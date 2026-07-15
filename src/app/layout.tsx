@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Fraunces } from "next/font/google";
 import Link from "next/link";
 import "./globals.css";
-import { isOwner } from "@/lib/auth";
+import { currentUser } from "@/lib/auth";
 import { logout } from "./actions";
 import ThemeToggle from "@/components/ThemeToggle";
 
@@ -18,7 +18,7 @@ const fraunces = Fraunces({
 
 export const metadata: Metadata = {
   title: "Cragdiary",
-  description: "A personal, free-form climbing journal.",
+  description: "A free, Notion-style journal for climbing days.",
 };
 
 const THEME_INIT_SCRIPT = `
@@ -37,7 +37,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const owner = await isOwner();
+  const user = await currentUser();
 
   return (
     <html
@@ -56,22 +56,27 @@ export default async function RootLayout({
             </Link>
             <nav className="site-nav">
               <ThemeToggle />
-              {owner ? (
+              <Link href="/climbers">Climbers</Link>
+              {user ? (
                 <>
                   <Link href="/entries/new">New entry</Link>
+                  <Link href={`/u/${user.username}`}>My journal</Link>
                   <form action={logout}>
                     <button type="submit">Log out</button>
                   </form>
                 </>
               ) : (
-                <Link href="/login">Log in</Link>
+                <>
+                  <Link href="/login">Log in</Link>
+                  <Link href="/signup">Sign up</Link>
+                </>
               )}
             </nav>
           </div>
         </header>
         <main className="flex-1">{children}</main>
         <footer className="site-footer">
-          Cragdiary — a personal climbing journal.
+          Cragdiary — a shared climbing journal. Free, no tracking, just days on rock.
         </footer>
       </body>
     </html>

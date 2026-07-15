@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { login } from "@/app/actions";
 
 export default async function LoginPage({
@@ -12,13 +13,20 @@ export default async function LoginPage({
       <h1 className="page-title">Log in</h1>
       <form action={login} className="entry-form">
         <label>
-          Password
-          <input type="password" name="password" required autoFocus />
+          Username
+          <input type="text" name="username" required autoFocus autoComplete="username" />
         </label>
-        {error && <p className="form-error">Wrong password.</p>}
+        <label>
+          Password
+          <input type="password" name="password" required autoComplete="current-password" />
+        </label>
+        {error && <p className="form-error">Wrong username or password.</p>}
         <button type="submit" className="btn-primary">
           Log in
         </button>
+        <p className="form-hint">
+          No account yet? <Link href="/signup">Sign up</Link>.
+        </p>
       </form>
     </div>
   );

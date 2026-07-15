@@ -66,13 +66,14 @@ a {
 }
 
 .site-header-inner {
-  max-width: 860px;
+  max-width: 1020px;
   margin: 0 auto;
   padding: 1.1rem 1.5rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+  flex-wrap: wrap;
 }
 
 .site-title {
@@ -88,6 +89,7 @@ a {
   align-items: center;
   gap: 1rem;
   font-size: 0.92rem;
+  flex-wrap: wrap;
 }
 
 .site-nav a {
@@ -113,7 +115,7 @@ a {
 }
 
 .site-footer {
-  max-width: 860px;
+  max-width: 1020px;
   margin: 2rem auto 3rem;
   padding: 0 1.5rem;
   color: var(--text-muted);
@@ -151,7 +153,7 @@ a {
 /* Page layout */
 
 .page-container {
-  max-width: 860px;
+  max-width: 1020px;
   margin: 0 auto;
   padding: 2.5rem 1.5rem;
 }
@@ -165,14 +167,6 @@ a {
   margin-bottom: 1.5rem;
 }
 
-/* Feed */
-
-.feed {
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
-}
-
 .empty-state {
   color: var(--text-muted);
   text-align: center;
@@ -184,74 +178,257 @@ a {
   text-decoration: underline;
 }
 
-/* Entry card */
+/* Entry card grid */
+
+.entry-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1.4rem;
+}
+
+.entry-card-link {
+  text-decoration: none;
+  display: block;
+}
 
 .entry-card {
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-card);
-  padding: 1.6rem;
+  overflow: hidden;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-.entry-card-head {
+.entry-card-link:hover .entry-card {
+  transform: translateY(-3px);
+}
+
+:root[data-theme="scrapbook"] .entry-card-link:nth-child(3n + 1) .entry-card {
+  transform: rotate(-0.6deg);
+}
+
+:root[data-theme="scrapbook"] .entry-card-link:nth-child(3n) .entry-card {
+  transform: rotate(0.5deg);
+}
+
+:root[data-theme="scrapbook"] .entry-card-link:hover .entry-card {
+  transform: translateY(-3px) rotate(0deg);
+}
+
+.entry-card-cover {
+  aspect-ratio: 3 / 2;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.entry-card-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.entry-card-cover-empty {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 1rem;
-  flex-wrap: wrap;
-  margin-bottom: 0.6rem;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.2rem;
+  opacity: 0.5;
+}
+
+.entry-card-body {
+  padding: 1rem 1.2rem 1.2rem;
 }
 
 .entry-crag {
-  font-size: 1.3rem;
+  font-size: 1.15rem;
+  margin: 0 0 0.25rem;
+}
+
+.entry-card-meta {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  margin: 0 0 0.5rem;
+}
+
+.entry-card-snippet {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
   margin: 0;
 }
 
-.entry-date {
-  color: var(--text-muted);
-  font-size: 0.85rem;
-  white-space: nowrap;
+/* Notion-style entry page */
+
+.notion-page {
+  padding-bottom: 3rem;
 }
 
-.entry-meta {
+.notion-cover {
+  width: 100%;
+  height: clamp(180px, 30vh, 320px);
+  overflow: hidden;
+}
+
+.notion-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.notion-body {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+.notion-icon {
+  font-size: 3rem;
+  line-height: 1;
+  margin-top: -1.6rem;
+  margin-bottom: 0.6rem;
+  width: fit-content;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15));
+}
+
+.notion-page:not(:has(.notion-cover)) .notion-icon,
+.notion-editor .notion-icon {
+  margin-top: 2.5rem;
+}
+
+.notion-title {
+  font-size: 2.3rem;
+  line-height: 1.15;
+  margin: 0 0 1.4rem;
+  letter-spacing: -0.01em;
+}
+
+.notion-props {
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
-  color: var(--text-muted);
+  margin: 0;
+}
+
+.notion-prop {
+  display: grid;
+  grid-template-columns: 130px 1fr;
+  gap: 1rem;
+  align-items: center;
+  padding: 0.35rem 0;
   font-size: 0.92rem;
-  margin-bottom: 1rem;
 }
 
-.meta-label {
-  color: var(--text);
-  font-weight: 600;
-  margin-right: 0.35rem;
-}
-
-.entry-notes {
-  white-space: pre-wrap;
-  line-height: 1.55;
-  margin: 1rem 0 0.5rem;
-}
-
-.entry-footer {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 0.8rem;
-}
-
-.delete-btn {
-  border: none;
-  background: none;
+.notion-prop dt,
+.notion-prop label {
   color: var(--text-muted);
-  font-size: 0.8rem;
-  cursor: pointer;
-  padding: 0.2rem 0;
+  white-space: nowrap;
 }
 
-.delete-btn:hover {
-  color: #b91c1c;
+.notion-prop dd {
+  margin: 0;
+}
+
+.notion-prop dd a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.notion-divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 1.4rem 0;
+}
+
+.notion-notes {
+  white-space: pre-wrap;
+  line-height: 1.65;
+  font-size: 1.02rem;
+}
+
+.notion-gallery {
+  margin-top: 1.6rem;
+}
+
+/* Notion-style editor (new entry) */
+
+.notion-title-input {
+  width: 100%;
+  font-family: var(--heading-font), serif;
+  font-size: 2.3rem;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  font-weight: 700;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  padding: 0;
+  margin: 0 0 1.4rem;
+}
+
+.notion-title-input:focus {
+  outline: none;
+}
+
+.notion-title-input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.55;
+}
+
+.notion-editor .notion-prop input {
+  font: inherit;
+  color: var(--text);
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  padding: 0.25rem 0.4rem;
+  width: 100%;
+}
+
+.notion-editor .notion-prop input:hover {
+  background: color-mix(in srgb, var(--border) 40%, transparent);
+}
+
+.notion-editor .notion-prop input:focus {
+  outline: none;
+  background: color-mix(in srgb, var(--border) 55%, transparent);
+}
+
+.notion-editor .notion-prop input[type="file"] {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.notion-notes-input {
+  width: 100%;
+  font-family: var(--font-body), sans-serif;
+  font-size: 1.02rem;
+  line-height: 1.65;
+  color: var(--text);
+  background: transparent;
+  border: none;
+  resize: vertical;
+  padding: 0;
+  min-height: 12rem;
+}
+
+.notion-notes-input:focus {
+  outline: none;
+}
+
+.notion-notes-input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.55;
+}
+
+.notion-editor-actions {
+  margin-top: 1.8rem;
 }
 
 /* Photos */
@@ -287,7 +464,86 @@ a {
   transform: rotate(-1deg);
 }
 
-/* Forms */
+/* Profile */
+
+.profile-header {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  margin-bottom: 2rem;
+}
+
+.profile-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--heading-font), serif;
+  font-size: 1.6rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.profile-avatar-sm {
+  width: 40px;
+  height: 40px;
+  font-size: 1.05rem;
+}
+
+.profile-name {
+  font-size: 1.6rem;
+  margin: 0;
+}
+
+.profile-sub {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  margin: 0.15rem 0 0;
+}
+
+.profile-bio {
+  margin: 0.5rem 0 0;
+  font-size: 0.95rem;
+}
+
+/* Climbers list */
+
+.climber-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  max-width: 560px;
+}
+
+.climber-row {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.7rem 0.9rem;
+  border-radius: 12px;
+  text-decoration: none;
+  border: 1px solid transparent;
+}
+
+.climber-row:hover {
+  background: var(--bg-elevated);
+  border-color: var(--border);
+}
+
+.climber-name {
+  font-weight: 600;
+}
+
+.climber-meta {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+/* Forms (login / signup) */
 
 .entry-form {
   display: flex;
@@ -313,11 +569,6 @@ a {
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 0.6rem 0.75rem;
-}
-
-.entry-form input[type="file"] {
-  font-size: 0.85rem;
-  color: var(--text-muted);
 }
 
 .entry-form textarea {
@@ -349,4 +600,34 @@ a {
 .form-error {
   color: #b91c1c;
   font-size: 0.85rem;
+}
+
+.form-hint {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.form-hint a {
+  color: var(--accent);
+}
+
+/* Entry footer (delete) */
+
+.entry-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 2rem;
+}
+
+.delete-btn {
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  cursor: pointer;
+  padding: 0.2rem 0;
+}
+
+.delete-btn:hover {
+  color: #b91c1c;
 }

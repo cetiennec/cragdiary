@@ -1,11 +1,9 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { deleteEntry } from "@/app/actions";
 
 export default function DeleteEntryButton({ id }: { id: string }) {
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
 
   return (
@@ -19,11 +17,10 @@ export default function DeleteEntryButton({ id }: { id: string }) {
         formData.set("id", id);
         startTransition(async () => {
           await deleteEntry(formData);
-          router.refresh();
         });
       }}
     >
-      {pending ? "Deleting…" : "Delete"}
+      {pending ? "Deleting…" : "Delete entry"}
     </button>
   );
 }

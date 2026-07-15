@@ -1,7 +1,7 @@
-import type { EntryWithPhotos } from "@/lib/queries";
-import DeleteEntryButton from "@/components/DeleteEntryButton";
+import Link from "next/link";
+import type { EntryWithAuthor } from "@/lib/queries";
 
-function formatDate(dateStr: string): string {
+export function formatDate(dateStr: string): string {
   const date = new Date(`${dateStr}T00:00:00`);
   return date.toLocaleDateString("en-US", {
     year: "numeric",
@@ -12,53 +12,39 @@ function formatDate(dateStr: string): string {
 
 export default function EntryCard({
   entry,
-  owner,
+  showAuthor = true,
 }: {
-  entry: EntryWithPhotos;
-  owner: boolean;
+  entry: EntryWithAuthor;
+  showAuthor?: boolean;
 }) {
+  const cover = entry.photos[0];
+  const snippet =
+    entry.notes && entry.notes.length > 140
+      ? `${entry.notes.slice(0, 140).trimEnd()}…`
+      : entry.notes;
+
   return (
-    <article className="entry-card">
-      <div className="entry-card-head">
-        <h2 className="entry-crag">{entry.crag}</h2>
-        <time className="entry-date" dateTime={entry.entry_date}>
-          {formatDate(entry.entry_date)}
-        </time>
-      </div>
-
-      {(entry.routes || entry.partners) && (
-        <div className="entry-meta">
-          {entry.routes && (
-            <p>
-              <span className="meta-label">Routes</span>
-              {entry.routes}
-            </p>
-          )}
-          {entry.partners && (
-            <p>
-              <span className="meta-label">With</span>
-              {entry.partners}
-            </p>
-          )}
+    <Link href={`/entries/${entry.id}`} className="entry-card-link">
+      <article className="entry-card">
+        {cover ? (
+          <div className="entry-card-cover">
+            {/* eslint-disable-next-line @next/next/no-img-element -- served from our own DB-backed route, already resized/compressed server-side */}
+            <img src={`/api/photos/${cover.id}`} alt="" loading="lazy" />
+          </div>
+        ) : (
+          <div className="entry-card-cover entry-card-cover-empty" aria-hidden>
+            ⛰️
+          </div>
+        )}
+        <div className="entry-card-body">
+          <h2 className="entry-crag">{entry.crag}</h2>
+          <p className="entry-card-meta">
+            <time dateTime={entry.entry_date}>{formatDate(entry.entry_date)}</time>
+            {showAuthor && <span> · {entry.display_name}</span>}
+          </p>
+          {snippet && <p className="entry-card-snippet">{snippet}</p>}
         </div>
-      )}
-
-      {entry.photos.length > 0 && (
-        <div className="photo-grid">
-          {entry.photos.map((photo) => (
-            // eslint-disable-next-line @next/next/no-img-element -- served from our own DB-backed route, already resized/compressed server-side
-            <img key={photo.id} src={`/api/photos/${photo.id}`} alt="" loading="lazy" />
-          ))}
-        </div>
-      )}
-
-      {entry.notes && <p className="entry-notes">{entry.notes}</p>}
-
-      {owner && (
-        <div className="entry-footer">
-          <DeleteEntryButton id={entry.id} />
-        </div>
-      )}
-    </article>
+      </article>
+    </Link>
   );
 }
