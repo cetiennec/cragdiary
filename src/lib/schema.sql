@@ -17,6 +17,8 @@ create table if not exists entries (
   routes text,
   partners text,
   notes text,
+  visibility text not null default 'public'
+    check (visibility in ('public','unlisted','private')),
   created_at timestamptz not null default now()
 );
 

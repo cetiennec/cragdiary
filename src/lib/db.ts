@@ -28,6 +28,8 @@ export type User = {
   created_at: string;
 };
 
+export type Visibility = "public" | "unlisted" | "private";
+
 export type Entry = {
   id: string;
   user_id: string;
@@ -36,6 +38,7 @@ export type Entry = {
   routes: string | null;
   partners: string | null;
   notes: string | null;
+  visibility: Visibility;
   created_at: string;
 };
 

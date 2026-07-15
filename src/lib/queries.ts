@@ -37,6 +37,7 @@ export async function getFeed(): Promise<EntryWithAuthor[]> {
     `select e.*, u.username, u.display_name
      from entries e
      join users u on u.id = e.user_id
+     where e.visibility = 'public'
      order by e.entry_date desc, e.created_at desc`
   );
   return attachPhotos(result.rows);
@@ -63,14 +64,18 @@ export async function getUserByUsername(username: string): Promise<User | null> 
   return result.rows[0] ?? null;
 }
 
-export async function getEntriesByUser(userId: string): Promise<EntryWithAuthor[]> {
+export async function getEntriesByUser(
+  userId: string,
+  { includeNonPublic = false }: { includeNonPublic?: boolean } = {}
+): Promise<EntryWithAuthor[]> {
   const result = await pool.query<Entry & { username: string; display_name: string }>(
     `select e.*, u.username, u.display_name
      from entries e
      join users u on u.id = e.user_id
      where e.user_id = $1
+       and ($2 or e.visibility = 'public')
      order by e.entry_date desc, e.created_at desc`,
-    [userId]
+    [userId, includeNonPublic]
   );
   return attachPhotos(result.rows);
 }
@@ -78,7 +83,7 @@ export async function getEntriesByUser(userId: string): Promise<EntryWithAuthor[
 export async function getAllUsers(): Promise<(User & { entry_count: number })[]> {
   const result = await pool.query<User & { entry_count: number }>(
     `select u.id, u.username, u.display_name, u.bio, u.created_at,
-            count(e.id)::int as entry_count
+            count(e.id) filter (where e.visibility = 'public')::int as entry_count
      from users u
      left join entries e on e.user_id = u.id
      group by u.id

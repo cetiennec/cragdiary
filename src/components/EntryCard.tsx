@@ -10,13 +10,22 @@ export function formatDate(dateStr: string): string {
   });
 }
 
+const VISIBILITY_BADGES = {
+  public: null,
+  unlisted: "🔗",
+  private: "🔒",
+} as const;
+
 export default function EntryCard({
   entry,
   showAuthor = true,
+  showVisibility = false,
 }: {
   entry: EntryWithAuthor;
   showAuthor?: boolean;
+  showVisibility?: boolean;
 }) {
+  const badge = showVisibility ? VISIBILITY_BADGES[entry.visibility] : null;
   const cover = entry.photos[0];
   const snippet =
     entry.notes && entry.notes.length > 140
@@ -41,6 +50,7 @@ export default function EntryCard({
           <p className="entry-card-meta">
             <time dateTime={entry.entry_date}>{formatDate(entry.entry_date)}</time>
             {showAuthor && <span> · {entry.display_name}</span>}
+            {badge && <span> · {badge}</span>}
           </p>
           {snippet && <p className="entry-card-snippet">{snippet}</p>}
         </div>

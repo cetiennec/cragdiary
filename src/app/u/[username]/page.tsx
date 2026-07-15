@@ -14,8 +14,8 @@ export default async function ProfilePage({
   const [profile, user] = await Promise.all([getUserByUsername(username), currentUser()]);
   if (!profile) notFound();
 
-  const entries = await getEntriesByUser(profile.id);
   const isSelf = user?.id === profile.id;
+  const entries = await getEntriesByUser(profile.id, { includeNonPublic: isSelf });
 
   return (
     <div className="page-container">
@@ -46,7 +46,7 @@ export default async function ProfilePage({
       ) : (
         <div className="entry-grid">
           {entries.map((entry) => (
-            <EntryCard key={entry.id} entry={entry} showAuthor={false} />
+            <EntryCard key={entry.id} entry={entry} showAuthor={false} showVisibility={isSelf} />
           ))}
         </div>
       )}

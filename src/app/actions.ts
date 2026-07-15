@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import sharp from "sharp";
-import { pool } from "@/lib/db";
+import { pool, type Visibility } from "@/lib/db";
 import {
   createSession,
   currentUser,
@@ -15,6 +15,30 @@ import {
 const MAX_PHOTO_DIMENSION = 1800;
 const PHOTO_QUALITY = 82;
 const USERNAME_RE = /^[a-z0-9-]{3,20}$/;
+
+function parseVisibility(value: FormDataEntryValue | null): Visibility {
+  return value === "unlisted" || value === "private" ? value : "public";
+}
+
+async function processPhoto(file: File): Promise<Buffer> {
+  const inputBuffer = Buffer.from(await file.arrayBuffer());
+  return sharp(inputBuffer)
+    .rotate()
+    .resize({
+      width: MAX_PHOTO_DIMENSION,
+      height: MAX_PHOTO_DIMENSION,
+      fit: "inside",
+      withoutEnlargement: true,
+    })
+    .webp({ quality: PHOTO_QUALITY })
+    .toBuffer();
+}
+
+function photoFiles(formData: FormData): File[] {
+  return formData
+    .getAll("photos")
+    .filter((f): f is File => f instanceof File && f.size > 0);
+}
 
 export async function signup(formData: FormData): Promise<void> {
   const username = String(formData.get("username") ?? "").trim().toLowerCase();
@@ -79,6 +103,7 @@ export async function createEntry(formData: FormData): Promise<void> {
   const routes = String(formData.get("routes") ?? "").trim() || null;
   const partners = String(formData.get("partners") ?? "").trim() || null;
   const notes = String(formData.get("notes") ?? "").trim() || null;
+  const visibility = parseVisibility(formData.get("visibility"));
 
   if (!entryDate || !crag) {
     throw new Error("Date and crag are required");
@@ -88,26 +113,16 @@ export async function createEntry(formData: FormData): Promise<void> {
   let entryId: string;
   try {
     const result = await client.query<{ id: string }>(
-      `insert into entries (user_id, entry_date, crag, routes, partners, notes)
-       values ($1, $2, $3, $4, $5, $6)
+      `insert into entries (user_id, entry_date, crag, routes, partners, notes, visibility)
+       values ($1, $2, $3, $4, $5, $6, $7)
        returning id`,
-      [user.id, entryDate, crag, routes, partners, notes]
+      [user.id, entryDate, crag, routes, partners, notes, visibility]
     );
     entryId = result.rows[0].id;
 
-    const files = formData
-      .getAll("photos")
-      .filter((f): f is File => f instanceof File && f.size > 0);
-
     let position = 0;
-    for (const file of files) {
-      const inputBuffer = Buffer.from(await file.arrayBuffer());
-      const processed = await sharp(inputBuffer)
-        .rotate()
-        .resize({ width: MAX_PHOTO_DIMENSION, height: MAX_PHOTO_DIMENSION, fit: "inside", withoutEnlargement: true })
-        .webp({ quality: PHOTO_QUALITY })
-        .toBuffer();
-
+    for (const file of photoFiles(formData)) {
+      const processed = await processPhoto(file);
       await client.query(
         `insert into photos (entry_id, content_type, data, position)
          values ($1, $2, $3, $4)`,
@@ -122,6 +137,71 @@ export async function createEntry(formData: FormData): Promise<void> {
   revalidatePath("/");
   revalidatePath(`/u/${user.username}`);
   redirect(`/entries/${entryId}`);
+}
+
+export async function updateEntry(formData: FormData): Promise<void> {
+  const user = await currentUser();
+  if (!user) throw new Error("Unauthorized");
+
+  const id = String(formData.get("id") ?? "");
+  const entryDate = String(formData.get("entry_date") ?? "");
+  const crag = String(formData.get("crag") ?? "").trim();
+  const routes = String(formData.get("routes") ?? "").trim() || null;
+  const partners = String(formData.get("partners") ?? "").trim() || null;
+  const notes = String(formData.get("notes") ?? "").trim() || null;
+  const visibility = parseVisibility(formData.get("visibility"));
+
+  if (!id || !entryDate || !crag) {
+    throw new Error("Date and crag are required");
+  }
+
+  const removePhotoIds = formData
+    .getAll("remove_photos")
+    .map(String)
+    .filter(Boolean);
+
+  const client = await pool.connect();
+  try {
+    const updated = await client.query(
+      `update entries
+       set entry_date = $1, crag = $2, routes = $3, partners = $4, notes = $5, visibility = $6
+       where id = $7 and user_id = $8`,
+      [entryDate, crag, routes, partners, notes, visibility, id, user.id]
+    );
+    if (updated.rowCount === 0) throw new Error("Not found");
+
+    if (removePhotoIds.length > 0) {
+      await client.query(
+        "delete from photos where entry_id = $1 and id = any($2)",
+        [id, removePhotoIds]
+      );
+    }
+
+    const newFiles = photoFiles(formData);
+    if (newFiles.length > 0) {
+      const maxPos = await client.query<{ max: number | null }>(
+        "select max(position)::int as max from photos where entry_id = $1",
+        [id]
+      );
+      let position = (maxPos.rows[0].max ?? -1) + 1;
+      for (const file of newFiles) {
+        const processed = await processPhoto(file);
+        await client.query(
+          `insert into photos (entry_id, content_type, data, position)
+           values ($1, $2, $3, $4)`,
+          [id, "image/webp", processed, position]
+        );
+        position += 1;
+      }
+    }
+  } finally {
+    client.release();
+  }
+
+  revalidatePath("/");
+  revalidatePath(`/u/${user.username}`);
+  revalidatePath(`/entries/${id}`);
+  redirect(`/entries/${id}`);
 }
 
 export async function deleteEntry(formData: FormData): Promise<void> {

@@ -5,6 +5,12 @@ import { currentUser } from "@/lib/auth";
 import { formatDate } from "@/components/EntryCard";
 import DeleteEntryButton from "@/components/DeleteEntryButton";
 
+const VISIBILITY_BADGES = {
+  public: null,
+  unlisted: "🔗 Link only",
+  private: "🔒 Private",
+} as const;
+
 export default async function EntryPage({
   params,
 }: {
@@ -16,6 +22,9 @@ export default async function EntryPage({
   if (!entry) notFound();
 
   const isAuthor = user?.id === entry.user_id;
+  if (entry.visibility === "private" && !isAuthor) notFound();
+
+  const badge = isAuthor ? VISIBILITY_BADGES[entry.visibility] : null;
   const [cover, ...gallery] = entry.photos;
 
   return (
@@ -32,6 +41,8 @@ export default async function EntryPage({
           🧗
         </div>
         <h1 className="notion-title">{entry.crag}</h1>
+
+        {badge && <p className="visibility-badge">{badge}</p>}
 
         <dl className="notion-props">
           <div className="notion-prop">
@@ -73,6 +84,9 @@ export default async function EntryPage({
 
         {isAuthor && (
           <div className="entry-footer">
+            <Link href={`/entries/${entry.id}/edit`} className="edit-link">
+              Edit entry
+            </Link>
             <DeleteEntryButton id={entry.id} />
           </div>
         )}
