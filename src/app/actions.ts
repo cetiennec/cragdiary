@@ -2,8 +2,10 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import sharp from "sharp";
 import { pool, type Visibility } from "@/lib/db";
+import { LOCALE_COOKIE } from "@/lib/i18n";
 import {
   createSession,
   currentUser,
@@ -18,6 +20,25 @@ const USERNAME_RE = /^[a-z0-9-]{3,20}$/;
 
 function parseVisibility(value: FormDataEntryValue | null): Visibility {
   return value === "unlisted" || value === "private" ? value : "public";
+}
+
+function optionalText(value: FormDataEntryValue | null): string | null {
+  return String(value ?? "").trim() || null;
+}
+
+function optionalInt(value: FormDataEntryValue | null): number | null {
+  const n = parseInt(String(value ?? ""), 10);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+export async function setLocale(formData: FormData): Promise<void> {
+  const locale = formData.get("locale") === "fr" ? "fr" : "en";
+  const store = await cookies();
+  store.set(LOCALE_COOKIE, locale, {
+    path: "/",
+    maxAge: 365 * 24 * 60 * 60,
+    sameSite: "lax",
+  });
 }
 
 async function processPhoto(file: File): Promise<Buffer> {
@@ -100,23 +121,35 @@ export async function createEntry(formData: FormData): Promise<void> {
 
   const entryDate = String(formData.get("entry_date") ?? "");
   const crag = String(formData.get("crag") ?? "").trim();
-  const routes = String(formData.get("routes") ?? "").trim() || null;
-  const partners = String(formData.get("partners") ?? "").trim() || null;
-  const notes = String(formData.get("notes") ?? "").trim() || null;
   const visibility = parseVisibility(formData.get("visibility"));
 
   if (!entryDate || !crag) {
-    throw new Error("Date and crag are required");
+    throw new Error("Date and title are required");
   }
 
   const client = await pool.connect();
   let entryId: string;
   try {
     const result = await client.query<{ id: string }>(
-      `insert into entries (user_id, entry_date, crag, routes, partners, notes, visibility)
-       values ($1, $2, $3, $4, $5, $6, $7)
+      `insert into entries
+         (user_id, entry_date, crag, location, style, grade_max, pitches, height_m,
+          routes, partners, notes, visibility)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
        returning id`,
-      [user.id, entryDate, crag, routes, partners, notes, visibility]
+      [
+        user.id,
+        entryDate,
+        crag,
+        optionalText(formData.get("location")),
+        optionalText(formData.get("style")),
+        optionalText(formData.get("grade_max")),
+        optionalInt(formData.get("pitches")),
+        optionalInt(formData.get("height_m")),
+        optionalText(formData.get("routes")),
+        optionalText(formData.get("partners")),
+        optionalText(formData.get("notes")),
+        visibility,
+      ]
     );
     entryId = result.rows[0].id;
 
@@ -146,13 +179,10 @@ export async function updateEntry(formData: FormData): Promise<void> {
   const id = String(formData.get("id") ?? "");
   const entryDate = String(formData.get("entry_date") ?? "");
   const crag = String(formData.get("crag") ?? "").trim();
-  const routes = String(formData.get("routes") ?? "").trim() || null;
-  const partners = String(formData.get("partners") ?? "").trim() || null;
-  const notes = String(formData.get("notes") ?? "").trim() || null;
   const visibility = parseVisibility(formData.get("visibility"));
 
   if (!id || !entryDate || !crag) {
-    throw new Error("Date and crag are required");
+    throw new Error("Date and title are required");
   }
 
   const removePhotoIds = formData
@@ -164,9 +194,25 @@ export async function updateEntry(formData: FormData): Promise<void> {
   try {
     const updated = await client.query(
       `update entries
-       set entry_date = $1, crag = $2, routes = $3, partners = $4, notes = $5, visibility = $6
-       where id = $7 and user_id = $8`,
-      [entryDate, crag, routes, partners, notes, visibility, id, user.id]
+       set entry_date = $1, crag = $2, location = $3, style = $4, grade_max = $5,
+           pitches = $6, height_m = $7, routes = $8, partners = $9, notes = $10,
+           visibility = $11
+       where id = $12 and user_id = $13`,
+      [
+        entryDate,
+        crag,
+        optionalText(formData.get("location")),
+        optionalText(formData.get("style")),
+        optionalText(formData.get("grade_max")),
+        optionalInt(formData.get("pitches")),
+        optionalInt(formData.get("height_m")),
+        optionalText(formData.get("routes")),
+        optionalText(formData.get("partners")),
+        optionalText(formData.get("notes")),
+        visibility,
+        id,
+        user.id,
+      ]
     );
     if (updated.rowCount === 0) throw new Error("Not found");
 

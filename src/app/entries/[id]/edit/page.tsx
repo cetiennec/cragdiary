@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { getEntry } from "@/lib/queries";
 import { currentUser } from "@/lib/auth";
+import { getDict } from "@/lib/i18n";
 import EntryForm from "@/components/EntryForm";
 
 export default async function EditEntryPage({
@@ -16,5 +17,6 @@ export default async function EditEntryPage({
   const entry = await getEntry(id);
   if (!entry || entry.user_id !== user.id) notFound();
 
-  return <EntryForm entry={entry} />;
+  const { t } = await getDict();
+  return <EntryForm entry={entry} t={t.editor} />;
 }

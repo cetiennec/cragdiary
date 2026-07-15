@@ -1,14 +1,6 @@
 import Link from "next/link";
+import { formatDate, type Locale } from "@/lib/i18n";
 import type { EntryWithAuthor } from "@/lib/queries";
-
-export function formatDate(dateStr: string): string {
-  const date = new Date(`${dateStr}T00:00:00`);
-  return date.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-}
 
 const VISIBILITY_BADGES = {
   public: null,
@@ -18,10 +10,12 @@ const VISIBILITY_BADGES = {
 
 export default function EntryCard({
   entry,
+  locale,
   showAuthor = true,
   showVisibility = false,
 }: {
   entry: EntryWithAuthor;
+  locale: Locale;
   showAuthor?: boolean;
   showVisibility?: boolean;
 }) {
@@ -31,6 +25,13 @@ export default function EntryCard({
     entry.notes && entry.notes.length > 140
       ? `${entry.notes.slice(0, 140).trimEnd()}…`
       : entry.notes;
+
+  const metaBits = [
+    formatDate(entry.entry_date, locale),
+    entry.location,
+    entry.grade_max ? `${entry.grade_max} max` : null,
+    showAuthor ? entry.display_name : null,
+  ].filter(Boolean);
 
   return (
     <Link href={`/entries/${entry.id}`} className="entry-card-link">
@@ -48,9 +49,8 @@ export default function EntryCard({
         <div className="entry-card-body">
           <h2 className="entry-crag">{entry.crag}</h2>
           <p className="entry-card-meta">
-            <time dateTime={entry.entry_date}>{formatDate(entry.entry_date)}</time>
-            {showAuthor && <span> · {entry.display_name}</span>}
-            {badge && <span> · {badge}</span>}
+            {metaBits.join(" · ")}
+            {badge && ` · ${badge}`}
           </p>
           {snippet && <p className="entry-card-snippet">{snippet}</p>}
         </div>

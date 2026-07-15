@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { getAllUsers } from "@/lib/queries";
+import { getDict } from "@/lib/i18n";
 
 export default async function ClimbersPage() {
-  const users = await getAllUsers();
+  const [users, { t }] = await Promise.all([getAllUsers(), getDict()]);
 
   return (
     <div className="page-container">
-      <h1 className="page-title">Climbers</h1>
+      <h1 className="page-title">{t.climbers.title}</h1>
       <div className="climber-list">
         {users.map((user) => (
           <Link key={user.id} href={`/u/${user.username}`} className="climber-row">
@@ -15,8 +16,7 @@ export default async function ClimbersPage() {
             </span>
             <span className="climber-name">{user.display_name}</span>
             <span className="climber-meta">
-              @{user.username} · {user.entry_count}{" "}
-              {user.entry_count === 1 ? "entry" : "entries"}
+              @{user.username} · {t.profile.entryCount(user.entry_count)}
             </span>
           </Link>
         ))}

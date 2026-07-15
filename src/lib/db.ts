@@ -35,6 +35,11 @@ export type Entry = {
   user_id: string;
   entry_date: string;
   crag: string;
+  location: string | null;
+  style: string | null;
+  grade_max: string | null;
+  pitches: number | null;
+  height_m: number | null;
   routes: string | null;
   partners: string | null;
   notes: string | null;

@@ -3,7 +3,8 @@ import { Geist, Fraunces } from "next/font/google";
 import Link from "next/link";
 import "./globals.css";
 import { currentUser } from "@/lib/auth";
-import { logout } from "./actions";
+import { getDict } from "@/lib/i18n";
+import { logout, setLocale } from "./actions";
 import ThemeToggle from "@/components/ThemeToggle";
 
 const geistSans = Geist({
@@ -37,11 +38,11 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const user = await currentUser();
+  const [user, { locale, t }] = await Promise.all([currentUser(), getDict()]);
 
   return (
     <html
-      lang="en"
+      lang={locale}
       className={`${geistSans.variable} ${fraunces.variable} h-full`}
       suppressHydrationWarning
     >
@@ -55,29 +56,35 @@ export default async function RootLayout({
               Cragdiary
             </Link>
             <nav className="site-nav">
-              <ThemeToggle />
-              <Link href="/climbers">Climbers</Link>
+              <ThemeToggle labels={t.themes} />
+              <form action={setLocale} className="lang-toggle theme-toggle">
+                <button type="submit" name="locale" value="fr" data-active={locale === "fr"}>
+                  FR
+                </button>
+                <button type="submit" name="locale" value="en" data-active={locale === "en"}>
+                  EN
+                </button>
+              </form>
+              <Link href="/climbers">{t.nav.climbers}</Link>
               {user ? (
                 <>
-                  <Link href="/entries/new">New entry</Link>
-                  <Link href={`/u/${user.username}`}>My journal</Link>
+                  <Link href="/entries/new">{t.nav.newEntry}</Link>
+                  <Link href={`/u/${user.username}`}>{t.nav.myJournal}</Link>
                   <form action={logout}>
-                    <button type="submit">Log out</button>
+                    <button type="submit">{t.nav.logout}</button>
                   </form>
                 </>
               ) : (
                 <>
-                  <Link href="/login">Log in</Link>
-                  <Link href="/signup">Sign up</Link>
+                  <Link href="/login">{t.nav.login}</Link>
+                  <Link href="/signup">{t.nav.signup}</Link>
                 </>
               )}
             </nav>
           </div>
         </header>
         <main className="flex-1">{children}</main>
-        <footer className="site-footer">
-          Cragdiary — a shared climbing journal. Free, no tracking, just days on rock.
-        </footer>
+        <footer className="site-footer">{t.footer}</footer>
       </body>
     </html>
   );

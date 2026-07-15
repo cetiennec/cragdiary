@@ -1,26 +1,21 @@
 import Link from "next/link";
 import { signup } from "@/app/actions";
-
-const ERROR_MESSAGES: Record<string, string> = {
-  username: "Username must be 3–20 characters: lowercase letters, digits, hyphens.",
-  name: "Please enter a display name.",
-  password: "Password must be at least 8 characters.",
-  taken: "That username is already taken.",
-};
+import { getDict } from "@/lib/i18n";
 
 export default async function SignupPage({
   searchParams,
 }: {
   searchParams: Promise<{ error?: string }>;
 }) {
-  const { error } = await searchParams;
+  const [{ error }, { t }] = await Promise.all([searchParams, getDict()]);
+  const errors = t.signup.errors as Record<string, string>;
 
   return (
     <div className="page-container narrow">
-      <h1 className="page-title">Start your journal</h1>
+      <h1 className="page-title">{t.signup.title}</h1>
       <form action={signup} className="entry-form">
         <label>
-          Username
+          {t.signup.username}
           <input
             type="text"
             name="username"
@@ -28,15 +23,15 @@ export default async function SignupPage({
             autoFocus
             autoComplete="username"
             pattern="[a-z0-9-]{3,20}"
-            placeholder="lowercase letters, digits, hyphens"
+            placeholder={t.signup.usernameHint}
           />
         </label>
         <label>
-          Display name
-          <input type="text" name="display_name" required placeholder="How your name appears" />
+          {t.signup.displayName}
+          <input type="text" name="display_name" required placeholder={t.signup.displayNameHint} />
         </label>
         <label>
-          Password
+          {t.signup.password}
           <input
             type="password"
             name="password"
@@ -45,12 +40,13 @@ export default async function SignupPage({
             autoComplete="new-password"
           />
         </label>
-        {error && <p className="form-error">{ERROR_MESSAGES[error] ?? "Something went wrong."}</p>}
+        {error && <p className="form-error">{errors[error] ?? t.signup.errors.generic}</p>}
         <button type="submit" className="btn-primary">
-          Create account
+          {t.signup.submit}
         </button>
         <p className="form-hint">
-          Already have one? <Link href="/login">Log in</Link>.
+          {t.signup.hintPre}
+          <Link href="/login">{t.signup.hintLink}</Link>.
         </p>
       </form>
     </div>

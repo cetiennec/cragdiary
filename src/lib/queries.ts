@@ -80,6 +80,30 @@ export async function getEntriesByUser(
   return attachPhotos(result.rows);
 }
 
+export type UserStats = {
+  total: number;
+  meters: number;
+  this_year: number;
+  this_month: number;
+};
+
+export async function getUserStats(
+  userId: string,
+  { includeNonPublic = false }: { includeNonPublic?: boolean } = {}
+): Promise<UserStats> {
+  const result = await pool.query<UserStats>(
+    `select count(*)::int as total,
+            coalesce(sum(height_m), 0)::int as meters,
+            count(*) filter (where entry_date >= date_trunc('year', current_date))::int as this_year,
+            count(*) filter (where entry_date >= date_trunc('month', current_date))::int as this_month
+     from entries
+     where user_id = $1
+       and ($2 or visibility = 'public')`,
+    [userId, includeNonPublic]
+  );
+  return result.rows[0];
+}
+
 export async function getAllUsers(): Promise<(User & { entry_count: number })[]> {
   const result = await pool.query<User & { entry_count: number }>(
     `select u.id, u.username, u.display_name, u.bio, u.created_at,

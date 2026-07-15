@@ -6,7 +6,11 @@ type Theme = "scrapbook" | "minimal";
 
 const STORAGE_KEY = "cragdiary-theme";
 
-export default function ThemeToggle() {
+export default function ThemeToggle({
+  labels,
+}: {
+  labels: { scrapbook: string; minimal: string };
+}) {
   const [theme, setTheme] = useState<Theme | null>(null);
 
   useEffect(() => {
@@ -32,14 +36,14 @@ export default function ThemeToggle() {
         data-active={theme === "scrapbook"}
         onClick={() => applyTheme("scrapbook")}
       >
-        Scrapbook
+        {labels.scrapbook}
       </button>
       <button
         type="button"
         data-active={theme === "minimal"}
         onClick={() => applyTheme("minimal")}
       >
-        Minimal
+        {labels.minimal}
       </button>
     </div>
   );

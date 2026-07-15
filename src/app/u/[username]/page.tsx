@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getEntriesByUser, getUserByUsername } from "@/lib/queries";
+import { getEntriesByUser, getUserByUsername, getUserStats } from "@/lib/queries";
 import { currentUser } from "@/lib/auth";
+import { formatMeters, getDict } from "@/lib/i18n";
 import EntryCard from "@/components/EntryCard";
 
 export default async function ProfilePage({
@@ -11,11 +12,25 @@ export default async function ProfilePage({
 }) {
   const { username } = await params;
 
-  const [profile, user] = await Promise.all([getUserByUsername(username), currentUser()]);
+  const [profile, user, { locale, t }] = await Promise.all([
+    getUserByUsername(username),
+    currentUser(),
+    getDict(),
+  ]);
   if (!profile) notFound();
 
   const isSelf = user?.id === profile.id;
-  const entries = await getEntriesByUser(profile.id, { includeNonPublic: isSelf });
+  const [entries, stats] = await Promise.all([
+    getEntriesByUser(profile.id, { includeNonPublic: isSelf }),
+    getUserStats(profile.id, { includeNonPublic: isSelf }),
+  ]);
+
+  const tiles = [
+    { label: t.profile.stats.entries, value: String(stats.total) },
+    { label: t.profile.stats.meters, value: formatMeters(stats.meters, locale) },
+    { label: t.profile.stats.thisYear, value: String(stats.this_year) },
+    { label: t.profile.stats.thisMonth, value: String(stats.this_month) },
+  ];
 
   return (
     <div className="page-container">
@@ -26,27 +41,45 @@ export default async function ProfilePage({
         <div>
           <h1 className="profile-name">{profile.display_name}</h1>
           <p className="profile-sub">
-            @{profile.username} · {entries.length}{" "}
-            {entries.length === 1 ? "entry" : "entries"}
+            @{profile.username} · {t.profile.entryCount(entries.length)}
           </p>
           {profile.bio && <p className="profile-bio">{profile.bio}</p>}
         </div>
       </header>
 
+      {stats.total > 0 && (
+        <div className="stats-row">
+          {tiles.map((tile) => (
+            <div key={tile.label} className="stat-tile">
+              <p className="stat-label">{tile.label}</p>
+              <p className="stat-value">{tile.value}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
       {entries.length === 0 ? (
         <div className="empty-state">
           {isSelf ? (
             <p>
-              Your journal is empty — <Link href="/entries/new">log your first day out</Link>.
+              {t.profile.emptySelfPre}
+              <Link href="/entries/new">{t.profile.emptySelfLink}</Link>
+              {t.profile.emptySelfPost}
             </p>
           ) : (
-            <p>No entries yet.</p>
+            <p>{t.profile.emptyOther}</p>
           )}
         </div>
       ) : (
         <div className="entry-grid">
           {entries.map((entry) => (
-            <EntryCard key={entry.id} entry={entry} showAuthor={false} showVisibility={isSelf} />
+            <EntryCard
+              key={entry.id}
+              entry={entry}
+              locale={locale}
+              showAuthor={false}
+              showVisibility={isSelf}
+            />
           ))}
         </div>
       )}

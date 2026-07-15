@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
+import { getDict } from "@/lib/i18n";
 import EntryForm from "@/components/EntryForm";
 
 export default async function NewEntryPage() {
@@ -8,5 +9,6 @@ export default async function NewEntryPage() {
     redirect("/login");
   }
 
-  return <EntryForm />;
+  const { t } = await getDict();
+  return <EntryForm t={t.editor} />;
 }

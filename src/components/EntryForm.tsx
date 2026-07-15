@@ -3,22 +3,31 @@
 import { useState } from "react";
 import { useFormStatus } from "react-dom";
 import { createEntry, updateEntry } from "@/app/actions";
+import type { Dict } from "@/lib/i18n";
 import type { EntryWithAuthor } from "@/lib/queries";
+
+type EditorDict = Dict["editor"];
 
 function today(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-function SubmitButton({ editing }: { editing: boolean }) {
+function SubmitButton({ editing, t }: { editing: boolean; t: EditorDict }) {
   const { pending } = useFormStatus();
   return (
     <button type="submit" className="btn-primary" disabled={pending}>
-      {pending ? "Saving…" : editing ? "Save changes" : "Save entry"}
+      {pending ? t.saving : editing ? t.saveChanges : t.save}
     </button>
   );
 }
 
-export default function EntryForm({ entry }: { entry?: EntryWithAuthor }) {
+export default function EntryForm({
+  entry,
+  t,
+}: {
+  entry?: EntryWithAuthor;
+  t: EditorDict;
+}) {
   const [previews, setPreviews] = useState<string[]>([]);
   const editing = Boolean(entry);
 
@@ -39,8 +48,8 @@ export default function EntryForm({ entry }: { entry?: EntryWithAuthor }) {
           type="text"
           name="crag"
           className="notion-title-input"
-          placeholder="Untitled crag…"
-          aria-label="Crag / location"
+          placeholder={t.titlePlaceholder}
+          aria-label={t.titleAria}
           defaultValue={entry?.crag}
           required
           autoFocus={!editing}
@@ -48,7 +57,7 @@ export default function EntryForm({ entry }: { entry?: EntryWithAuthor }) {
 
         <div className="notion-props">
           <div className="notion-prop">
-            <label htmlFor="entry_date">📅 Date</label>
+            <label htmlFor="entry_date">{t.date}</label>
             <input
               id="entry_date"
               type="date"
@@ -58,35 +67,95 @@ export default function EntryForm({ entry }: { entry?: EntryWithAuthor }) {
             />
           </div>
           <div className="notion-prop">
-            <label htmlFor="routes">🧭 Routes</label>
+            <label htmlFor="location">{t.location}</label>
             <input
-              id="routes"
+              id="location"
               type="text"
-              name="routes"
-              defaultValue={entry?.routes ?? ""}
-              placeholder="Berlin (7a), La Ravanelle…"
+              name="location"
+              defaultValue={entry?.location ?? ""}
+              placeholder={t.locationPlaceholder}
             />
           </div>
           <div className="notion-prop">
-            <label htmlFor="partners">👥 Partners</label>
+            <label htmlFor="style">{t.style}</label>
+            <input
+              id="style"
+              type="text"
+              name="style"
+              list="style-options"
+              defaultValue={entry?.style ?? ""}
+              placeholder={t.stylePlaceholder}
+            />
+            <datalist id="style-options">
+              {t.styleOptions.map((option) => (
+                <option key={option} value={option} />
+              ))}
+            </datalist>
+          </div>
+          <div className="notion-prop">
+            <label htmlFor="grade_max">{t.grade}</label>
+            <input
+              id="grade_max"
+              type="text"
+              name="grade_max"
+              defaultValue={entry?.grade_max ?? ""}
+              placeholder={t.gradePlaceholder}
+            />
+          </div>
+          <div className="notion-prop notion-prop-pair">
+            <label htmlFor="pitches">{t.pitches}</label>
+            <div className="notion-prop-pair-fields">
+              <input
+                id="pitches"
+                type="number"
+                name="pitches"
+                min={1}
+                defaultValue={entry?.pitches ?? ""}
+                placeholder="4"
+              />
+              <label htmlFor="height_m" className="notion-prop-inline-label">
+                {t.height}
+              </label>
+              <input
+                id="height_m"
+                type="number"
+                name="height_m"
+                min={1}
+                defaultValue={entry?.height_m ?? ""}
+                placeholder="150"
+              />
+            </div>
+          </div>
+          <div className="notion-prop">
+            <label htmlFor="partners">{t.partners}</label>
             <input
               id="partners"
               type="text"
               name="partners"
               defaultValue={entry?.partners ?? ""}
-              placeholder="Léo, Marine…"
+              placeholder={t.partnersPlaceholder}
             />
           </div>
           <div className="notion-prop">
-            <label htmlFor="visibility">👁️ Visibility</label>
+            <label htmlFor="routes">{t.routes}</label>
+            <input
+              id="routes"
+              type="text"
+              name="routes"
+              defaultValue={entry?.routes ?? ""}
+              placeholder={t.routesPlaceholder}
+            />
+          </div>
+          <div className="notion-prop">
+            <label htmlFor="visibility">{t.visibility}</label>
             <select id="visibility" name="visibility" defaultValue={entry?.visibility ?? "public"}>
-              <option value="public">🌍 Public — on the main feed</option>
-              <option value="unlisted">🔗 Link only — anyone with the link</option>
-              <option value="private">🔒 Private — just you</option>
+              <option value="public">{t.visibilityOptions.public}</option>
+              <option value="unlisted">{t.visibilityOptions.unlisted}</option>
+              <option value="private">{t.visibilityOptions.private}</option>
             </select>
           </div>
           <div className="notion-prop">
-            <label htmlFor="photos">🖼️ Add photos</label>
+            <label htmlFor="photos">{t.addPhotos}</label>
             <input
               id="photos"
               type="file"
@@ -105,20 +174,20 @@ export default function EntryForm({ entry }: { entry?: EntryWithAuthor }) {
           className="notion-notes-input"
           rows={10}
           defaultValue={entry?.notes ?? ""}
-          placeholder="Write about the day — the rock, the light, the people, the vibe…"
-          aria-label="Notes"
+          placeholder={t.notesPlaceholder}
+          aria-label={t.notesAria}
         />
 
         {editing && entry!.photos.length > 0 && (
           <>
-            <p className="form-hint">Current photos — tick to remove on save:</p>
+            <p className="form-hint">{t.currentPhotos}</p>
             <div className="photo-grid">
               {entry!.photos.map((photo) => (
                 <label key={photo.id} className="photo-removable">
                   {/* eslint-disable-next-line @next/next/no-img-element -- served from our own DB-backed route, already resized/compressed server-side */}
                   <img src={`/api/photos/${photo.id}`} alt="" />
                   <span className="photo-remove-check">
-                    <input type="checkbox" name="remove_photos" value={photo.id} /> Remove
+                    <input type="checkbox" name="remove_photos" value={photo.id} /> {t.removePhoto}
                   </span>
                 </label>
               ))}
@@ -136,7 +205,7 @@ export default function EntryForm({ entry }: { entry?: EntryWithAuthor }) {
         )}
 
         <div className="notion-editor-actions">
-          <SubmitButton editing={editing} />
+          <SubmitButton editing={editing} t={t} />
         </div>
       </div>
     </form>
