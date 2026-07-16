@@ -1346,3 +1346,43 @@ a {
   background: #b91c1c;
   color: #fff;
 }
+
+/* Auto-generated thumbnail for photo-less entries */
+
+.auto-cover {
+  position: relative;
+  color: var(--accent);
+  background: var(--bg-elevated);
+  display: block;
+}
+
+.auto-cover svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.5;
+}
+
+.auto-cover-info {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+}
+
+.auto-cover-grade {
+  font-family: var(--heading-font), serif;
+  font-size: 2.1rem;
+  font-weight: 700;
+  color: var(--text);
+  opacity: 0.85;
+}
+
+.auto-cover-sub {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}

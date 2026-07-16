@@ -14,7 +14,12 @@ export const pool =
   new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: { rejectUnauthorized: false },
+    idleTimeoutMillis: 30_000,
   });
+
+// Neon terminates idle pooled connections; without a handler that error is an
+// uncaught exception that kills the serverless function mid-request.
+pool.on("error", () => {});
 
 if (process.env.NODE_ENV !== "production") {
   global._cragdiaryPool = pool;

@@ -32,7 +32,8 @@ export async function GET(
   return new Response(new Uint8Array(row.avatar), {
     headers: {
       "Content-Type": row.avatar_type ?? "image/webp",
-      "Cache-Control": row.is_public ? "public, max-age=3600" : "private, max-age=0",
+      // no-cache: a freshly uploaded picture must show immediately (same URL)
+      "Cache-Control": "no-cache",
     },
   });
 }
