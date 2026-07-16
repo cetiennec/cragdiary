@@ -6,6 +6,7 @@ import { createEntry, updateEntry } from "@/app/actions";
 import type { Dict, Locale } from "@/lib/i18n";
 import type { C2cSuggestion } from "@/app/api/c2c/search/route";
 import type { GeoSuggestion } from "@/app/api/geo/search/route";
+import type { UserSuggestion } from "@/app/api/users/search/route";
 import type { EntryWithAuthor } from "@/lib/queries";
 
 type EditorDict = Dict["editor"];
@@ -62,7 +63,8 @@ export default function EntryForm({
   t: EditorDict;
   locale: Locale;
 }) {
-  const [previews, setPreviews] = useState<string[]>([]);
+  const [newFiles, setNewFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const editing = Boolean(entry);
 
   const [title, setTitle] = useState(entry?.crag ?? "");
@@ -75,6 +77,14 @@ export default function EntryForm({
   const [includeSummary, setIncludeSummary] = useState(Boolean(entry?.c2c_summary));
   const [pitches, setPitches] = useState(entry?.pitches ? String(entry.pitches) : "");
 
+  const [monthOnly, setMonthOnly] = useState(entry?.month_only ?? false);
+  const [dateValue, setDateValue] = useState(
+    entry?.entry_date
+      ? entry.month_only
+        ? entry.entry_date.slice(0, 7)
+        : entry.entry_date
+      : today()
+  );
   const [lat, setLat] = useState(entry?.lat != null ? String(entry.lat) : "");
   const [lon, setLon] = useState(entry?.lon != null ? String(entry.lon) : "");
 
@@ -89,6 +99,48 @@ export default function EntryForm({
   const [geoHighlighted, setGeoHighlighted] = useState(-1);
   const geoArmed = useRef(false);
   const geoAbortRef = useRef<AbortController | null>(null);
+
+  const [partners, setPartners] = useState(entry?.partners ?? "");
+  const [mentionSuggestions, setMentionSuggestions] = useState<UserSuggestion[]>([]);
+  const [mentionOpen, setMentionOpen] = useState(false);
+  const [mentionHighlighted, setMentionHighlighted] = useState(-1);
+  const mentionToken = useRef<{ start: number; text: string } | null>(null);
+  const partnersInputRef = useRef<HTMLInputElement>(null);
+
+  function detectMention(value: string, caret: number) {
+    const upToCaret = value.slice(0, caret);
+    const match = /@([a-z0-9-]*)$/i.exec(upToCaret);
+    if (!match) {
+      mentionToken.current = null;
+      setMentionOpen(false);
+      return;
+    }
+    mentionToken.current = { start: match.index, text: match[1] };
+    if (match[1].length < 1) {
+      setMentionOpen(false);
+      return;
+    }
+    fetch(`/api/users/search?q=${encodeURIComponent(match[1])}`)
+      .then((res) => res.json())
+      .then((data: { results: UserSuggestion[] }) => {
+        setMentionSuggestions(data.results);
+        setMentionOpen(data.results.length > 0);
+        setMentionHighlighted(-1);
+      })
+      .catch(() => {});
+  }
+
+  function applyMention(s: UserSuggestion) {
+    const token = mentionToken.current;
+    if (!token) return;
+    const input = partnersInputRef.current;
+    const caret = input?.selectionStart ?? partners.length;
+    const next = `${partners.slice(0, token.start)}@${s.username} ${partners.slice(caret)}`;
+    setPartners(next);
+    mentionToken.current = null;
+    setMentionOpen(false);
+    setMentionSuggestions([]);
+  }
 
   useEffect(() => {
     if (!searchArmed.current || title.trim().length < 3) {
@@ -193,18 +245,32 @@ export default function EntryForm({
     }
   }
 
+  function syncFileInput(files: File[]) {
+    const dt = new DataTransfer();
+    for (const file of files) dt.items.add(file);
+    if (fileInputRef.current) fileInputRef.current.files = dt.files;
+  }
+
   async function handleFiles(e: React.ChangeEvent<HTMLInputElement>) {
-    const input = e.target;
-    const files = Array.from(input.files ?? []);
+    const files = Array.from(e.target.files ?? []);
     if (files.length === 0) {
-      setPreviews([]);
+      setNewFiles([]);
       return;
     }
     const compressed = await Promise.all(files.map(compressImage));
-    const dt = new DataTransfer();
-    for (const file of compressed) dt.items.add(file);
-    input.files = dt.files;
-    setPreviews(compressed.map((f) => URL.createObjectURL(f)));
+    syncFileInput(compressed);
+    setNewFiles(compressed);
+  }
+
+  function moveNewPhoto(index: number, delta: number) {
+    setNewFiles((files) => {
+      const target = index + delta;
+      if (target < 0 || target >= files.length) return files;
+      const next = [...files];
+      [next[index], next[target]] = [next[target], next[index]];
+      syncFileInput(next);
+      return next;
+    });
   }
 
   const [orderedPhotos, setOrderedPhotos] = useState(entry?.photos ?? []);
@@ -293,13 +359,28 @@ export default function EntryForm({
         <div className="notion-props">
           <div className="notion-prop">
             <label htmlFor="entry_date">{t.date}</label>
-            <input
-              id="entry_date"
-              type="date"
-              name="entry_date"
-              defaultValue={entry?.entry_date ?? today()}
-              required
-            />
+            <div className="notion-prop-pair-fields">
+              <input
+                id="entry_date"
+                type={monthOnly ? "month" : "date"}
+                name="entry_date"
+                value={dateValue}
+                onChange={(e) => setDateValue(e.target.value)}
+                required
+              />
+              <label className="notion-prop-inline-label date-precision-toggle">
+                <input
+                  type="checkbox"
+                  checked={monthOnly}
+                  onChange={(e) => {
+                    const next = e.target.checked;
+                    setMonthOnly(next);
+                    setDateValue((v) => (next ? v.slice(0, 7) : v.length === 7 ? `${v}-01` : v));
+                  }}
+                />{" "}
+                {t.monthOnly}
+              </label>
+            </div>
           </div>
           <div className="notion-prop">
             <label htmlFor="location">{t.location}</label>
@@ -431,13 +512,55 @@ export default function EntryForm({
           </div>
           <div className="notion-prop">
             <label htmlFor="partners">{t.partners}</label>
-            <input
-              id="partners"
-              type="text"
-              name="partners"
-              defaultValue={entry?.partners ?? ""}
-              placeholder={t.partnersPlaceholder}
-            />
+            <div className="combobox">
+              <input
+                id="partners"
+                type="text"
+                name="partners"
+                ref={partnersInputRef}
+                value={partners}
+                onChange={(e) => {
+                  setPartners(e.target.value);
+                  detectMention(e.target.value, e.target.selectionStart ?? e.target.value.length);
+                }}
+                onKeyDown={(e) =>
+                  comboKeys(
+                    e,
+                    mentionOpen,
+                    mentionSuggestions.length,
+                    mentionHighlighted,
+                    setMentionHighlighted,
+                    () => applyMention(mentionSuggestions[mentionHighlighted]),
+                    () => setMentionOpen(false)
+                  )
+                }
+                onBlur={() => setTimeout(() => setMentionOpen(false), 150)}
+                autoComplete="off"
+                placeholder={t.partnersPlaceholder}
+              />
+              {mentionOpen && (
+                <ul className="combobox-list" role="listbox">
+                  {mentionSuggestions.map((s, i) => (
+                    <li key={s.username}>
+                      <button
+                        type="button"
+                        role="option"
+                        aria-selected={i === mentionHighlighted}
+                        data-highlighted={i === mentionHighlighted}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          applyMention(s);
+                        }}
+                        onMouseEnter={() => setMentionHighlighted(i)}
+                      >
+                        <span className="combobox-title">{s.display_name}</span>
+                        <span className="combobox-meta">@{s.username}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </div>
           <div className="notion-prop">
             <label htmlFor="routes">{t.routes}</label>
@@ -476,6 +599,7 @@ export default function EntryForm({
               name="photos"
               accept="image/*"
               multiple
+              ref={fileInputRef}
               onChange={handleFiles}
             />
           </div>
@@ -568,11 +692,33 @@ export default function EntryForm({
           </>
         )}
 
-        {previews.length > 0 && (
+        {newFiles.length > 0 && (
           <div className="photo-grid notion-gallery">
-            {previews.map((src, i) => (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img key={i} src={src} alt="" />
+            {newFiles.map((file, i) => (
+              <div key={`${file.name}-${i}`} className="photo-removable">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={URL.createObjectURL(file)} alt="" />
+                <span className="photo-remove-check">
+                  <button
+                    type="button"
+                    className="photo-move-btn"
+                    aria-label={t.movePhotoEarlier}
+                    disabled={i === 0}
+                    onClick={() => moveNewPhoto(i, -1)}
+                  >
+                    ←
+                  </button>
+                  <button
+                    type="button"
+                    className="photo-move-btn"
+                    aria-label={t.movePhotoLater}
+                    disabled={i === newFiles.length - 1}
+                    onClick={() => moveNewPhoto(i, 1)}
+                  >
+                    →
+                  </button>
+                </span>
+              </div>
             ))}
           </div>
         )}

@@ -22,6 +22,12 @@ function parseVisibility(value: FormDataEntryValue | null): Visibility {
   return value === "unlisted" || value === "private" ? value : "public";
 }
 
+function parseEntryDate(formData: FormData): { date: string; monthOnly: boolean } {
+  const raw = String(formData.get("entry_date") ?? "").trim();
+  if (/^\d{4}-\d{2}$/.test(raw)) return { date: `${raw}-01`, monthOnly: true };
+  return { date: raw, monthOnly: formData.get("month_only") === "1" };
+}
+
 function optionalText(value: FormDataEntryValue | null): string | null {
   return String(value ?? "").trim() || null;
 }
@@ -163,7 +169,7 @@ export async function createEntry(formData: FormData): Promise<void> {
   const user = await currentUser();
   if (!user) throw new Error("Unauthorized");
 
-  const entryDate = String(formData.get("entry_date") ?? "");
+  const { date: entryDate, monthOnly } = parseEntryDate(formData);
   const crag = String(formData.get("crag") ?? "").trim();
   const visibility = parseVisibility(formData.get("visibility"));
 
@@ -179,13 +185,14 @@ export async function createEntry(formData: FormData): Promise<void> {
   try {
     const result = await client.query<{ id: string }>(
       `insert into entries
-         (user_id, entry_date, crag, location, style, grade_max, rating, pitches, height_m,
-          routes, partners, notes, c2c_url, c2c_summary, pitch_notes, lat, lon, visibility)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+         (user_id, entry_date, month_only, crag, location, style, grade_max, rating, pitches,
+          height_m, routes, partners, notes, c2c_url, c2c_summary, pitch_notes, lat, lon, visibility)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
        returning id`,
       [
         user.id,
         entryDate,
+        monthOnly,
         crag,
         optionalText(formData.get("location")),
         optionalText(formData.get("style")),
@@ -230,7 +237,7 @@ export async function updateEntry(formData: FormData): Promise<void> {
   if (!user) throw new Error("Unauthorized");
 
   const id = String(formData.get("id") ?? "");
-  const entryDate = String(formData.get("entry_date") ?? "");
+  const { date: entryDate, monthOnly } = parseEntryDate(formData);
   const crag = String(formData.get("crag") ?? "").trim();
   const visibility = parseVisibility(formData.get("visibility"));
 
@@ -250,13 +257,14 @@ export async function updateEntry(formData: FormData): Promise<void> {
   try {
     const updated = await client.query(
       `update entries
-       set entry_date = $1, crag = $2, location = $3, style = $4, grade_max = $5,
-           rating = $6, pitches = $7, height_m = $8, routes = $9, partners = $10,
-           notes = $11, c2c_url = $12, c2c_summary = $13, pitch_notes = $14,
-           lat = $15, lon = $16, visibility = $17
-       where id = $18 and user_id = $19`,
+       set entry_date = $1, month_only = $2, crag = $3, location = $4, style = $5,
+           grade_max = $6, rating = $7, pitches = $8, height_m = $9, routes = $10,
+           partners = $11, notes = $12, c2c_url = $13, c2c_summary = $14,
+           pitch_notes = $15, lat = $16, lon = $17, visibility = $18
+       where id = $19 and user_id = $20`,
       [
         entryDate,
+        monthOnly,
         crag,
         optionalText(formData.get("location")),
         optionalText(formData.get("style")),

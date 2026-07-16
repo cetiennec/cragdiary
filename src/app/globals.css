@@ -720,15 +720,28 @@ a {
   color: var(--text-muted);
 }
 
-/* Entry map */
+/* Entry head: props left, small map right */
 
-.entry-map {
-  margin-top: 1.6rem;
+.entry-head {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.2rem;
+  align-items: start;
+}
+
+@media (min-width: 680px) {
+  .entry-head:has(.entry-map-side) {
+    grid-template-columns: 1fr 260px;
+  }
+}
+
+.entry-map-side {
+  min-width: 0;
 }
 
 .entry-map-frame {
   width: 100%;
-  height: 280px;
+  height: 200px;
   border: 1px solid var(--border);
   border-radius: var(--radius-photo);
   display: block;

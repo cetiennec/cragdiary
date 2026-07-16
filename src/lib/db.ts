@@ -34,6 +34,7 @@ export type Entry = {
   id: string;
   user_id: string;
   entry_date: string;
+  month_only: boolean;
   crag: string;
   location: string | null;
   style: string | null;

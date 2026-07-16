@@ -13,6 +13,7 @@ create table if not exists entries (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references users(id) on delete cascade,
   entry_date date not null,
+  month_only boolean not null default false,
   crag text not null,
   location text,
   style text,

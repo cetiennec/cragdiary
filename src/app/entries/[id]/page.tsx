@@ -1,9 +1,32 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getEntry } from "@/lib/queries";
+import { getEntry, getExistingUsernames } from "@/lib/queries";
 import { currentUser } from "@/lib/auth";
 import { formatDate, getDict } from "@/lib/i18n";
 import DeleteEntryButton from "@/components/DeleteEntryButton";
+
+const MENTION_RE = /@([a-z0-9-]{3,20})/g;
+
+async function renderPartners(partners: string): Promise<React.ReactNode[]> {
+  const mentioned = [...partners.matchAll(MENTION_RE)].map((m) => m[1]);
+  const existing = await getExistingUsernames(mentioned);
+
+  const nodes: React.ReactNode[] = [];
+  let cursor = 0;
+  for (const match of partners.matchAll(MENTION_RE)) {
+    const username = match[1];
+    if (!existing.has(username)) continue;
+    if (match.index > cursor) nodes.push(partners.slice(cursor, match.index));
+    nodes.push(
+      <Link key={`${username}-${match.index}`} href={`/u/${username}`}>
+        @{username}
+      </Link>
+    );
+    cursor = match.index + match[0].length;
+  }
+  if (cursor < partners.length) nodes.push(partners.slice(cursor));
+  return nodes;
+}
 
 export default async function EntryPage({
   params,
@@ -50,10 +73,11 @@ export default async function EntryPage({
 
         {badge && <p className="visibility-badge">{badge}</p>}
 
+        <div className="entry-head">
         <dl className="notion-props">
           <div className="notion-prop">
             <dt>{t.entry.date}</dt>
-            <dd>{formatDate(entry.entry_date, locale)}</dd>
+            <dd>{formatDate(entry.entry_date, locale, entry.month_only)}</dd>
           </div>
           {entry.location && (
             <div className="notion-prop">
@@ -94,7 +118,7 @@ export default async function EntryPage({
           {entry.partners && (
             <div className="notion-prop">
               <dt>{t.entry.partners}</dt>
-              <dd>{entry.partners}</dd>
+              <dd>{await renderPartners(entry.partners)}</dd>
             </div>
           )}
           {entry.c2c_url && (
@@ -114,6 +138,27 @@ export default async function EntryPage({
             </dd>
           </div>
         </dl>
+
+        {entry.lat != null && entry.lon != null && (
+          <div className="entry-map-side">
+            <iframe
+              className="entry-map-frame"
+              src={`https://www.openstreetmap.org/export/embed.html?bbox=${entry.lon - 0.03},${entry.lat - 0.018},${entry.lon + 0.03},${entry.lat + 0.018}&layer=mapnik&marker=${entry.lat},${entry.lon}`}
+              title={t.entry.mapTitle}
+              loading="lazy"
+            />
+            <p className="entry-map-link">
+              <a
+                href={`https://www.openstreetmap.org/?mlat=${entry.lat}&mlon=${entry.lon}#map=14/${entry.lat}/${entry.lon}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {t.entry.mapOpen} ↗
+              </a>
+            </p>
+          </div>
+        )}
+        </div>
 
         <hr className="notion-divider" />
 
@@ -156,27 +201,6 @@ export default async function EntryPage({
               // eslint-disable-next-line @next/next/no-img-element -- served from our own DB-backed route, already resized/compressed server-side
               <img key={photo.id} src={`/api/photos/${photo.id}`} alt="" loading="lazy" />
             ))}
-          </div>
-        )}
-
-        {entry.lat != null && entry.lon != null && (
-          <div className="entry-map">
-            <h2 className="pitch-notes-title">{t.entry.mapTitle}</h2>
-            <iframe
-              className="entry-map-frame"
-              src={`https://www.openstreetmap.org/export/embed.html?bbox=${entry.lon - 0.03},${entry.lat - 0.018},${entry.lon + 0.03},${entry.lat + 0.018}&layer=mapnik&marker=${entry.lat},${entry.lon}`}
-              title={t.entry.mapTitle}
-              loading="lazy"
-            />
-            <p className="entry-map-link">
-              <a
-                href={`https://www.openstreetmap.org/?mlat=${entry.lat}&mlon=${entry.lon}#map=14/${entry.lat}/${entry.lon}`}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                {t.entry.mapOpen} ↗
-              </a>
-            </p>
           </div>
         )}
 

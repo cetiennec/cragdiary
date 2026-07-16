@@ -27,7 +27,7 @@ export default function EntryCard({
       : entry.notes;
 
   const metaBits = [
-    formatDate(entry.entry_date, locale),
+    formatDate(entry.entry_date, locale, entry.month_only),
     entry.location,
     entry.grade_max ? `${entry.grade_max} max` : null,
     showAuthor ? entry.display_name : null,

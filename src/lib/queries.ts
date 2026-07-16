@@ -115,3 +115,12 @@ export async function getAllUsers(): Promise<(User & { entry_count: number })[]>
   );
   return result.rows;
 }
+
+export async function getExistingUsernames(usernames: string[]): Promise<Set<string>> {
+  if (usernames.length === 0) return new Set();
+  const result = await pool.query<{ username: string }>(
+    "select username from users where username = any($1)",
+    [usernames]
+  );
+  return new Set(result.rows.map((r) => r.username));
+}

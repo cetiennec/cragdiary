@@ -53,6 +53,7 @@ const en = {
     titlePlaceholder: "Untitled route or day…",
     titleAria: "Route or day title",
     date: "📅 Date",
+    monthOnly: "Month only",
     location: "📍 Location",
     locationPlaceholder: "Verdon, Cap Canaille…",
     style: "🪢 Style",
@@ -65,7 +66,7 @@ const en = {
     pitches: "🪜 Pitches",
     height: "📏 Height (m)",
     partners: "👥 Partners",
-    partnersPlaceholder: "Léo, Marine…",
+    partnersPlaceholder: "Léo, @marine… (@ to tag a climber)",
     routes: "🧭 Routes",
     routesPlaceholder: "For a cragging day: the routes you did",
     visibility: "👁️ Visibility",
@@ -95,6 +96,7 @@ const en = {
   },
   entry: {
     date: "📅 Date",
+    monthOnly: "Month only",
     location: "📍 Location",
     style: "🪢 Style",
     grade: "🎯 Max grade",
@@ -183,6 +185,7 @@ const fr: Dict = {
     titlePlaceholder: "Voie ou journée sans titre…",
     titleAria: "Nom de la voie ou de la journée",
     date: "📅 Date",
+    monthOnly: "Mois seulement",
     location: "📍 Lieu",
     locationPlaceholder: "Verdon, Cap Canaille…",
     style: "🪢 Style",
@@ -195,7 +198,7 @@ const fr: Dict = {
     pitches: "🪜 Longueurs",
     height: "📏 Hauteur (m)",
     partners: "👥 Partenaires",
-    partnersPlaceholder: "Léo, Marine…",
+    partnersPlaceholder: "Léo, @marine… (@ pour taguer un grimpeur)",
     routes: "🧭 Voies",
     routesPlaceholder: "Pour une journée en couenne : les voies faites",
     visibility: "👁️ Visibilité",
@@ -225,6 +228,7 @@ const fr: Dict = {
   },
   entry: {
     date: "📅 Date",
+    monthOnly: "Mois seulement",
     location: "📍 Lieu",
     style: "🪢 Style",
     grade: "🎯 Cotation max",
@@ -279,12 +283,12 @@ export async function getDict(): Promise<{ locale: Locale; t: Dict }> {
   return { locale, t: dictionaries[locale] };
 }
 
-export function formatDate(dateStr: string, locale: Locale): string {
+export function formatDate(dateStr: string, locale: Locale, monthOnly = false): string {
   const date = new Date(`${dateStr}T00:00:00`);
   return date.toLocaleDateString(locale === "fr" ? "fr-FR" : "en-US", {
     year: "numeric",
     month: "long",
-    day: "numeric",
+    ...(monthOnly ? {} : { day: "numeric" as const }),
   });
 }
 
