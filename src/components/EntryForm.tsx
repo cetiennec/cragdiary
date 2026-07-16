@@ -63,7 +63,6 @@ export default function EntryForm({
   const [lat, setLat] = useState(entry?.lat != null ? String(entry.lat) : "");
   const [lon, setLon] = useState(entry?.lon != null ? String(entry.lon) : "");
 
-  const [autoFilled, setAutoFilled] = useState<Set<string>>(new Set());
   const [excludedFields, setExcludedFields] = useState<Set<string>>(new Set());
 
   function toggleField(name: string) {
@@ -75,8 +74,7 @@ export default function EntryForm({
     });
   }
 
-  function fieldToggle(name: string, always = false) {
-    if (!always && !autoFilled.has(name)) return null;
+  function fieldToggle(name: string) {
     const off = excludedFields.has(name);
     return (
       <button
@@ -201,39 +199,18 @@ export default function EntryForm({
     searchArmed.current = false;
     geoArmed.current = false;
     setTitle(s.title);
-    const filled = new Set<string>();
-    if (s.area) {
-      setLocation(s.area);
-      filled.add("location");
-    }
-    if (s.height_m) {
-      setHeightM(String(s.height_m));
-      filled.add("height_m");
-    }
-    if (s.grade) {
-      setGrade(s.grade);
-      filled.add("grade_max");
-    }
-    if (s.rating) {
-      setRating(s.rating);
-      filled.add("rating");
-    }
-    if (s.orientation) {
-      setOrientation(s.orientation);
-      filled.add("orientation");
-    }
-    if (s.equipment) {
-      setEquipment(s.equipment);
-      filled.add("equipment");
-    }
+    if (s.area) setLocation(s.area);
+    if (s.height_m) setHeightM(String(s.height_m));
+    if (s.grade) setGrade(s.grade);
+    if (s.rating) setRating(s.rating);
+    if (s.orientation) setOrientation(s.orientation);
+    if (s.equipment) setEquipment(s.equipment);
     if (s.summary) setC2cSummary(s.summary);
     setC2cUrl(s.url);
-    filled.add("c2c_url");
     if (s.lat != null && s.lon != null) {
       setLat(String(s.lat));
       setLon(String(s.lon));
     }
-    setAutoFilled(filled);
     setExcludedFields(new Set());
     setSuggestions([]);
     setOpen(false);
@@ -665,7 +642,7 @@ export default function EntryForm({
                 </ul>
               )}
             </div>
-            {fieldToggle("partners", true)}
+            {fieldToggle("partners")}
             </div>
           </div>
           <div className="notion-prop">

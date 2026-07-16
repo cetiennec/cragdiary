@@ -18,8 +18,13 @@ const fraunces = Fraunces({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.APP_URL ?? "https://cragdiary.nanocorp.app"),
   title: "Cragdiary",
   description: "A free, Notion-style journal for climbing days.",
+  openGraph: {
+    siteName: "Cragdiary",
+    type: "website",
+  },
 };
 
 const THEME_INIT_SCRIPT = `
@@ -85,7 +90,8 @@ export default async function RootLayout({
         </header>
         <main className="flex-1">{children}</main>
         <footer className="site-footer">
-          {t.footer} · <Link href="/credits">{t.credits.linkLabel}</Link>
+          {t.footer} · <Link href="/credits">{t.credits.linkLabel}</Link> ·{" "}
+          <Link href="/privacy">{t.privacy.linkLabel}</Link>
         </footer>
       </body>
     </html>

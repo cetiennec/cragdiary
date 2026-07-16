@@ -1266,3 +1266,64 @@ a {
   margin-top: 1.8rem;
   margin-bottom: 0;
 }
+
+/* Profile cover */
+
+.profile-cover {
+  height: clamp(120px, 22vw, 220px);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  margin-bottom: 1.6rem;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+}
+
+.profile-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.profile-cover-default {
+  color: var(--accent);
+  display: flex;
+  align-items: flex-end;
+}
+
+.profile-cover-default svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* Danger zone */
+
+.danger-zone {
+  margin-top: 1.6rem;
+  border-top: 1px dashed var(--border);
+  padding-top: 1rem;
+}
+
+.danger-title {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: #b91c1c;
+  margin: 0 0 0.3rem;
+}
+
+.btn-danger {
+  align-self: flex-start;
+  background: transparent;
+  color: #b91c1c;
+  border: 1px solid #b91c1c;
+  border-radius: 999px;
+  padding: 0.5rem 1.2rem;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-danger:hover {
+  background: #b91c1c;
+  color: #fff;
+}

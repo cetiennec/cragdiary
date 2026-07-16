@@ -5,7 +5,9 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import sharp from "sharp";
 import { pool, type Visibility } from "@/lib/db";
-import { LOCALE_COOKIE } from "@/lib/i18n";
+import { LOCALE_COOKIE, getLocale } from "@/lib/i18n";
+import { sendEmail } from "@/lib/email";
+import { createHash, randomBytes } from "crypto";
 import {
   createSession,
   currentUser,
@@ -123,11 +125,21 @@ export async function signup(formData: FormData): Promise<void> {
   const existing = await pool.query("select 1 from users where username = $1", [username]);
   if (existing.rows.length > 0) redirect("/signup?error=taken");
 
-  const result = await pool.query<{ id: string }>(
-    `insert into users (username, display_name, password_hash)
-     values ($1, $2, $3) returning id`,
-    [username, displayName, hashPassword(password)]
-  );
+  const rawEmail = String(formData.get("email") ?? "").trim().toLowerCase();
+  const email = rawEmail && rawEmail.includes("@") ? rawEmail : null;
+
+  let result;
+  try {
+    result = await pool.query<{ id: string }>(
+      `insert into users (username, display_name, password_hash, email)
+       values ($1, $2, $3, $4) returning id`,
+      [username, displayName, hashPassword(password), email]
+    );
+  } catch (e) {
+    const pgError = e as { code?: string };
+    if (pgError.code === "23505") redirect("/signup?error=email-taken");
+    throw e;
+  }
 
   await createSession(result.rows[0].id);
   redirect(`/u/${username}`);
@@ -160,11 +172,19 @@ export async function updateProfile(formData: FormData): Promise<void> {
 
   const bio = String(formData.get("bio") ?? "").trim() || null;
   const isPublic = formData.get("is_public") === "1";
-  await pool.query("update users set bio = $1, is_public = $2 where id = $3", [
-    bio,
-    isPublic,
-    user.id,
-  ]);
+  const rawEmail = String(formData.get("email") ?? "").trim().toLowerCase();
+  const email = rawEmail && rawEmail.includes("@") ? rawEmail : null;
+
+  try {
+    await pool.query(
+      "update users set bio = $1, is_public = $2, email = $3 where id = $4",
+      [bio, isPublic, email, user.id]
+    );
+  } catch (e) {
+    const pgError = e as { code?: string };
+    if (pgError.code === "23505") redirect(`/u/${user.username}?error=email-taken`);
+    throw e;
+  }
 
   if (formData.get("remove_avatar") === "1") {
     await pool.query("update users set avatar = null, avatar_type = null where id = $1", [
@@ -180,6 +200,25 @@ export async function updateProfile(formData: FormData): Promise<void> {
         .toBuffer();
       await pool.query(
         "update users set avatar = $1, avatar_type = 'image/webp' where id = $2",
+        [processed, user.id]
+      );
+    }
+  }
+
+  if (formData.get("remove_cover") === "1") {
+    await pool.query("update users set cover = null, cover_type = null where id = $1", [
+      user.id,
+    ]);
+  } else {
+    const coverFile = formData.get("cover");
+    if (coverFile instanceof File && coverFile.size > 0) {
+      const processed = await sharp(Buffer.from(await coverFile.arrayBuffer()))
+        .rotate()
+        .resize({ width: 1400, height: 420, fit: "cover" })
+        .webp({ quality: 80 })
+        .toBuffer();
+      await pool.query(
+        "update users set cover = $1, cover_type = 'image/webp' where id = $2",
         [processed, user.id]
       );
     }
@@ -381,5 +420,86 @@ export async function deleteEntry(formData: FormData): Promise<void> {
 
   revalidatePath("/");
   revalidatePath(`/u/${user.username}`);
+  redirect("/");
+}
+
+function siteUrl(): string {
+  return process.env.APP_URL ?? "https://cragdiary.nanocorp.app";
+}
+
+export async function requestPasswordReset(formData: FormData): Promise<void> {
+  const identifier = String(formData.get("identifier") ?? "").trim().toLowerCase();
+  const locale = await getLocale();
+
+  if (identifier) {
+    const result = await pool.query<{ id: string; email: string | null; username: string }>(
+      "select id, email, username from users where username = $1 or lower(email) = $1",
+      [identifier]
+    );
+    const user = result.rows[0];
+    if (user?.email) {
+      const token = randomBytes(32).toString("hex");
+      const tokenHash = createHash("sha256").update(token).digest("hex");
+      await pool.query(
+        `insert into password_resets (user_id, token_hash, expires_at)
+         values ($1, $2, now() + interval '1 hour')`,
+        [user.id, tokenHash]
+      );
+      const link = `${siteUrl()}/reset/${token}`;
+      const subject =
+        locale === "fr" ? "Cragdiary — réinitialisation du mot de passe" : "Cragdiary — password reset";
+      const html =
+        locale === "fr"
+          ? `<p>Bonjour @${user.username},</p><p>Pour choisir un nouveau mot de passe, ouvrez ce lien (valable 1 heure) :</p><p><a href="${link}">${link}</a></p><p>Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.</p>`
+          : `<p>Hi @${user.username},</p><p>To choose a new password, open this link (valid for 1 hour):</p><p><a href="${link}">${link}</a></p><p>If you didn't request this, just ignore this email.</p>`;
+      await sendEmail(user.email, subject, html);
+    }
+  }
+
+  // Same answer whether or not the account exists — no enumeration.
+  redirect("/forgot?sent=1");
+}
+
+export async function resetPassword(formData: FormData): Promise<void> {
+  const token = String(formData.get("token") ?? "");
+  const password = String(formData.get("password") ?? "");
+  if (!token) redirect("/login");
+  if (password.length < 8) redirect(`/reset/${token}?error=password`);
+
+  const tokenHash = createHash("sha256").update(token).digest("hex");
+  const result = await pool.query<{ id: string; user_id: string }>(
+    `select id, user_id from password_resets
+     where token_hash = $1 and not used and expires_at > now()`,
+    [tokenHash]
+  );
+  const reset = result.rows[0];
+  if (!reset) redirect(`/reset/${token}?error=invalid`);
+
+  await pool.query("update users set password_hash = $1 where id = $2", [
+    hashPassword(password),
+    reset.user_id,
+  ]);
+  await pool.query("update password_resets set used = true where id = $1", [reset.id]);
+
+  await createSession(reset.user_id);
+  redirect("/");
+}
+
+export async function deleteAccount(formData: FormData): Promise<void> {
+  const user = await currentUser();
+  if (!user) throw new Error("Unauthorized");
+
+  const password = String(formData.get("confirm_password") ?? "");
+  const result = await pool.query<{ password_hash: string }>(
+    "select password_hash from users where id = $1",
+    [user.id]
+  );
+  if (!verifyPassword(password, result.rows[0].password_hash)) {
+    redirect(`/u/${user.username}?error=wrong-password`);
+  }
+
+  await pool.query("delete from users where id = $1", [user.id]);
+  await destroySession();
+  revalidatePath("/");
   redirect("/");
 }

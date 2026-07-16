@@ -27,7 +27,8 @@ export default async function LoginPage({
         </button>
         <p className="form-hint">
           {t.login.hintPre}
-          <Link href="/signup">{t.login.hintLink}</Link>.
+          <Link href="/signup">{t.login.hintLink}</Link>.{" "}
+          <Link href="/forgot">{t.login.forgot}</Link>
         </p>
       </form>
     </div>

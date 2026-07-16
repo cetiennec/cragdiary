@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getEntriesByUser, getUserByUsername, getUserStats } from "@/lib/queries";
 import { currentUser } from "@/lib/auth";
@@ -6,13 +7,42 @@ import { formatMeters, getDict } from "@/lib/i18n";
 import EntryCard from "@/components/EntryCard";
 import ProfileMap from "@/components/ProfileMap";
 import ProfileSettingsForm from "@/components/ProfileSettingsForm";
+import ProfileCover from "@/components/ProfileCover";
 
-export default async function ProfilePage({
+export async function generateMetadata({
   params,
 }: {
   params: Promise<{ username: string }>;
-}) {
+}): Promise<Metadata> {
   const { username } = await params;
+  const profile = await getUserByUsername(username);
+  if (!profile || !profile.is_public) return {};
+
+  const description = profile.bio ?? `@${profile.username} on Cragdiary`;
+  return {
+    title: `${profile.display_name} — Cragdiary`,
+    description,
+    openGraph: {
+      title: profile.display_name,
+      description,
+      type: "profile",
+      images: profile.has_cover
+        ? [{ url: `/api/covers/${profile.username}` }]
+        : profile.has_avatar
+          ? [{ url: `/api/avatars/${profile.username}` }]
+          : [],
+    },
+  };
+}
+
+export default async function ProfilePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ username: string }>;
+  searchParams: Promise<{ error?: string }>;
+}) {
+  const [{ username }, { error }] = await Promise.all([params, searchParams]);
 
   const [profile, user, { locale, t }] = await Promise.all([
     getUserByUsername(username),
@@ -36,7 +66,13 @@ export default async function ProfilePage({
   ];
 
   return (
-    <div className="page-container">
+    <div className="page-container profile-page">
+      <ProfileCover username={profile.username} hasCover={profile.has_cover} />
+      {isSelf && error && (
+        <p className="form-error">
+          {error === "email-taken" ? t.profile.emailTaken : t.profile.wrongPassword}
+        </p>
+      )}
       <header className="profile-header">
         <div className="profile-avatar" aria-hidden>
           {profile.has_avatar ? (
@@ -60,8 +96,10 @@ export default async function ProfilePage({
           <summary>{t.profile.settingsTitle}</summary>
           <ProfileSettingsForm
             bio={profile.bio ?? ""}
+            email={profile.email ?? ""}
             isPublic={profile.is_public}
             hasAvatar={profile.has_avatar}
+            hasCover={profile.has_cover}
             t={{
               bioLabel: t.profile.bioLabel,
               avatarLabel: t.profile.avatarLabel,
@@ -69,6 +107,14 @@ export default async function ProfilePage({
               publicLabel: t.profile.publicLabel,
               privateHint: t.profile.privateHint,
               settingsSave: t.profile.settingsSave,
+              emailLabel: t.profile.emailLabel,
+              emailHint: t.profile.emailHint,
+              coverLabel: t.profile.coverLabel,
+              coverRemove: t.profile.coverRemove,
+              dangerTitle: t.profile.dangerTitle,
+              deleteLabel: t.profile.deleteLabel,
+              deleteConfirmPassword: t.profile.deleteConfirmPassword,
+              deleteButton: t.profile.deleteButton,
             }}
           />
         </details>

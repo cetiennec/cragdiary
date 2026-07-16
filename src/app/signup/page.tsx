@@ -31,6 +31,10 @@ export default async function SignupPage({
           <input type="text" name="display_name" required placeholder={t.signup.displayNameHint} />
         </label>
         <label>
+          {t.signup.email}
+          <input type="email" name="email" autoComplete="email" placeholder={t.signup.emailHint} />
+        </label>
+        <label>
           {t.signup.password}
           <input
             type="password"

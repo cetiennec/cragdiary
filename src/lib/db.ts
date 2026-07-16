@@ -27,6 +27,8 @@ export type User = {
   bio: string | null;
   is_public: boolean;
   has_avatar: boolean;
+  has_cover: boolean;
+  email: string | null;
   created_at: string;
 };
 

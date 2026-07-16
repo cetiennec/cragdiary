@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getEntry, getExistingUsernames } from "@/lib/queries";
 import { currentUser } from "@/lib/auth";
@@ -67,6 +68,40 @@ async function renderPartners(partners: string): Promise<React.ReactNode[]> {
   }
   if (cursor < partners.length) nodes.push(partners.slice(cursor));
   return nodes;
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const entry = await getEntry(id);
+  if (!entry || entry.visibility === "private") return {};
+
+  const cover = entry.photos.find((p) => !p.align) ?? entry.photos[0];
+  const bits = [
+    entry.location,
+    entry.grade_max ? `${entry.grade_max} max` : null,
+    entry.pitches ? `${entry.pitches}L` : null,
+    entry.height_m ? `${entry.height_m} m` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  const description =
+    bits || entry.notes?.slice(0, 140) || "A climbing day on Cragdiary.";
+
+  return {
+    title: `${entry.crag} — Cragdiary`,
+    description,
+    openGraph: {
+      title: entry.crag,
+      description,
+      type: "article",
+      images: cover ? [{ url: `/api/photos/${cover.id}` }] : [],
+    },
+    twitter: { card: cover ? "summary_large_image" : "summary" },
+  };
 }
 
 export default async function EntryPage({
