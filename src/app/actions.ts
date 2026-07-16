@@ -166,6 +166,25 @@ export async function updateProfile(formData: FormData): Promise<void> {
     user.id,
   ]);
 
+  if (formData.get("remove_avatar") === "1") {
+    await pool.query("update users set avatar = null, avatar_type = null where id = $1", [
+      user.id,
+    ]);
+  } else {
+    const file = formData.get("avatar");
+    if (file instanceof File && file.size > 0) {
+      const processed = await sharp(Buffer.from(await file.arrayBuffer()))
+        .rotate()
+        .resize({ width: 320, height: 320, fit: "cover" })
+        .webp({ quality: 80 })
+        .toBuffer();
+      await pool.query(
+        "update users set avatar = $1, avatar_type = 'image/webp' where id = $2",
+        [processed, user.id]
+      );
+    }
+  }
+
   revalidatePath("/");
   revalidatePath("/climbers");
   revalidatePath(`/u/${user.username}`);

@@ -26,6 +26,7 @@ export type User = {
   display_name: string;
   bio: string | null;
   is_public: boolean;
+  has_avatar: boolean;
   created_at: string;
 };
 

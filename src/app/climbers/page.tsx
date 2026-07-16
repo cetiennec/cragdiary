@@ -12,7 +12,12 @@ export default async function ClimbersPage() {
         {users.map((user) => (
           <Link key={user.id} href={`/u/${user.username}`} className="climber-row">
             <span className="profile-avatar profile-avatar-sm" aria-hidden>
-              {user.display_name.slice(0, 1).toUpperCase()}
+              {user.has_avatar ? (
+                // eslint-disable-next-line @next/next/no-img-element -- served from our own DB-backed route, already resized server-side
+                <img src={`/api/avatars/${user.username}`} alt="" loading="lazy" />
+              ) : (
+                user.display_name.slice(0, 1).toUpperCase()
+              )}
             </span>
             <span className="climber-name">{user.display_name}</span>
             <span className="climber-meta">

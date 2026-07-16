@@ -7,6 +7,8 @@ create table if not exists users (
   password_hash text not null,
   bio text,
   is_public boolean not null default true,
+  avatar bytea,
+  avatar_type text,
   created_at timestamptz not null default now()
 );
 

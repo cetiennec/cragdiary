@@ -59,7 +59,7 @@ export async function getEntry(id: string): Promise<EntryWithAuthor | null> {
 
 export async function getUserByUsername(username: string): Promise<User | null> {
   const result = await pool.query<User>(
-    "select id, username, display_name, bio, is_public, created_at from users where username = $1",
+    "select id, username, display_name, bio, is_public, avatar is not null as has_avatar, created_at from users where username = $1",
     [username]
   );
   return result.rows[0] ?? null;
@@ -107,7 +107,8 @@ export async function getUserStats(
 
 export async function getAllUsers(): Promise<(User & { entry_count: number })[]> {
   const result = await pool.query<User & { entry_count: number }>(
-    `select u.id, u.username, u.display_name, u.bio, u.is_public, u.created_at,
+    `select u.id, u.username, u.display_name, u.bio, u.is_public,
+            u.avatar is not null as has_avatar, u.created_at,
             count(e.id) filter (where e.visibility = 'public')::int as entry_count
      from users u
      left join entries e on e.user_id = u.id

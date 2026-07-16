@@ -8,41 +8,14 @@ import type { C2cSuggestion } from "@/app/api/c2c/search/route";
 import type { GeoSuggestion } from "@/app/api/geo/search/route";
 import type { UserSuggestion } from "@/app/api/users/search/route";
 import type { EntryWithAuthor } from "@/lib/queries";
+import { compressImage } from "@/lib/client-image";
 
 type EditorDict = Dict["editor"];
 
 const MAX_PITCH_SECTIONS = 40;
-const CLIENT_MAX_DIMENSION = 1800;
-const CLIENT_JPEG_QUALITY = 0.82;
 
 function today(): string {
   return new Date().toISOString().slice(0, 10);
-}
-
-// Vercel caps request bodies at ~4.5 MB, so full-size phone photos must be
-// downscaled in the browser before upload or multi-photo posts get rejected.
-async function compressImage(file: File): Promise<File> {
-  try {
-    const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
-    const scale = Math.min(1, CLIENT_MAX_DIMENSION / Math.max(bitmap.width, bitmap.height));
-    const width = Math.round(bitmap.width * scale);
-    const height = Math.round(bitmap.height * scale);
-    const canvas = document.createElement("canvas");
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return file;
-    ctx.drawImage(bitmap, 0, 0, width, height);
-    const blob = await new Promise<Blob | null>((resolve) =>
-      canvas.toBlob(resolve, "image/jpeg", CLIENT_JPEG_QUALITY)
-    );
-    if (!blob || blob.size >= file.size) return file;
-    return new File([blob], file.name.replace(/\.\w+$/, "") + ".jpg", {
-      type: "image/jpeg",
-    });
-  } catch {
-    return file;
-  }
 }
 
 function SubmitButton({ editing, t }: { editing: boolean; t: EditorDict }) {
@@ -311,7 +284,7 @@ export default function EntryForm({
       setNewFiles([]);
       return;
     }
-    const compressed = await Promise.all(files.map(compressImage));
+    const compressed = await Promise.all(files.map((f) => compressImage(f)));
     syncFileInput(compressed);
     setNewFiles(compressed);
   }

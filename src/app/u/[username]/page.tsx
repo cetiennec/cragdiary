@@ -5,7 +5,7 @@ import { currentUser } from "@/lib/auth";
 import { formatMeters, getDict } from "@/lib/i18n";
 import EntryCard from "@/components/EntryCard";
 import ProfileMap from "@/components/ProfileMap";
-import { updateProfile } from "@/app/actions";
+import ProfileSettingsForm from "@/components/ProfileSettingsForm";
 
 export default async function ProfilePage({
   params,
@@ -39,7 +39,12 @@ export default async function ProfilePage({
     <div className="page-container">
       <header className="profile-header">
         <div className="profile-avatar" aria-hidden>
-          {profile.display_name.slice(0, 1).toUpperCase()}
+          {profile.has_avatar ? (
+            // eslint-disable-next-line @next/next/no-img-element -- served from our own DB-backed route, already resized server-side
+            <img src={`/api/avatars/${profile.username}`} alt="" />
+          ) : (
+            profile.display_name.slice(0, 1).toUpperCase()
+          )}
         </div>
         <div>
           <h1 className="profile-name">{profile.display_name}</h1>
@@ -53,20 +58,19 @@ export default async function ProfilePage({
       {isSelf && (
         <details className="profile-settings">
           <summary>{t.profile.settingsTitle}</summary>
-          <form action={updateProfile} className="entry-form profile-settings-form">
-            <label>
-              {t.profile.bioLabel}
-              <textarea name="bio" rows={3} defaultValue={profile.bio ?? ""} />
-            </label>
-            <label className="profile-public-toggle">
-              <input type="checkbox" name="is_public" value="1" defaultChecked={profile.is_public} />{" "}
-              {t.profile.publicLabel}
-            </label>
-            {!profile.is_public && <p className="form-hint">{t.profile.privateHint}</p>}
-            <button type="submit" className="btn-primary">
-              {t.profile.settingsSave}
-            </button>
-          </form>
+          <ProfileSettingsForm
+            bio={profile.bio ?? ""}
+            isPublic={profile.is_public}
+            hasAvatar={profile.has_avatar}
+            t={{
+              bioLabel: t.profile.bioLabel,
+              avatarLabel: t.profile.avatarLabel,
+              avatarRemove: t.profile.avatarRemove,
+              publicLabel: t.profile.publicLabel,
+              privateHint: t.profile.privateHint,
+              settingsSave: t.profile.settingsSave,
+            }}
+          />
         </details>
       )}
 
