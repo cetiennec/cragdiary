@@ -18,7 +18,7 @@ const en = {
   feed: {
     tabAll: "Everyone",
     tabCordees: "My rope parties",
-    emptyCordees: "No entries from climbers you follow — follow someone from their journal page.",
+    emptyCordees: "No entries from your rope parties yet — a rope party is someone you follow, or someone you climbed with (tagged with @ in partners, either way).",
     empty: "No entries yet.",
     logFirst: "Log your first day out",
     createPre: "",
@@ -270,7 +270,7 @@ const fr: Dict = {
   feed: {
     tabAll: "Tout le monde",
     tabCordees: "Mes cordées",
-    emptyCordees: "Aucune entrée de vos cordées — suivez quelqu'un depuis sa page carnet.",
+    emptyCordees: "Aucune entrée de vos cordées — une cordée, c'est quelqu'un que vous suivez ou avec qui vous avez grimpé (mentionné avec @ dans les partenaires, dans un sens ou dans l'autre).",
     empty: "Aucune entrée pour l'instant.",
     logFirst: "Racontez votre première sortie",
     createPre: "",

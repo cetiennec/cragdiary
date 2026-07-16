@@ -28,7 +28,9 @@ export default async function Home({
   const cordees = params.feed === "cordees" && Boolean(user);
   const filters = parseFilters(params);
   const [entries, years] = await Promise.all([
-    getFeed(filters, { followerId: cordees ? user!.id : null }),
+    getFeed(filters, {
+      cordeesOf: cordees ? { id: user!.id, username: user!.username } : null,
+    }),
     getEntryYears(),
   ]);
 

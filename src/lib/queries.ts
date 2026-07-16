@@ -63,15 +63,27 @@ function filterConditions(
 
 export async function getFeed(
   filters: EntryFilters = {},
-  { followerId = null }: { followerId?: string | null } = {}
+  { cordeesOf = null }: { cordeesOf?: { id: string; username: string } | null } = {}
 ): Promise<EntryWithAuthor[]> {
   const params: unknown[] = [];
   const conds = ["e.visibility = 'public'"];
-  if (followerId) {
-    params.push(followerId);
-    conds.push(
-      `e.user_id in (select followee_id from follows where follower_id = $${params.length})`
-    );
+  if (cordeesOf) {
+    params.push(cordeesOf.id);
+    const pid = params.length;
+    params.push(cordeesOf.username);
+    const pu = params.length;
+    // A rope party: someone you follow, someone you tagged as a partner,
+    // or someone who tagged you as a partner.
+    conds.push(`(
+      e.user_id in (select followee_id from follows where follower_id = $${pid})
+      or exists (select 1 from entries mine
+                 where mine.user_id = $${pid}
+                   and mine.partners ~* ('@' || u.username || '([^a-z0-9-]|$)'))
+      or exists (select 1 from entries theirs
+                 where theirs.user_id = e.user_id
+                   and theirs.partners ~* ('@' || $${pu} || '([^a-z0-9-]|$)'))
+    )`);
+    conds.push(`e.user_id != $${pid}`);
     conds.push("u.visibility != 'private'");
   } else {
     conds.push("u.visibility = 'public'");
