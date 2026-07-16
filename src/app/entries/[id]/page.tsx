@@ -5,6 +5,7 @@ import { getEntry, getExistingUsernames } from "@/lib/queries";
 import { currentUser } from "@/lib/auth";
 import { formatDate, getDict } from "@/lib/i18n";
 import DeleteEntryButton from "@/components/DeleteEntryButton";
+import AutoCover from "@/components/AutoCover";
 
 const MENTION_RE = /@([a-z0-9-]{3,20})/g;
 
@@ -139,11 +140,13 @@ export default async function EntryPage({
 
   return (
     <article className="notion-page">
-      {cover && (
+      {cover ? (
         <div className="notion-cover">
           {/* eslint-disable-next-line @next/next/no-img-element -- served from our own DB-backed route, already resized/compressed server-side */}
           <img src={`/api/photos/${cover.id}`} alt="" />
         </div>
+      ) : (
+        <AutoCover entry={entry} className="notion-cover auto-cover" showTag={false} />
       )}
 
       <div className="notion-body">
