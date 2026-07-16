@@ -19,6 +19,8 @@ create table if not exists entries (
   style text,
   grade_max text,
   rating text,
+  orientation text,
+  equipment text,
   pitches integer,
   height_m integer,
   routes text,

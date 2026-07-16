@@ -11,6 +11,8 @@ type C2cRoute = {
   height_diff_up?: number | null;
   rock_free_rating?: string | null;
   global_rating?: string | null;
+  orientations?: string[] | null;
+  equipment_rating?: string | null;
   geometry?: { geom?: string | null } | null;
 };
 
@@ -21,6 +23,8 @@ export type C2cSuggestion = {
   height_m: number | null;
   grade: string | null;
   rating: string | null;
+  orientation: string | null;
+  equipment: string | null;
   url: string;
   lat: number | null;
   lon: number | null;
@@ -82,6 +86,8 @@ export async function GET(req: Request) {
           height_m: doc.height_diff_difficulties ?? doc.height_diff_up ?? null,
           grade: doc.rock_free_rating ?? null,
           rating: doc.global_rating ?? null,
+          orientation: doc.orientations?.length ? doc.orientations.join(", ") : null,
+          equipment: doc.equipment_rating ?? null,
           url: `${C2C_SITE}/${doc.document_id}`,
           lat: coords?.lat ?? null,
           lon: coords?.lon ?? null,

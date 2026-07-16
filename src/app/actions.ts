@@ -185,9 +185,10 @@ export async function createEntry(formData: FormData): Promise<void> {
   try {
     const result = await client.query<{ id: string }>(
       `insert into entries
-         (user_id, entry_date, month_only, crag, location, style, grade_max, rating, pitches,
-          height_m, routes, partners, notes, c2c_url, c2c_summary, pitch_notes, lat, lon, visibility)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+         (user_id, entry_date, month_only, crag, location, style, grade_max, rating,
+          orientation, equipment, pitches, height_m, routes, partners, notes,
+          c2c_url, c2c_summary, pitch_notes, lat, lon, visibility)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
        returning id`,
       [
         user.id,
@@ -198,6 +199,8 @@ export async function createEntry(formData: FormData): Promise<void> {
         optionalText(formData.get("style")),
         optionalText(formData.get("grade_max")),
         optionalText(formData.get("rating")),
+        optionalText(formData.get("orientation")),
+        optionalText(formData.get("equipment")),
         pitches,
         optionalInt(formData.get("height_m")),
         optionalText(formData.get("routes")),
@@ -258,10 +261,10 @@ export async function updateEntry(formData: FormData): Promise<void> {
     const updated = await client.query(
       `update entries
        set entry_date = $1, month_only = $2, crag = $3, location = $4, style = $5,
-           grade_max = $6, rating = $7, pitches = $8, height_m = $9, routes = $10,
-           partners = $11, notes = $12, c2c_url = $13, c2c_summary = $14,
-           pitch_notes = $15, lat = $16, lon = $17, visibility = $18
-       where id = $19 and user_id = $20`,
+           grade_max = $6, rating = $7, orientation = $8, equipment = $9, pitches = $10,
+           height_m = $11, routes = $12, partners = $13, notes = $14, c2c_url = $15,
+           c2c_summary = $16, pitch_notes = $17, lat = $18, lon = $19, visibility = $20
+       where id = $21 and user_id = $22`,
       [
         entryDate,
         monthOnly,
@@ -270,6 +273,8 @@ export async function updateEntry(formData: FormData): Promise<void> {
         optionalText(formData.get("style")),
         optionalText(formData.get("grade_max")),
         optionalText(formData.get("rating")),
+        optionalText(formData.get("orientation")),
+        optionalText(formData.get("equipment")),
         pitches,
         optionalInt(formData.get("height_m")),
         optionalText(formData.get("routes")),

@@ -40,6 +40,8 @@ export type Entry = {
   style: string | null;
   grade_max: string | null;
   rating: string | null;
+  orientation: string | null;
+  equipment: string | null;
   pitches: number | null;
   height_m: number | null;
   routes: string | null;

@@ -71,6 +71,8 @@ export default function EntryForm({
   const [location, setLocation] = useState(entry?.location ?? "");
   const [grade, setGrade] = useState(entry?.grade_max ?? "");
   const [rating, setRating] = useState(entry?.rating ?? "");
+  const [orientation, setOrientation] = useState(entry?.orientation ?? "");
+  const [equipment, setEquipment] = useState(entry?.equipment ?? "");
   const [heightM, setHeightM] = useState(entry?.height_m ? String(entry.height_m) : "");
   const [c2cUrl, setC2cUrl] = useState(entry?.c2c_url ?? "");
   const [c2cSummary, setC2cSummary] = useState(entry?.c2c_summary ?? "");
@@ -202,6 +204,8 @@ export default function EntryForm({
     if (s.height_m) setHeightM(String(s.height_m));
     if (s.grade) setGrade(s.grade);
     if (s.rating) setRating(s.rating);
+    if (s.orientation) setOrientation(s.orientation);
+    if (s.equipment) setEquipment(s.equipment);
     if (s.summary) setC2cSummary(s.summary);
     setC2cUrl(s.url);
     if (s.lat != null && s.lon != null) {
@@ -481,6 +485,40 @@ export default function EntryForm({
                   <option key={option} value={option} />
                 )
               )}
+            </datalist>
+          </div>
+          <div className="notion-prop">
+            <label htmlFor="orientation">{t.orientation}</label>
+            <input
+              id="orientation"
+              type="text"
+              name="orientation"
+              list="orientation-options"
+              value={orientation}
+              onChange={(e) => setOrientation(e.target.value)}
+              placeholder={t.orientationPlaceholder}
+            />
+            <datalist id="orientation-options">
+              {["N", "NE", "E", "SE", "S", "SW", "W", "NW"].map((o) => (
+                <option key={o} value={o} />
+              ))}
+            </datalist>
+          </div>
+          <div className="notion-prop">
+            <label htmlFor="equipment">{t.equipment}</label>
+            <input
+              id="equipment"
+              type="text"
+              name="equipment"
+              list="equipment-options"
+              value={equipment}
+              onChange={(e) => setEquipment(e.target.value)}
+              placeholder={t.equipmentPlaceholder}
+            />
+            <datalist id="equipment-options">
+              {["P1", "P1+", "P2", "P2+", "P3", "P3+", "P4", "P4+"].map((o) => (
+                <option key={o} value={o} />
+              ))}
             </datalist>
           </div>
           <div className="notion-prop notion-prop-pair">

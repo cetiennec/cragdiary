@@ -103,6 +103,18 @@ export default async function EntryPage({
               <dd>{entry.rating}</dd>
             </div>
           )}
+          {entry.orientation && (
+            <div className="notion-prop">
+              <dt>{t.entry.orientation}</dt>
+              <dd>{entry.orientation}</dd>
+            </div>
+          )}
+          {entry.equipment && (
+            <div className="notion-prop">
+              <dt>{t.entry.equipment}</dt>
+              <dd>{entry.equipment}</dd>
+            </div>
+          )}
           {pitchesAndHeight && (
             <div className="notion-prop">
               <dt>{t.entry.pitches}</dt>
