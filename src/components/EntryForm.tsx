@@ -5,14 +5,43 @@ import { useFormStatus } from "react-dom";
 import { createEntry, updateEntry } from "@/app/actions";
 import type { Dict, Locale } from "@/lib/i18n";
 import type { C2cSuggestion } from "@/app/api/c2c/search/route";
+import type { GeoSuggestion } from "@/app/api/geo/search/route";
 import type { EntryWithAuthor } from "@/lib/queries";
 
 type EditorDict = Dict["editor"];
 
 const MAX_PITCH_SECTIONS = 40;
+const CLIENT_MAX_DIMENSION = 1800;
+const CLIENT_JPEG_QUALITY = 0.82;
 
 function today(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+// Vercel caps request bodies at ~4.5 MB, so full-size phone photos must be
+// downscaled in the browser before upload or multi-photo posts get rejected.
+async function compressImage(file: File): Promise<File> {
+  try {
+    const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+    const scale = Math.min(1, CLIENT_MAX_DIMENSION / Math.max(bitmap.width, bitmap.height));
+    const width = Math.round(bitmap.width * scale);
+    const height = Math.round(bitmap.height * scale);
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return file;
+    ctx.drawImage(bitmap, 0, 0, width, height);
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, "image/jpeg", CLIENT_JPEG_QUALITY)
+    );
+    if (!blob || blob.size >= file.size) return file;
+    return new File([blob], file.name.replace(/\.\w+$/, "") + ".jpg", {
+      type: "image/jpeg",
+    });
+  } catch {
+    return file;
+  }
 }
 
 function SubmitButton({ editing, t }: { editing: boolean; t: EditorDict }) {
@@ -39,15 +68,27 @@ export default function EntryForm({
   const [title, setTitle] = useState(entry?.crag ?? "");
   const [location, setLocation] = useState(entry?.location ?? "");
   const [grade, setGrade] = useState(entry?.grade_max ?? "");
+  const [rating, setRating] = useState(entry?.rating ?? "");
   const [heightM, setHeightM] = useState(entry?.height_m ? String(entry.height_m) : "");
   const [c2cUrl, setC2cUrl] = useState(entry?.c2c_url ?? "");
+  const [c2cSummary, setC2cSummary] = useState(entry?.c2c_summary ?? "");
+  const [includeSummary, setIncludeSummary] = useState(Boolean(entry?.c2c_summary));
   const [pitches, setPitches] = useState(entry?.pitches ? String(entry.pitches) : "");
+
+  const [lat, setLat] = useState(entry?.lat != null ? String(entry.lat) : "");
+  const [lon, setLon] = useState(entry?.lon != null ? String(entry.lon) : "");
 
   const [suggestions, setSuggestions] = useState<C2cSuggestion[]>([]);
   const [open, setOpen] = useState(false);
   const [highlighted, setHighlighted] = useState(-1);
   const searchArmed = useRef(false);
   const abortRef = useRef<AbortController | null>(null);
+
+  const [geoSuggestions, setGeoSuggestions] = useState<GeoSuggestion[]>([]);
+  const [geoOpen, setGeoOpen] = useState(false);
+  const [geoHighlighted, setGeoHighlighted] = useState(-1);
+  const geoArmed = useRef(false);
+  const geoAbortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     if (!searchArmed.current || title.trim().length < 3) {
@@ -75,36 +116,107 @@ export default function EntryForm({
     return () => clearTimeout(timer);
   }, [title, locale]);
 
+  useEffect(() => {
+    if (!geoArmed.current || location.trim().length < 3) {
+      setGeoSuggestions([]);
+      setGeoOpen(false);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      geoAbortRef.current?.abort();
+      const controller = new AbortController();
+      geoAbortRef.current = controller;
+      try {
+        const res = await fetch(
+          `/api/geo/search?q=${encodeURIComponent(location.trim())}&lang=${locale}`,
+          { signal: controller.signal }
+        );
+        const data = (await res.json()) as { results: GeoSuggestion[] };
+        setGeoSuggestions(data.results);
+        setGeoOpen(data.results.length > 0);
+        setGeoHighlighted(-1);
+      } catch {
+        // aborted or network error — keep the editor silent and usable
+      }
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [location, locale]);
+
   function applySuggestion(s: C2cSuggestion) {
     searchArmed.current = false;
+    geoArmed.current = false;
     setTitle(s.title);
     if (s.area) setLocation(s.area);
     if (s.height_m) setHeightM(String(s.height_m));
     if (s.grade) setGrade(s.grade);
+    if (s.rating) setRating(s.rating);
+    if (s.summary) setC2cSummary(s.summary);
     setC2cUrl(s.url);
+    if (s.lat != null && s.lon != null) {
+      setLat(String(s.lat));
+      setLon(String(s.lon));
+    }
     setSuggestions([]);
     setOpen(false);
   }
 
-  function handleTitleKeys(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (!open) return;
+  function applyGeoSuggestion(s: GeoSuggestion) {
+    geoArmed.current = false;
+    setLocation(s.name);
+    setLat(String(s.lat));
+    setLon(String(s.lon));
+    setGeoSuggestions([]);
+    setGeoOpen(false);
+  }
+
+  function comboKeys(
+    e: React.KeyboardEvent<HTMLInputElement>,
+    isOpen: boolean,
+    count: number,
+    idx: number,
+    setIdx: (fn: (h: number) => number) => void,
+    pick: () => void,
+    close: () => void
+  ) {
+    if (!isOpen) return;
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      setHighlighted((h) => Math.min(h + 1, suggestions.length - 1));
+      setIdx((h) => Math.min(h + 1, count - 1));
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
-      setHighlighted((h) => Math.max(h - 1, -1));
-    } else if (e.key === "Enter" && highlighted >= 0) {
+      setIdx((h) => Math.max(h - 1, -1));
+    } else if (e.key === "Enter" && idx >= 0) {
       e.preventDefault();
-      applySuggestion(suggestions[highlighted]);
+      pick();
     } else if (e.key === "Escape") {
-      setOpen(false);
+      close();
     }
   }
 
-  function handleFiles(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files ?? []);
-    setPreviews(files.map((f) => URL.createObjectURL(f)));
+  async function handleFiles(e: React.ChangeEvent<HTMLInputElement>) {
+    const input = e.target;
+    const files = Array.from(input.files ?? []);
+    if (files.length === 0) {
+      setPreviews([]);
+      return;
+    }
+    const compressed = await Promise.all(files.map(compressImage));
+    const dt = new DataTransfer();
+    for (const file of compressed) dt.items.add(file);
+    input.files = dt.files;
+    setPreviews(compressed.map((f) => URL.createObjectURL(f)));
+  }
+
+  const [orderedPhotos, setOrderedPhotos] = useState(entry?.photos ?? []);
+
+  function movePhoto(index: number, delta: number) {
+    setOrderedPhotos((photos) => {
+      const target = index + delta;
+      if (target < 0 || target >= photos.length) return photos;
+      const next = [...photos];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
   }
 
   const pitchCount = Math.min(parseInt(pitches, 10) || 0, MAX_PITCH_SECTIONS);
@@ -113,6 +225,9 @@ export default function EntryForm({
     <form action={editing ? updateEntry : createEntry} className="notion-page notion-editor">
       <div className="notion-body">
         {editing && <input type="hidden" name="id" value={entry!.id} />}
+        <input type="hidden" name="lat" value={lat} />
+        <input type="hidden" name="lon" value={lon} />
+        <input type="hidden" name="c2c_summary" value={includeSummary ? c2cSummary : ""} />
 
         <div className="notion-icon" aria-hidden>
           🧗
@@ -130,7 +245,17 @@ export default function EntryForm({
               searchArmed.current = true;
               setTitle(e.target.value);
             }}
-            onKeyDown={handleTitleKeys}
+            onKeyDown={(e) =>
+              comboKeys(
+                e,
+                open,
+                suggestions.length,
+                highlighted,
+                setHighlighted,
+                () => applySuggestion(suggestions[highlighted]),
+                () => setOpen(false)
+              )
+            }
             onBlur={() => setTimeout(() => setOpen(false), 150)}
             autoComplete="off"
             required
@@ -178,14 +303,58 @@ export default function EntryForm({
           </div>
           <div className="notion-prop">
             <label htmlFor="location">{t.location}</label>
-            <input
-              id="location"
-              type="text"
-              name="location"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              placeholder={t.locationPlaceholder}
-            />
+            <div className="combobox">
+              <input
+                id="location"
+                type="text"
+                name="location"
+                value={location}
+                onChange={(e) => {
+                  geoArmed.current = true;
+                  setLocation(e.target.value);
+                  // Manually edited text no longer matches the picked point.
+                  setLat("");
+                  setLon("");
+                }}
+                onKeyDown={(e) =>
+                  comboKeys(
+                    e,
+                    geoOpen,
+                    geoSuggestions.length,
+                    geoHighlighted,
+                    setGeoHighlighted,
+                    () => applyGeoSuggestion(geoSuggestions[geoHighlighted]),
+                    () => setGeoOpen(false)
+                  )
+                }
+                onBlur={() => setTimeout(() => setGeoOpen(false), 150)}
+                autoComplete="off"
+                placeholder={t.locationPlaceholder}
+              />
+              {geoOpen && (
+                <ul className="combobox-list" role="listbox">
+                  {geoSuggestions.map((s, i) => (
+                    <li key={`${s.lat},${s.lon}`}>
+                      <button
+                        type="button"
+                        role="option"
+                        aria-selected={i === geoHighlighted}
+                        data-highlighted={i === geoHighlighted}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          applyGeoSuggestion(s);
+                        }}
+                        onMouseEnter={() => setGeoHighlighted(i)}
+                      >
+                        <span className="combobox-title">{s.name}</span>
+                        {s.region && <span className="combobox-meta">{s.region}</span>}
+                      </button>
+                    </li>
+                  ))}
+                  <li className="combobox-attribution">{t.geoAttribution}</li>
+                </ul>
+              )}
+            </div>
           </div>
           <div className="notion-prop">
             <label htmlFor="style">{t.style}</label>
@@ -213,6 +382,25 @@ export default function EntryForm({
               onChange={(e) => setGrade(e.target.value)}
               placeholder={t.gradePlaceholder}
             />
+          </div>
+          <div className="notion-prop">
+            <label htmlFor="rating">{t.rating}</label>
+            <input
+              id="rating"
+              type="text"
+              name="rating"
+              list="rating-options"
+              value={rating}
+              onChange={(e) => setRating(e.target.value)}
+              placeholder={t.ratingPlaceholder}
+            />
+            <datalist id="rating-options">
+              {["F", "PD-", "PD", "PD+", "AD-", "AD", "AD+", "D-", "D", "D+", "TD-", "TD", "TD+", "ED-", "ED", "ED+", "ABO"].map(
+                (option) => (
+                  <option key={option} value={option} />
+                )
+              )}
+            </datalist>
           </div>
           <div className="notion-prop notion-prop-pair">
             <label htmlFor="pitches">{t.pitches}</label>
@@ -293,6 +481,21 @@ export default function EntryForm({
           </div>
         </div>
 
+        {c2cSummary && (
+          <div className="c2c-summary-panel">
+            <p className="c2c-summary-source">{t.c2cSummaryTitle}</p>
+            <p className="c2c-summary-text">{c2cSummary}</p>
+            <label className="c2c-summary-include">
+              <input
+                type="checkbox"
+                checked={includeSummary}
+                onChange={(e) => setIncludeSummary(e.target.checked)}
+              />{" "}
+              {t.c2cSummaryInclude}
+            </label>
+          </div>
+        )}
+
         <hr className="notion-divider" />
 
         <textarea
@@ -322,18 +525,44 @@ export default function EntryForm({
           </div>
         )}
 
-        {editing && entry!.photos.length > 0 && (
+        {editing && orderedPhotos.length > 0 && (
           <>
             <p className="form-hint">{t.currentPhotos}</p>
+            <input
+              type="hidden"
+              name="photo_order"
+              value={orderedPhotos.map((p) => p.id).join(",")}
+            />
             <div className="photo-grid">
-              {entry!.photos.map((photo) => (
-                <label key={photo.id} className="photo-removable">
+              {orderedPhotos.map((photo, i) => (
+                <div key={photo.id} className="photo-removable">
                   {/* eslint-disable-next-line @next/next/no-img-element -- served from our own DB-backed route, already resized/compressed server-side */}
                   <img src={`/api/photos/${photo.id}`} alt="" />
                   <span className="photo-remove-check">
-                    <input type="checkbox" name="remove_photos" value={photo.id} /> {t.removePhoto}
+                    <button
+                      type="button"
+                      className="photo-move-btn"
+                      aria-label={t.movePhotoEarlier}
+                      disabled={i === 0}
+                      onClick={() => movePhoto(i, -1)}
+                    >
+                      ←
+                    </button>
+                    <button
+                      type="button"
+                      className="photo-move-btn"
+                      aria-label={t.movePhotoLater}
+                      disabled={i === orderedPhotos.length - 1}
+                      onClick={() => movePhoto(i, 1)}
+                    >
+                      →
+                    </button>
+                    <label>
+                      <input type="checkbox" name="remove_photos" value={photo.id} />{" "}
+                      {t.removePhoto}
+                    </label>
                   </span>
-                </label>
+                </div>
               ))}
             </div>
           </>

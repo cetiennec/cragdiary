@@ -38,13 +38,17 @@ export type Entry = {
   location: string | null;
   style: string | null;
   grade_max: string | null;
+  rating: string | null;
   pitches: number | null;
   height_m: number | null;
   routes: string | null;
   partners: string | null;
   notes: string | null;
   c2c_url: string | null;
+  c2c_summary: string | null;
   pitch_notes: Record<string, string> | null;
+  lat: number | null;
+  lon: number | null;
   visibility: Visibility;
   created_at: string;
 };

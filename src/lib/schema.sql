@@ -17,13 +17,17 @@ create table if not exists entries (
   location text,
   style text,
   grade_max text,
+  rating text,
   pitches integer,
   height_m integer,
   routes text,
   partners text,
   notes text,
   c2c_url text,
+  c2c_summary text,
   pitch_notes jsonb,
+  lat double precision,
+  lon double precision,
   visibility text not null default 'public'
     check (visibility in ('public','unlisted','private')),
   created_at timestamptz not null default now()

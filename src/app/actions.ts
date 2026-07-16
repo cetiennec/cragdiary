@@ -33,6 +33,23 @@ function optionalInt(value: FormDataEntryValue | null): number | null {
 
 const MAX_PITCH_SECTIONS = 40;
 
+function optionalCoord(
+  value: FormDataEntryValue | null,
+  min: number,
+  max: number
+): number | null {
+  const n = parseFloat(String(value ?? ""));
+  return Number.isFinite(n) && n >= min && n <= max ? n : null;
+}
+
+function parseCoords(formData: FormData): { lat: number | null; lon: number | null } {
+  const lat = optionalCoord(formData.get("lat"), -90, 90);
+  const lon = optionalCoord(formData.get("lon"), -180, 180);
+  // Either both or neither — a lone coordinate is meaningless.
+  if (lat === null || lon === null) return { lat: null, lon: null };
+  return { lat, lon };
+}
+
 function optionalHttpUrl(value: FormDataEntryValue | null): string | null {
   const raw = String(value ?? "").trim();
   if (!raw) return null;
@@ -155,15 +172,16 @@ export async function createEntry(formData: FormData): Promise<void> {
   }
 
   const pitches = optionalInt(formData.get("pitches"));
+  const coords = parseCoords(formData);
 
   const client = await pool.connect();
   let entryId: string;
   try {
     const result = await client.query<{ id: string }>(
       `insert into entries
-         (user_id, entry_date, crag, location, style, grade_max, pitches, height_m,
-          routes, partners, notes, c2c_url, pitch_notes, visibility)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+         (user_id, entry_date, crag, location, style, grade_max, rating, pitches, height_m,
+          routes, partners, notes, c2c_url, c2c_summary, pitch_notes, lat, lon, visibility)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
        returning id`,
       [
         user.id,
@@ -172,13 +190,17 @@ export async function createEntry(formData: FormData): Promise<void> {
         optionalText(formData.get("location")),
         optionalText(formData.get("style")),
         optionalText(formData.get("grade_max")),
+        optionalText(formData.get("rating")),
         pitches,
         optionalInt(formData.get("height_m")),
         optionalText(formData.get("routes")),
         optionalText(formData.get("partners")),
         optionalText(formData.get("notes")),
         optionalHttpUrl(formData.get("c2c_url")),
+        optionalText(formData.get("c2c_summary")),
         parsePitchNotes(formData, pitches),
+        coords.lat,
+        coords.lon,
         visibility,
       ]
     );
@@ -222,28 +244,34 @@ export async function updateEntry(formData: FormData): Promise<void> {
     .filter(Boolean);
 
   const pitches = optionalInt(formData.get("pitches"));
+  const coords = parseCoords(formData);
 
   const client = await pool.connect();
   try {
     const updated = await client.query(
       `update entries
        set entry_date = $1, crag = $2, location = $3, style = $4, grade_max = $5,
-           pitches = $6, height_m = $7, routes = $8, partners = $9, notes = $10,
-           c2c_url = $11, pitch_notes = $12, visibility = $13
-       where id = $14 and user_id = $15`,
+           rating = $6, pitches = $7, height_m = $8, routes = $9, partners = $10,
+           notes = $11, c2c_url = $12, c2c_summary = $13, pitch_notes = $14,
+           lat = $15, lon = $16, visibility = $17
+       where id = $18 and user_id = $19`,
       [
         entryDate,
         crag,
         optionalText(formData.get("location")),
         optionalText(formData.get("style")),
         optionalText(formData.get("grade_max")),
+        optionalText(formData.get("rating")),
         pitches,
         optionalInt(formData.get("height_m")),
         optionalText(formData.get("routes")),
         optionalText(formData.get("partners")),
         optionalText(formData.get("notes")),
         optionalHttpUrl(formData.get("c2c_url")),
+        optionalText(formData.get("c2c_summary")),
         parsePitchNotes(formData, pitches),
+        coords.lat,
+        coords.lon,
         visibility,
         id,
         user.id,
@@ -255,6 +283,17 @@ export async function updateEntry(formData: FormData): Promise<void> {
       await client.query(
         "delete from photos where entry_id = $1 and id = any($2)",
         [id, removePhotoIds]
+      );
+    }
+
+    const photoOrder = String(formData.get("photo_order") ?? "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    for (let i = 0; i < photoOrder.length; i++) {
+      await client.query(
+        "update photos set position = $1 where id = $2 and entry_id = $3",
+        [i, photoOrder[i], id]
       );
     }
 

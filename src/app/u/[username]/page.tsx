@@ -4,6 +4,7 @@ import { getEntriesByUser, getUserByUsername, getUserStats } from "@/lib/queries
 import { currentUser } from "@/lib/auth";
 import { formatMeters, getDict } from "@/lib/i18n";
 import EntryCard from "@/components/EntryCard";
+import ProfileMap from "@/components/ProfileMap";
 
 export default async function ProfilePage({
   params,
@@ -57,6 +58,12 @@ export default async function ProfilePage({
           ))}
         </div>
       )}
+
+      <ProfileMap
+        points={entries
+          .filter((e) => e.lat != null && e.lon != null)
+          .map((e) => ({ id: e.id, title: e.crag, lat: e.lat!, lon: e.lon! }))}
+      />
 
       {entries.length === 0 ? (
         <div className="empty-state">

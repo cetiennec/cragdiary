@@ -73,6 +73,12 @@ export default async function EntryPage({
               <dd>{entry.grade_max}</dd>
             </div>
           )}
+          {entry.rating && (
+            <div className="notion-prop">
+              <dt>{t.entry.rating}</dt>
+              <dd>{entry.rating}</dd>
+            </div>
+          )}
           {pitchesAndHeight && (
             <div className="notion-prop">
               <dt>{t.entry.pitches}</dt>
@@ -111,6 +117,21 @@ export default async function EntryPage({
 
         <hr className="notion-divider" />
 
+        {entry.c2c_summary && (
+          <blockquote className="c2c-summary-quote">
+            <p>{entry.c2c_summary}</p>
+            <footer>
+              {entry.c2c_url ? (
+                <a href={entry.c2c_url} target="_blank" rel="noopener noreferrer">
+                  {t.entry.c2cSummarySource}
+                </a>
+              ) : (
+                t.entry.c2cSummarySource
+              )}
+            </footer>
+          </blockquote>
+        )}
+
         {entry.notes && <div className="notion-notes">{entry.notes}</div>}
 
         {entry.pitch_notes && Object.keys(entry.pitch_notes).length > 0 && (
@@ -135,6 +156,27 @@ export default async function EntryPage({
               // eslint-disable-next-line @next/next/no-img-element -- served from our own DB-backed route, already resized/compressed server-side
               <img key={photo.id} src={`/api/photos/${photo.id}`} alt="" loading="lazy" />
             ))}
+          </div>
+        )}
+
+        {entry.lat != null && entry.lon != null && (
+          <div className="entry-map">
+            <h2 className="pitch-notes-title">{t.entry.mapTitle}</h2>
+            <iframe
+              className="entry-map-frame"
+              src={`https://www.openstreetmap.org/export/embed.html?bbox=${entry.lon - 0.03},${entry.lat - 0.018},${entry.lon + 0.03},${entry.lat + 0.018}&layer=mapnik&marker=${entry.lat},${entry.lon}`}
+              title={t.entry.mapTitle}
+              loading="lazy"
+            />
+            <p className="entry-map-link">
+              <a
+                href={`https://www.openstreetmap.org/?mlat=${entry.lat}&mlon=${entry.lon}#map=14/${entry.lat}/${entry.lon}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {t.entry.mapOpen} ↗
+              </a>
+            </p>
           </div>
         )}
 
