@@ -9,6 +9,6 @@ export default async function NewEntryPage() {
     redirect("/login");
   }
 
-  const { t } = await getDict();
-  return <EntryForm t={t.editor} />;
+  const { locale, t } = await getDict();
+  return <EntryForm t={t.editor} locale={locale} />;
 }

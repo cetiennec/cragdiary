@@ -1,12 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { createEntry, updateEntry } from "@/app/actions";
-import type { Dict } from "@/lib/i18n";
+import type { Dict, Locale } from "@/lib/i18n";
+import type { C2cSuggestion } from "@/app/api/c2c/search/route";
 import type { EntryWithAuthor } from "@/lib/queries";
 
 type EditorDict = Dict["editor"];
+
+const MAX_PITCH_SECTIONS = 40;
 
 function today(): string {
   return new Date().toISOString().slice(0, 10);
@@ -24,17 +27,87 @@ function SubmitButton({ editing, t }: { editing: boolean; t: EditorDict }) {
 export default function EntryForm({
   entry,
   t,
+  locale,
 }: {
   entry?: EntryWithAuthor;
   t: EditorDict;
+  locale: Locale;
 }) {
   const [previews, setPreviews] = useState<string[]>([]);
   const editing = Boolean(entry);
+
+  const [title, setTitle] = useState(entry?.crag ?? "");
+  const [location, setLocation] = useState(entry?.location ?? "");
+  const [grade, setGrade] = useState(entry?.grade_max ?? "");
+  const [heightM, setHeightM] = useState(entry?.height_m ? String(entry.height_m) : "");
+  const [c2cUrl, setC2cUrl] = useState(entry?.c2c_url ?? "");
+  const [pitches, setPitches] = useState(entry?.pitches ? String(entry.pitches) : "");
+
+  const [suggestions, setSuggestions] = useState<C2cSuggestion[]>([]);
+  const [open, setOpen] = useState(false);
+  const [highlighted, setHighlighted] = useState(-1);
+  const searchArmed = useRef(false);
+  const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    if (!searchArmed.current || title.trim().length < 3) {
+      setSuggestions([]);
+      setOpen(false);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+      try {
+        const res = await fetch(
+          `/api/c2c/search?q=${encodeURIComponent(title.trim())}&lang=${locale}`,
+          { signal: controller.signal }
+        );
+        const data = (await res.json()) as { results: C2cSuggestion[] };
+        setSuggestions(data.results);
+        setOpen(data.results.length > 0);
+        setHighlighted(-1);
+      } catch {
+        // aborted or network error — keep the editor silent and usable
+      }
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [title, locale]);
+
+  function applySuggestion(s: C2cSuggestion) {
+    searchArmed.current = false;
+    setTitle(s.title);
+    if (s.area) setLocation(s.area);
+    if (s.height_m) setHeightM(String(s.height_m));
+    if (s.grade) setGrade(s.grade);
+    setC2cUrl(s.url);
+    setSuggestions([]);
+    setOpen(false);
+  }
+
+  function handleTitleKeys(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (!open) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setHighlighted((h) => Math.min(h + 1, suggestions.length - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setHighlighted((h) => Math.max(h - 1, -1));
+    } else if (e.key === "Enter" && highlighted >= 0) {
+      e.preventDefault();
+      applySuggestion(suggestions[highlighted]);
+    } else if (e.key === "Escape") {
+      setOpen(false);
+    }
+  }
 
   function handleFiles(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
     setPreviews(files.map((f) => URL.createObjectURL(f)));
   }
+
+  const pitchCount = Math.min(parseInt(pitches, 10) || 0, MAX_PITCH_SECTIONS);
 
   return (
     <form action={editing ? updateEntry : createEntry} className="notion-page notion-editor">
@@ -44,16 +117,53 @@ export default function EntryForm({
         <div className="notion-icon" aria-hidden>
           🧗
         </div>
-        <input
-          type="text"
-          name="crag"
-          className="notion-title-input"
-          placeholder={t.titlePlaceholder}
-          aria-label={t.titleAria}
-          defaultValue={entry?.crag}
-          required
-          autoFocus={!editing}
-        />
+
+        <div className="combobox">
+          <input
+            type="text"
+            name="crag"
+            className="notion-title-input"
+            placeholder={t.titlePlaceholder}
+            aria-label={t.titleAria}
+            value={title}
+            onChange={(e) => {
+              searchArmed.current = true;
+              setTitle(e.target.value);
+            }}
+            onKeyDown={handleTitleKeys}
+            onBlur={() => setTimeout(() => setOpen(false), 150)}
+            autoComplete="off"
+            required
+            autoFocus={!editing}
+          />
+          {open && (
+            <ul className="combobox-list" role="listbox">
+              {suggestions.map((s, i) => (
+                <li key={s.id}>
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={i === highlighted}
+                    data-highlighted={i === highlighted}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      applySuggestion(s);
+                    }}
+                    onMouseEnter={() => setHighlighted(i)}
+                  >
+                    <span className="combobox-title">{s.title}</span>
+                    <span className="combobox-meta">
+                      {[s.area, s.height_m ? `${s.height_m} m` : null, s.rating, s.grade]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </span>
+                  </button>
+                </li>
+              ))}
+              <li className="combobox-attribution">{t.suggestionsAttribution}</li>
+            </ul>
+          )}
+        </div>
 
         <div className="notion-props">
           <div className="notion-prop">
@@ -72,7 +182,8 @@ export default function EntryForm({
               id="location"
               type="text"
               name="location"
-              defaultValue={entry?.location ?? ""}
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
               placeholder={t.locationPlaceholder}
             />
           </div>
@@ -98,7 +209,8 @@ export default function EntryForm({
               id="grade_max"
               type="text"
               name="grade_max"
-              defaultValue={entry?.grade_max ?? ""}
+              value={grade}
+              onChange={(e) => setGrade(e.target.value)}
               placeholder={t.gradePlaceholder}
             />
           </div>
@@ -110,7 +222,9 @@ export default function EntryForm({
                 type="number"
                 name="pitches"
                 min={1}
-                defaultValue={entry?.pitches ?? ""}
+                max={MAX_PITCH_SECTIONS}
+                value={pitches}
+                onChange={(e) => setPitches(e.target.value)}
                 placeholder="4"
               />
               <label htmlFor="height_m" className="notion-prop-inline-label">
@@ -121,7 +235,8 @@ export default function EntryForm({
                 type="number"
                 name="height_m"
                 min={1}
-                defaultValue={entry?.height_m ?? ""}
+                value={heightM}
+                onChange={(e) => setHeightM(e.target.value)}
                 placeholder="150"
               />
             </div>
@@ -144,6 +259,17 @@ export default function EntryForm({
               name="routes"
               defaultValue={entry?.routes ?? ""}
               placeholder={t.routesPlaceholder}
+            />
+          </div>
+          <div className="notion-prop">
+            <label htmlFor="c2c_url">{t.c2c}</label>
+            <input
+              id="c2c_url"
+              type="url"
+              name="c2c_url"
+              value={c2cUrl}
+              onChange={(e) => setC2cUrl(e.target.value)}
+              placeholder={t.c2cPlaceholder}
             />
           </div>
           <div className="notion-prop">
@@ -172,11 +298,29 @@ export default function EntryForm({
         <textarea
           name="notes"
           className="notion-notes-input"
-          rows={10}
+          rows={8}
           defaultValue={entry?.notes ?? ""}
           placeholder={t.notesPlaceholder}
           aria-label={t.notesAria}
         />
+
+        {pitchCount > 0 && (
+          <div className="pitch-notes">
+            <p className="form-hint">{t.pitchNotesHint}</p>
+            {Array.from({ length: pitchCount }, (_, i) => i + 1).map((n) => (
+              <div key={n} className="pitch-note-row">
+                <label htmlFor={`pitch_note_${n}`}>L{n}</label>
+                <input
+                  id={`pitch_note_${n}`}
+                  type="text"
+                  name={`pitch_note_${n}`}
+                  defaultValue={entry?.pitch_notes?.[String(n)] ?? ""}
+                  placeholder={t.pitchPlaceholder}
+                />
+              </div>
+            ))}
+          </div>
+        )}
 
         {editing && entry!.photos.length > 0 && (
           <>

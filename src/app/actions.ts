@@ -31,6 +31,33 @@ function optionalInt(value: FormDataEntryValue | null): number | null {
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
+const MAX_PITCH_SECTIONS = 40;
+
+function optionalHttpUrl(value: FormDataEntryValue | null): string | null {
+  const raw = String(value ?? "").trim();
+  if (!raw) return null;
+  try {
+    const url = new URL(raw);
+    if (url.protocol !== "http:" && url.protocol !== "https:") return null;
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
+function parsePitchNotes(
+  formData: FormData,
+  pitches: number | null
+): Record<string, string> | null {
+  if (!pitches) return null;
+  const notes: Record<string, string> = {};
+  for (let i = 1; i <= Math.min(pitches, MAX_PITCH_SECTIONS); i++) {
+    const text = String(formData.get(`pitch_note_${i}`) ?? "").trim();
+    if (text) notes[String(i)] = text;
+  }
+  return Object.keys(notes).length > 0 ? notes : null;
+}
+
 export async function setLocale(formData: FormData): Promise<void> {
   const locale = formData.get("locale") === "fr" ? "fr" : "en";
   const store = await cookies();
@@ -127,14 +154,16 @@ export async function createEntry(formData: FormData): Promise<void> {
     throw new Error("Date and title are required");
   }
 
+  const pitches = optionalInt(formData.get("pitches"));
+
   const client = await pool.connect();
   let entryId: string;
   try {
     const result = await client.query<{ id: string }>(
       `insert into entries
          (user_id, entry_date, crag, location, style, grade_max, pitches, height_m,
-          routes, partners, notes, visibility)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+          routes, partners, notes, c2c_url, pitch_notes, visibility)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
        returning id`,
       [
         user.id,
@@ -143,11 +172,13 @@ export async function createEntry(formData: FormData): Promise<void> {
         optionalText(formData.get("location")),
         optionalText(formData.get("style")),
         optionalText(formData.get("grade_max")),
-        optionalInt(formData.get("pitches")),
+        pitches,
         optionalInt(formData.get("height_m")),
         optionalText(formData.get("routes")),
         optionalText(formData.get("partners")),
         optionalText(formData.get("notes")),
+        optionalHttpUrl(formData.get("c2c_url")),
+        parsePitchNotes(formData, pitches),
         visibility,
       ]
     );
@@ -190,25 +221,29 @@ export async function updateEntry(formData: FormData): Promise<void> {
     .map(String)
     .filter(Boolean);
 
+  const pitches = optionalInt(formData.get("pitches"));
+
   const client = await pool.connect();
   try {
     const updated = await client.query(
       `update entries
        set entry_date = $1, crag = $2, location = $3, style = $4, grade_max = $5,
            pitches = $6, height_m = $7, routes = $8, partners = $9, notes = $10,
-           visibility = $11
-       where id = $12 and user_id = $13`,
+           c2c_url = $11, pitch_notes = $12, visibility = $13
+       where id = $14 and user_id = $15`,
       [
         entryDate,
         crag,
         optionalText(formData.get("location")),
         optionalText(formData.get("style")),
         optionalText(formData.get("grade_max")),
-        optionalInt(formData.get("pitches")),
+        pitches,
         optionalInt(formData.get("height_m")),
         optionalText(formData.get("routes")),
         optionalText(formData.get("partners")),
         optionalText(formData.get("notes")),
+        optionalHttpUrl(formData.get("c2c_url")),
+        parsePitchNotes(formData, pitches),
         visibility,
         id,
         user.id,

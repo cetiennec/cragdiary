@@ -14,9 +14,16 @@ create table if not exists entries (
   user_id uuid not null references users(id) on delete cascade,
   entry_date date not null,
   crag text not null,
+  location text,
+  style text,
+  grade_max text,
+  pitches integer,
+  height_m integer,
   routes text,
   partners text,
   notes text,
+  c2c_url text,
+  pitch_notes jsonb,
   visibility text not null default 'public'
     check (visibility in ('public','unlisted','private')),
   created_at timestamptz not null default now()

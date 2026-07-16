@@ -91,6 +91,16 @@ export default async function EntryPage({
               <dd>{entry.partners}</dd>
             </div>
           )}
+          {entry.c2c_url && (
+            <div className="notion-prop">
+              <dt>{t.entry.topo}</dt>
+              <dd>
+                <a href={entry.c2c_url} target="_blank" rel="noopener noreferrer">
+                  {t.entry.topoLink} ↗
+                </a>
+              </dd>
+            </div>
+          )}
           <div className="notion-prop">
             <dt>{t.entry.journal}</dt>
             <dd>
@@ -102,6 +112,22 @@ export default async function EntryPage({
         <hr className="notion-divider" />
 
         {entry.notes && <div className="notion-notes">{entry.notes}</div>}
+
+        {entry.pitch_notes && Object.keys(entry.pitch_notes).length > 0 && (
+          <div className="pitch-notes-view">
+            <h2 className="pitch-notes-title">{t.entry.pitchNotesTitle}</h2>
+            <dl className="pitch-notes-list">
+              {Object.entries(entry.pitch_notes)
+                .sort(([a], [b]) => Number(a) - Number(b))
+                .map(([n, text]) => (
+                  <div key={n} className="pitch-note-view-row">
+                    <dt>L{n}</dt>
+                    <dd>{text}</dd>
+                  </div>
+                ))}
+            </dl>
+          </div>
+        )}
 
         {gallery.length > 0 && (
           <div className="photo-grid notion-gallery">

@@ -17,6 +17,6 @@ export default async function EditEntryPage({
   const entry = await getEntry(id);
   if (!entry || entry.user_id !== user.id) notFound();
 
-  const { t } = await getDict();
-  return <EntryForm entry={entry} t={t.editor} />;
+  const { locale, t } = await getDict();
+  return <EntryForm entry={entry} t={t.editor} locale={locale} />;
 }

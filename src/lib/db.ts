@@ -43,6 +43,8 @@ export type Entry = {
   routes: string | null;
   partners: string | null;
   notes: string | null;
+  c2c_url: string | null;
+  pitch_notes: Record<string, string> | null;
   visibility: Visibility;
   created_at: string;
 };
