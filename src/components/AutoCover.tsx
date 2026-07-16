@@ -23,6 +23,23 @@ const COVER_COLORS = ["#bc5b2e", "#7a8450", "#5a7a94", "#8a5a74", "#a8873a"];
 
 // Strict peak/valley alternation so the silhouette always reads as mountains;
 // randomness only nudges summit heights, col depths, and horizontal placement.
+// Points are joined with a Catmull-Rom spline for a soft, hand-drawn feel.
+function smoothPath(points: [number, number][]): string {
+  let d = `M${points[0][0].toFixed(0)} ${points[0][1].toFixed(0)}`;
+  for (let i = 0; i < points.length - 1; i++) {
+    const p0 = points[Math.max(0, i - 1)];
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    const p3 = points[Math.min(points.length - 1, i + 2)];
+    const c1x = p1[0] + (p2[0] - p0[0]) / 6;
+    const c1y = p1[1] + (p2[1] - p0[1]) / 6;
+    const c2x = p2[0] - (p3[0] - p1[0]) / 6;
+    const c2y = p2[1] - (p3[1] - p1[1]) / 6;
+    d += ` C${c1x.toFixed(0)} ${c1y.toFixed(0)}, ${c2x.toFixed(0)} ${c2y.toFixed(0)}, ${p2[0].toFixed(0)} ${p2[1].toFixed(0)}`;
+  }
+  return d;
+}
+
 function ridgePath(
   rand: () => number,
   width: number,
@@ -35,17 +52,18 @@ function ridgePath(
   const peakY = () => peakBand[0] + rand() * (peakBand[1] - peakBand[0]);
   const valleyY = () => valleyBand[0] + rand() * (valleyBand[1] - valleyBand[0]);
 
-  let d = `M-10 ${floor} L-10 ${valleyY().toFixed(0)}`;
+  const points: [number, number][] = [
+    [-10, floor],
+    [-10, valleyY()],
+  ];
   for (let i = 0; i < peaks; i++) {
-    const px = seg * (i + 0.3 + rand() * 0.4);
-    d += ` L${px.toFixed(0)} ${peakY().toFixed(0)}`;
+    points.push([seg * (i + 0.3 + rand() * 0.4), peakY()]);
     if (i < peaks - 1) {
-      const vx = seg * (i + 0.85 + rand() * 0.15);
-      d += ` L${vx.toFixed(0)} ${valleyY().toFixed(0)}`;
+      points.push([seg * (i + 0.85 + rand() * 0.15), valleyY()]);
     }
   }
-  d += ` L${width + 10} ${floor}`;
-  return d;
+  points.push([width + 10, floor]);
+  return smoothPath(points);
 }
 
 export function coverEmojis(entry: EntryWithAuthor): string[] {
