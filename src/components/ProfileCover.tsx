@@ -14,9 +14,10 @@ export default function ProfileCover({
     );
   }
 
-  // Default cover: hand-drawn line mountains in the theme's palette.
+  // Default: hand-drawn line mountains as a backdrop layer behind the
+  // profile header (between the page background and the content).
   return (
-    <div className="profile-cover profile-cover-default" aria-hidden>
+    <div className="profile-backdrop" aria-hidden>
       <svg viewBox="0 0 1400 320" preserveAspectRatio="xMidYMax slice" fill="none">
         <circle cx="1150" cy="88" r="44" stroke="currentColor" strokeWidth="3" opacity="0.5" />
         <path

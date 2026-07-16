@@ -1285,13 +1285,32 @@ a {
   display: block;
 }
 
-.profile-cover-default {
+.profile-page {
+  position: relative;
+}
+
+.profile-page > *:not(.profile-backdrop) {
+  position: relative;
+  z-index: 1;
+}
+
+.profile-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 250px;
   color: var(--accent);
+  opacity: 0.22;
+  pointer-events: none;
+  z-index: 0;
+  mask-image: linear-gradient(to bottom, black 55%, transparent);
+  -webkit-mask-image: linear-gradient(to bottom, black 55%, transparent);
   display: flex;
   align-items: flex-end;
 }
 
-.profile-cover-default svg {
+.profile-backdrop svg {
   width: 100%;
   height: 100%;
 }
