@@ -44,6 +44,8 @@ function coverEmojis(entry: EntryWithAuthor): string[] {
   const out: string[] = [];
   const orientation = entry.orientation?.toUpperCase() ?? "";
   const style = entry.style?.toLowerCase() ?? "";
+  const place = `${entry.location ?? ""} ${entry.crag}`.toLowerCase();
+  if (/calanque|canaille/.test(place)) out.push("🌊");
   if (orientation.includes("S") || orientation.includes("E")) out.push("☀️");
   else if (orientation.includes("N")) out.push("☁️");
   if (entry.pitches) out.push("🪢");
@@ -87,7 +89,14 @@ function AutoCover({ entry }: { entry: EntryWithAuthor }) {
         <path d={back} stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" opacity="0.3" />
         <path d={front} stroke="currentColor" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" opacity="0.8" />
         {emojis.map((e, i) => (
-          <text key={i} x={e.x.toFixed(0)} y={e.y.toFixed(0)} fontSize={e.size.toFixed(0)} opacity="0.9">
+          <text
+            key={i}
+            x={e.x.toFixed(0)}
+            y={e.y.toFixed(0)}
+            fontSize={e.size.toFixed(0)}
+            opacity="0.9"
+            fill="currentColor"
+          >
             {e.emoji}
           </text>
         ))}
