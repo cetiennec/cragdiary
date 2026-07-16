@@ -77,6 +77,7 @@ const en = {
     partnersPlaceholder: "Léo, @marine… (@ to tag a climber)",
     routes: "🧭 Routes",
     routesPlaceholder: "For a cragging day: the routes you did",
+    showPins: "📌 Pins on the thumbnail",
     visibility: "👁️ Visibility",
     visibilityOptions: {
       public: "🌍 Public — on the main feed",
@@ -300,6 +301,7 @@ const fr: Dict = {
     partnersPlaceholder: "Léo, @marine… (@ pour taguer un grimpeur)",
     routes: "🧭 Voies",
     routesPlaceholder: "Pour une journée en couenne : les voies faites",
+    showPins: "📌 Pins sur la miniature",
     visibility: "👁️ Visibilité",
     visibilityOptions: {
       public: "🌍 Public — sur le fil principal",

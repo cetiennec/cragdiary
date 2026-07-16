@@ -671,6 +671,18 @@ export default function EntryForm({
             </div>
           </div>
           <div className="notion-prop">
+            <label htmlFor="show_pins">{t.showPins}</label>
+            <label className="profile-public-toggle notion-checkbox">
+              <input
+                id="show_pins"
+                type="checkbox"
+                name="show_pins"
+                value="1"
+                defaultChecked={entry?.show_pins ?? true}
+              />
+            </label>
+          </div>
+          <div className="notion-prop">
             <label htmlFor="visibility">{t.visibility}</label>
             <select id="visibility" name="visibility" defaultValue={entry?.visibility ?? "public"}>
               <option value="public">{t.visibilityOptions.public}</option>

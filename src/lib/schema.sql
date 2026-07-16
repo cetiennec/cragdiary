@@ -37,6 +37,7 @@ create table if not exists entries (
   pitch_notes jsonb,
   lat double precision,
   lon double precision,
+  show_pins boolean not null default true,
   visibility text not null default 'public'
     check (visibility in ('public','unlisted','private')),
   created_at timestamptz not null default now()

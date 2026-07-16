@@ -62,6 +62,7 @@ export type Entry = {
   lat: number | null;
   lon: number | null;
   visibility: Visibility;
+  show_pins: boolean;
   created_at: string;
 };
 

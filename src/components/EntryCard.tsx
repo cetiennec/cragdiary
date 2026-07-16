@@ -41,11 +41,11 @@ export default function EntryCard({
           <div className="entry-card-cover">
             {/* eslint-disable-next-line @next/next/no-img-element -- served from our own DB-backed route, already resized/compressed server-side */}
             <img src={`/api/photos/${cover.id}`} alt="" loading="lazy" />
-            <CoverPins entry={entry} />
+            {entry.show_pins && <CoverPins entry={entry} />}
             <CoverTag entry={entry} />
           </div>
         ) : (
-          <AutoCover entry={entry} />
+          <AutoCover entry={entry} showPins={entry.show_pins} />
         )}
         <div className="entry-card-body">
           <h2 className="entry-crag">{entry.crag}</h2>

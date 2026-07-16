@@ -87,10 +87,12 @@ export default function AutoCover({
   entry,
   className = "entry-card-cover auto-cover",
   wide = false,
+  showPins = true,
 }: {
   entry: EntryWithAuthor;
   className?: string;
   wide?: boolean;
+  showPins?: boolean;
 }) {
   const seed = hashCode(entry.id);
   const rand = mulberry32(seed);
@@ -132,8 +134,8 @@ export default function AutoCover({
           opacity="0.8"
         />
       </svg>
-      <CoverPins entry={entry} />
-      <CoverTag entry={entry} />
+      {showPins && <CoverPins entry={entry} />}
+      {!wide && <CoverTag entry={entry} />}
     </div>
   );
 }
