@@ -247,25 +247,37 @@ export default async function EntryPage({
           <div className="pitch-notes-view">
             <h2 className="pitch-notes-title">{t.entry.pitchNotesTitle}</h2>
             <dl className="pitch-notes-list">
-              {Object.entries(entry.pitch_notes)
-                .sort(([a], [b]) => Number(a) - Number(b))
-                .map(([n, text]) => (
+              {Array.from(
+                {
+                  length: Math.max(
+                    entry.pitches ?? 0,
+                    ...Object.keys(entry.pitch_notes).map(Number)
+                  ),
+                },
+                (_, i) => i + 1
+              ).map((n) => {
+                const text = entry.pitch_notes?.[String(n)];
+                return (
                   <div key={n} className="pitch-note-view-row">
                     <dt>L{n}</dt>
-                    <dd>{text}</dd>
+                    <dd className={text ? undefined : "pitch-note-empty"}>{text ?? "—"}</dd>
                   </div>
-                ))}
+                );
+              })}
             </dl>
           </div>
         )}
 
         {gallery.length > 0 && (
+          <>
+          <h2 className="pitch-notes-title notion-gallery-title">{t.entry.galleryTitle}</h2>
           <div className="photo-grid notion-gallery">
             {gallery.map((photo) => (
               // eslint-disable-next-line @next/next/no-img-element -- served from our own DB-backed route, already resized/compressed server-side
               <img key={photo.id} src={`/api/photos/${photo.id}`} alt="" loading="lazy" />
             ))}
           </div>
+          </>
         )}
 
         {isAuthor && (

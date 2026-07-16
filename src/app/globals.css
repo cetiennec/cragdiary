@@ -658,6 +658,11 @@ a {
   line-height: 1.5;
 }
 
+.pitch-note-empty {
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+
 /* Profile map */
 
 .profile-map {
@@ -1205,4 +1210,47 @@ a {
 
 .delete-btn:hover {
   color: #b91c1c;
+}
+
+/* Credits page */
+
+.credits-page.narrow {
+  max-width: 620px;
+}
+
+.credits-intro {
+  color: var(--text-muted);
+  line-height: 1.55;
+  margin-bottom: 1.6rem;
+}
+
+.credits-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.credits-list a {
+  font-weight: 600;
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.credits-list a:hover {
+  text-decoration: underline;
+}
+
+.credits-list p {
+  margin: 0.2rem 0 0;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.notion-gallery-title {
+  margin-top: 1.8rem;
+  margin-bottom: 0;
 }

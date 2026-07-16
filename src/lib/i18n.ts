@@ -127,6 +127,7 @@ const en = {
     topoLink: "See on Camptocamp",
     c2cSummarySource: "— Camptocamp (CC BY-SA)",
     pitchNotesTitle: "Pitch by pitch",
+    galleryTitle: "Photos of the day",
     mapTitle: "Map",
     mapOpen: "Open full map",
     edit: "Edit entry",
@@ -154,6 +155,34 @@ const en = {
     },
   },
   climbers: { title: "Climbers" },
+  credits: {
+    title: "Credits",
+    intro:
+      "Cragdiary is free and built on open data and open-source software. Photos and texts posted on entries belong to their authors.",
+    linkLabel: "Credits",
+    items: [
+      {
+        name: "Camptocamp.org",
+        url: "https://www.camptocamp.org",
+        text: "Route information suggested in the editor (names, grades, heights, orientations, summaries) comes from the Camptocamp community database, licensed CC BY-SA.",
+      },
+      {
+        name: "OpenStreetMap",
+        url: "https://www.openstreetmap.org/copyright",
+        text: "Maps and location data © OpenStreetMap contributors, licensed ODbL.",
+      },
+      {
+        name: "Photon (Komoot)",
+        url: "https://photon.komoot.io",
+        text: "Location autocomplete is powered by Photon, an open-source geocoder built on OpenStreetMap data.",
+      },
+      {
+        name: "Leaflet",
+        url: "https://leafletjs.com",
+        text: "Profile maps are rendered with Leaflet, an open-source mapping library (BSD-2).",
+      },
+    ],
+  },
 };
 
 export type Dict = typeof en;
@@ -281,6 +310,7 @@ const fr: Dict = {
     topoLink: "Voir sur Camptocamp",
     c2cSummarySource: "— Camptocamp (CC BY-SA)",
     pitchNotesTitle: "Longueur par longueur",
+    galleryTitle: "Photos du jour",
     mapTitle: "Carte",
     mapOpen: "Ouvrir la carte",
     edit: "Modifier l'entrée",
@@ -308,6 +338,34 @@ const fr: Dict = {
     },
   },
   climbers: { title: "Grimpeurs" },
+  credits: {
+    title: "Crédits",
+    intro:
+      "Cragdiary est gratuit et construit sur des données ouvertes et des logiciels libres. Les photos et textes publiés dans les entrées appartiennent à leurs auteurs.",
+    linkLabel: "Crédits",
+    items: [
+      {
+        name: "Camptocamp.org",
+        url: "https://www.camptocamp.org",
+        text: "Les informations de voies proposées dans l'éditeur (noms, cotations, hauteurs, orientations, résumés) proviennent de la base communautaire Camptocamp, sous licence CC BY-SA.",
+      },
+      {
+        name: "OpenStreetMap",
+        url: "https://www.openstreetmap.org/copyright",
+        text: "Cartes et données de lieux © contributeurs OpenStreetMap, sous licence ODbL.",
+      },
+      {
+        name: "Photon (Komoot)",
+        url: "https://photon.komoot.io",
+        text: "L'autocomplétion des lieux s'appuie sur Photon, un géocodeur open source basé sur les données OpenStreetMap.",
+      },
+      {
+        name: "Leaflet",
+        url: "https://leafletjs.com",
+        text: "Les cartes de profil sont rendues avec Leaflet, bibliothèque cartographique open source (BSD-2).",
+      },
+    ],
+  },
 };
 
 const dictionaries: Record<Locale, Dict> = { en, fr };

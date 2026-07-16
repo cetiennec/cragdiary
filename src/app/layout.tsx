@@ -84,7 +84,9 @@ export default async function RootLayout({
           </div>
         </header>
         <main className="flex-1">{children}</main>
-        <footer className="site-footer">{t.footer}</footer>
+        <footer className="site-footer">
+          {t.footer} · <Link href="/credits">{t.credits.linkLabel}</Link>
+        </footer>
       </body>
     </html>
   );
