@@ -146,7 +146,7 @@ export default async function EntryPage({
           <img src={`/api/photos/${cover.id}`} alt="" />
         </div>
       ) : (
-        <AutoCover entry={entry} className="notion-cover auto-cover" wide showPins={false} />
+        <AutoCover entry={entry} locale={locale} className="notion-cover auto-cover" wide showPins={false} />
       )}
 
       <div className="notion-body">

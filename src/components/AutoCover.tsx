@@ -1,4 +1,5 @@
 import type { EntryWithAuthor } from "@/lib/queries";
+import { PIN_LABELS, type Locale } from "@/lib/i18n";
 
 function hashCode(str: string): number {
   let h = 0;
@@ -74,12 +75,14 @@ function coverTag(entry: EntryWithAuthor): string {
     .join(" · ");
 }
 
-export function CoverPins({ entry }: { entry: EntryWithAuthor }) {
+export function CoverPins({ entry, locale }: { entry: EntryWithAuthor; locale: Locale }) {
   const emojis = coverEmojis(entry);
   return (
-    <span className="cover-pins" aria-hidden>
+    <span className="cover-pins">
       {emojis.map((emoji, i) => (
-        <span key={i}>{emoji}</span>
+        <span key={i} title={PIN_LABELS[locale][emoji]}>
+          {emoji}
+        </span>
       ))}
     </span>
   );
@@ -93,11 +96,13 @@ export function CoverTag({ entry }: { entry: EntryWithAuthor }) {
 
 export default function AutoCover({
   entry,
+  locale,
   className = "entry-card-cover auto-cover",
   wide = false,
   showPins = true,
 }: {
   entry: EntryWithAuthor;
+  locale: Locale;
   className?: string;
   wide?: boolean;
   showPins?: boolean;
@@ -142,7 +147,7 @@ export default function AutoCover({
           opacity="0.8"
         />
       </svg>
-      {showPins && <CoverPins entry={entry} />}
+      {showPins && <CoverPins entry={entry} locale={locale} />}
       {!wide && <CoverTag entry={entry} />}
     </div>
   );

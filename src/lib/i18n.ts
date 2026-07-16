@@ -225,6 +225,7 @@ const en = {
   },
   credits: {
     title: "Credits",
+    pinsTitle: "What the thumbnail pins mean",
     intro:
       "Cragdiary is free and built on open data and open-source software. Photos and texts posted on entries belong to their authors.",
     linkLabel: "Credits",
@@ -476,6 +477,7 @@ const fr: Dict = {
   },
   credits: {
     title: "Crédits",
+    pinsTitle: "Le sens des pins sur les miniatures",
     intro:
       "Cragdiary est gratuit et construit sur des données ouvertes et des logiciels libres. Les photos et textes publiés dans les entrées appartiennent à leurs auteurs.",
     linkLabel: "Crédits",
@@ -520,6 +522,31 @@ export async function getDict(): Promise<{ locale: Locale; t: Dict }> {
   const locale = await getLocale();
   return { locale, t: dictionaries[locale] };
 }
+
+export const PIN_LABELS: Record<Locale, Record<string, string>> = {
+  en: {
+    "🌊": "By the sea (Calanques, Cap Canaille)",
+    "☀️": "South/east facing — sunny",
+    "☁️": "North facing — shade",
+    "🪢": "Multi-pitch",
+    "🛠️": "Trad or aid climbing",
+    "🤝": "With partners",
+    "🦅": "Big wall (150 m and more)",
+    "✍️": "A long story to read",
+    "🧗": "A climbing day",
+  },
+  fr: {
+    "🌊": "Au bord de la mer (Calanques, Cap Canaille)",
+    "☀️": "Orientée sud/est — au soleil",
+    "☁️": "Orientée nord — à l'ombre",
+    "🪢": "Grande voie",
+    "🛠️": "Trad ou artif",
+    "🤝": "Avec des partenaires",
+    "🦅": "Grande paroi (150 m et plus)",
+    "✍️": "Un long récit à lire",
+    "🧗": "Une journée de grimpe",
+  },
+};
 
 export function formatDate(dateStr: string, locale: Locale, monthOnly = false): string {
   const date = new Date(`${dateStr}T00:00:00`);

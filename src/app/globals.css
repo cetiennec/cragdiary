@@ -1596,3 +1596,21 @@ a {
 .export-link a:hover {
   text-decoration: underline;
 }
+
+/* Pins legend (credits page) */
+
+.pins-legend {
+  list-style: none;
+  margin: 0.6rem 0 2rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.92rem;
+  color: var(--text-muted);
+}
+
+.pins-legend-emoji {
+  display: inline-block;
+  width: 1.6rem;
+}
