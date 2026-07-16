@@ -1364,25 +1364,14 @@ a {
   opacity: 0.5;
 }
 
-.auto-cover-info {
+.auto-cover-tag {
   position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.15rem;
-}
-
-.auto-cover-grade {
-  font-family: var(--heading-font), serif;
-  font-size: 2.1rem;
-  font-weight: 700;
-  color: var(--text);
-  opacity: 0.85;
-}
-
-.auto-cover-sub {
-  font-size: 0.82rem;
+  right: 0.6rem;
+  bottom: 0.5rem;
+  font-size: 0.75rem;
   color: var(--text-muted);
+  background: color-mix(in srgb, var(--bg-elevated) 82%, transparent);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
 }
