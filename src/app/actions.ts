@@ -154,13 +154,20 @@ export async function logout(): Promise<void> {
   redirect("/");
 }
 
-export async function updateBio(formData: FormData): Promise<void> {
+export async function updateProfile(formData: FormData): Promise<void> {
   const user = await currentUser();
   if (!user) throw new Error("Unauthorized");
 
   const bio = String(formData.get("bio") ?? "").trim() || null;
-  await pool.query("update users set bio = $1 where id = $2", [bio, user.id]);
+  const isPublic = formData.get("is_public") === "1";
+  await pool.query("update users set bio = $1, is_public = $2 where id = $3", [
+    bio,
+    isPublic,
+    user.id,
+  ]);
 
+  revalidatePath("/");
+  revalidatePath("/climbers");
   revalidatePath(`/u/${user.username}`);
   redirect(`/u/${user.username}`);
 }

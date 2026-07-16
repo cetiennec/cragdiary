@@ -90,6 +90,34 @@ export default function EntryForm({
   const [lat, setLat] = useState(entry?.lat != null ? String(entry.lat) : "");
   const [lon, setLon] = useState(entry?.lon != null ? String(entry.lon) : "");
 
+  const [autoFilled, setAutoFilled] = useState<Set<string>>(new Set());
+  const [excludedFields, setExcludedFields] = useState<Set<string>>(new Set());
+
+  function toggleField(name: string) {
+    setExcludedFields((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
+  }
+
+  function fieldToggle(name: string) {
+    if (!autoFilled.has(name)) return null;
+    const off = excludedFields.has(name);
+    return (
+      <button
+        type="button"
+        className="prop-toggle"
+        aria-pressed={off}
+        title={off ? t.autofillShow : t.autofillHide}
+        onClick={() => toggleField(name)}
+      >
+        {off ? "🙈" : "👁"}
+      </button>
+    );
+  }
+
   const [suggestions, setSuggestions] = useState<C2cSuggestion[]>([]);
   const [open, setOpen] = useState(false);
   const [highlighted, setHighlighted] = useState(-1);
@@ -200,18 +228,40 @@ export default function EntryForm({
     searchArmed.current = false;
     geoArmed.current = false;
     setTitle(s.title);
-    if (s.area) setLocation(s.area);
-    if (s.height_m) setHeightM(String(s.height_m));
-    if (s.grade) setGrade(s.grade);
-    if (s.rating) setRating(s.rating);
-    if (s.orientation) setOrientation(s.orientation);
-    if (s.equipment) setEquipment(s.equipment);
+    const filled = new Set<string>();
+    if (s.area) {
+      setLocation(s.area);
+      filled.add("location");
+    }
+    if (s.height_m) {
+      setHeightM(String(s.height_m));
+      filled.add("height_m");
+    }
+    if (s.grade) {
+      setGrade(s.grade);
+      filled.add("grade_max");
+    }
+    if (s.rating) {
+      setRating(s.rating);
+      filled.add("rating");
+    }
+    if (s.orientation) {
+      setOrientation(s.orientation);
+      filled.add("orientation");
+    }
+    if (s.equipment) {
+      setEquipment(s.equipment);
+      filled.add("equipment");
+    }
     if (s.summary) setC2cSummary(s.summary);
     setC2cUrl(s.url);
+    filled.add("c2c_url");
     if (s.lat != null && s.lon != null) {
       setLat(String(s.lat));
       setLon(String(s.lon));
     }
+    setAutoFilled(filled);
+    setExcludedFields(new Set());
     setSuggestions([]);
     setOpen(false);
   }
@@ -295,8 +345,8 @@ export default function EntryForm({
     <form action={editing ? updateEntry : createEntry} className="notion-page notion-editor">
       <div className="notion-body">
         {editing && <input type="hidden" name="id" value={entry!.id} />}
-        <input type="hidden" name="lat" value={lat} />
-        <input type="hidden" name="lon" value={lon} />
+        <input type="hidden" name="lat" value={excludedFields.has("location") ? "" : lat} />
+        <input type="hidden" name="lon" value={excludedFields.has("location") ? "" : lon} />
         <input type="hidden" name="c2c_summary" value={includeSummary ? c2cSummary : ""} />
 
         <div className="notion-icon" aria-hidden>
@@ -386,13 +436,15 @@ export default function EntryForm({
               </label>
             </div>
           </div>
-          <div className="notion-prop">
+          <div className={`notion-prop${excludedFields.has("location") ? " prop-excluded" : ""}`}>
             <label htmlFor="location">{t.location}</label>
+            <div className="prop-field">
             <div className="combobox">
               <input
                 id="location"
                 type="text"
                 name="location"
+                disabled={excludedFields.has("location")}
                 value={location}
                 onChange={(e) => {
                   geoArmed.current = true;
@@ -440,6 +492,8 @@ export default function EntryForm({
                 </ul>
               )}
             </div>
+            {fieldToggle("location")}
+            </div>
           </div>
           <div className="notion-prop">
             <label htmlFor="style">{t.style}</label>
@@ -457,28 +511,36 @@ export default function EntryForm({
               ))}
             </datalist>
           </div>
-          <div className="notion-prop">
+          <div className={`notion-prop${excludedFields.has("grade_max") ? " prop-excluded" : ""}`}>
             <label htmlFor="grade_max">{t.grade}</label>
-            <input
-              id="grade_max"
-              type="text"
-              name="grade_max"
-              value={grade}
-              onChange={(e) => setGrade(e.target.value)}
-              placeholder={t.gradePlaceholder}
-            />
+            <div className="prop-field">
+              <input
+                id="grade_max"
+                type="text"
+                name="grade_max"
+                disabled={excludedFields.has("grade_max")}
+                value={grade}
+                onChange={(e) => setGrade(e.target.value)}
+                placeholder={t.gradePlaceholder}
+              />
+              {fieldToggle("grade_max")}
+            </div>
           </div>
-          <div className="notion-prop">
+          <div className={`notion-prop${excludedFields.has("rating") ? " prop-excluded" : ""}`}>
             <label htmlFor="rating">{t.rating}</label>
-            <input
-              id="rating"
-              type="text"
-              name="rating"
-              list="rating-options"
-              value={rating}
-              onChange={(e) => setRating(e.target.value)}
-              placeholder={t.ratingPlaceholder}
-            />
+            <div className="prop-field">
+              <input
+                id="rating"
+                type="text"
+                name="rating"
+                list="rating-options"
+                disabled={excludedFields.has("rating")}
+                value={rating}
+                onChange={(e) => setRating(e.target.value)}
+                placeholder={t.ratingPlaceholder}
+              />
+              {fieldToggle("rating")}
+            </div>
             <datalist id="rating-options">
               {["F", "PD-", "PD", "PD+", "AD-", "AD", "AD+", "D-", "D", "D+", "TD-", "TD", "TD+", "ED-", "ED", "ED+", "ABO"].map(
                 (option) => (
@@ -487,34 +549,42 @@ export default function EntryForm({
               )}
             </datalist>
           </div>
-          <div className="notion-prop">
+          <div className={`notion-prop${excludedFields.has("orientation") ? " prop-excluded" : ""}`}>
             <label htmlFor="orientation">{t.orientation}</label>
-            <input
-              id="orientation"
-              type="text"
-              name="orientation"
-              list="orientation-options"
-              value={orientation}
-              onChange={(e) => setOrientation(e.target.value)}
-              placeholder={t.orientationPlaceholder}
-            />
+            <div className="prop-field">
+              <input
+                id="orientation"
+                type="text"
+                name="orientation"
+                list="orientation-options"
+                disabled={excludedFields.has("orientation")}
+                value={orientation}
+                onChange={(e) => setOrientation(e.target.value)}
+                placeholder={t.orientationPlaceholder}
+              />
+              {fieldToggle("orientation")}
+            </div>
             <datalist id="orientation-options">
               {["N", "NE", "E", "SE", "S", "SW", "W", "NW"].map((o) => (
                 <option key={o} value={o} />
               ))}
             </datalist>
           </div>
-          <div className="notion-prop">
+          <div className={`notion-prop${excludedFields.has("equipment") ? " prop-excluded" : ""}`}>
             <label htmlFor="equipment">{t.equipment}</label>
-            <input
-              id="equipment"
-              type="text"
-              name="equipment"
-              list="equipment-options"
-              value={equipment}
-              onChange={(e) => setEquipment(e.target.value)}
-              placeholder={t.equipmentPlaceholder}
-            />
+            <div className="prop-field">
+              <input
+                id="equipment"
+                type="text"
+                name="equipment"
+                list="equipment-options"
+                disabled={excludedFields.has("equipment")}
+                value={equipment}
+                onChange={(e) => setEquipment(e.target.value)}
+                placeholder={t.equipmentPlaceholder}
+              />
+              {fieldToggle("equipment")}
+            </div>
             <datalist id="equipment-options">
               {["P1", "P1+", "P2", "P2+", "P3", "P3+", "P4", "P4+"].map((o) => (
                 <option key={o} value={o} />
@@ -542,10 +612,13 @@ export default function EntryForm({
                 type="number"
                 name="height_m"
                 min={1}
+                disabled={excludedFields.has("height_m")}
+                className={excludedFields.has("height_m") ? "input-excluded" : undefined}
                 value={heightM}
                 onChange={(e) => setHeightM(e.target.value)}
                 placeholder="150"
               />
+              {fieldToggle("height_m")}
             </div>
           </div>
           <div className="notion-prop">
@@ -610,16 +683,20 @@ export default function EntryForm({
               placeholder={t.routesPlaceholder}
             />
           </div>
-          <div className="notion-prop">
+          <div className={`notion-prop${excludedFields.has("c2c_url") ? " prop-excluded" : ""}`}>
             <label htmlFor="c2c_url">{t.c2c}</label>
-            <input
-              id="c2c_url"
-              type="url"
-              name="c2c_url"
-              value={c2cUrl}
-              onChange={(e) => setC2cUrl(e.target.value)}
-              placeholder={t.c2cPlaceholder}
-            />
+            <div className="prop-field">
+              <input
+                id="c2c_url"
+                type="url"
+                name="c2c_url"
+                disabled={excludedFields.has("c2c_url")}
+                value={c2cUrl}
+                onChange={(e) => setC2cUrl(e.target.value)}
+                placeholder={t.c2cPlaceholder}
+              />
+              {fieldToggle("c2c_url")}
+            </div>
           </div>
           <div className="notion-prop">
             <label htmlFor="visibility">{t.visibility}</label>

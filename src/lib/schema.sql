@@ -6,6 +6,7 @@ create table if not exists users (
   display_name text not null,
   password_hash text not null,
   bio text,
+  is_public boolean not null default true,
   created_at timestamptz not null default now()
 );
 

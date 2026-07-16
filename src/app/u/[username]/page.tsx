@@ -5,6 +5,7 @@ import { currentUser } from "@/lib/auth";
 import { formatMeters, getDict } from "@/lib/i18n";
 import EntryCard from "@/components/EntryCard";
 import ProfileMap from "@/components/ProfileMap";
+import { updateProfile } from "@/app/actions";
 
 export default async function ProfilePage({
   params,
@@ -21,6 +22,7 @@ export default async function ProfilePage({
   if (!profile) notFound();
 
   const isSelf = user?.id === profile.id;
+  if (!profile.is_public && !isSelf) notFound();
   const [entries, stats] = await Promise.all([
     getEntriesByUser(profile.id, { includeNonPublic: isSelf }),
     getUserStats(profile.id, { includeNonPublic: isSelf }),
@@ -47,6 +49,26 @@ export default async function ProfilePage({
           {profile.bio && <p className="profile-bio">{profile.bio}</p>}
         </div>
       </header>
+
+      {isSelf && (
+        <details className="profile-settings">
+          <summary>{t.profile.settingsTitle}</summary>
+          <form action={updateProfile} className="entry-form profile-settings-form">
+            <label>
+              {t.profile.bioLabel}
+              <textarea name="bio" rows={3} defaultValue={profile.bio ?? ""} />
+            </label>
+            <label className="profile-public-toggle">
+              <input type="checkbox" name="is_public" value="1" defaultChecked={profile.is_public} />{" "}
+              {t.profile.publicLabel}
+            </label>
+            {!profile.is_public && <p className="form-hint">{t.profile.privateHint}</p>}
+            <button type="submit" className="btn-primary">
+              {t.profile.settingsSave}
+            </button>
+          </form>
+        </details>
+      )}
 
       {stats.total > 0 && (
         <div className="stats-row">

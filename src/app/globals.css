@@ -762,6 +762,74 @@ a {
   text-decoration: underline;
 }
 
+/* Auto-fill include/exclude toggles */
+
+.prop-field {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.prop-field > .combobox,
+.prop-field > input {
+  flex: 1;
+  min-width: 0;
+}
+
+.prop-toggle {
+  border: none;
+  background: none;
+  font-size: 0.95rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.15rem;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.prop-toggle:hover {
+  background: color-mix(in srgb, var(--border) 45%, transparent);
+}
+
+.notion-prop.prop-excluded label,
+.notion-prop.prop-excluded input {
+  opacity: 0.4;
+  text-decoration: line-through;
+}
+
+.input-excluded {
+  opacity: 0.4;
+  text-decoration: line-through;
+}
+
+/* Profile settings */
+
+.profile-settings {
+  margin-bottom: 2rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.7rem 1rem;
+  background: var(--bg-elevated);
+}
+
+.profile-settings summary {
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.profile-settings-form {
+  margin-top: 1rem;
+}
+
+.profile-public-toggle {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 0.5rem !important;
+  cursor: pointer;
+}
+
 /* Paired inline props (pitches + height) */
 
 .notion-prop-pair-fields {
