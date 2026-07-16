@@ -223,6 +223,7 @@ a {
   aspect-ratio: 3 / 2;
   overflow: hidden;
   background: var(--bg);
+  position: relative;
 }
 
 .entry-card-cover img {
@@ -272,6 +273,7 @@ a {
   width: 100%;
   height: clamp(180px, 30vh, 320px);
   overflow: hidden;
+  position: relative;
 }
 
 .notion-cover img {
@@ -1374,4 +1376,23 @@ a {
   border: 1px solid var(--border);
   border-radius: 999px;
   padding: 0.15rem 0.6rem;
+}
+
+/* Vertical pins bubble (top-left of covers) */
+
+.cover-pins {
+  position: absolute;
+  top: 0.55rem;
+  left: 0.55rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  font-size: 0.95rem;
+  line-height: 1;
+  background: color-mix(in srgb, var(--bg-elevated) 82%, transparent);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.4rem 0.3rem;
+  backdrop-filter: blur(2px);
 }

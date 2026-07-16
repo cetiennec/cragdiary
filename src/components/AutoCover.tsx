@@ -21,18 +21,25 @@ function mulberry32(seed: number) {
 // Earthy hues that sit well on both themes.
 const COVER_COLORS = ["#bc5b2e", "#7a8450", "#5a7a94", "#8a5a74", "#a8873a"];
 
-function ridgePath(rand: () => number, base: number, amp: number): string {
-  let d = `M-10 150 L-10 ${base + rand() * 20}`;
-  for (let x = 30; x <= 330; x += 42 + Math.floor(rand() * 18)) {
+function ridgePath(
+  rand: () => number,
+  width: number,
+  base: number,
+  amp: number,
+  floor: number
+): string {
+  let d = `M-10 ${floor} L-10 ${(base + rand() * amp * 0.3).toFixed(0)}`;
+  const step = width / 8;
+  for (let x = step * 0.6; x <= width - step * 0.4; x += step * (0.8 + rand() * 0.5)) {
     const peak = rand() > 0.45;
-    const y = peak ? base - amp * (0.5 + rand() * 0.9) : base + rand() * 22;
-    d += ` L${x} ${Math.max(18, y).toFixed(0)}`;
+    const y = peak ? base - amp * (0.5 + rand() * 0.9) : base + rand() * amp * 0.35;
+    d += ` L${x.toFixed(0)} ${Math.max(amp * 0.2, y).toFixed(0)}`;
   }
-  d += " L370 150";
+  d += ` L${width + 10} ${floor}`;
   return d;
 }
 
-function coverEmojis(entry: EntryWithAuthor): string[] {
+export function coverEmojis(entry: EntryWithAuthor): string[] {
   const out: string[] = [];
   const orientation = entry.orientation?.toUpperCase() ?? "";
   const style = entry.style?.toLowerCase() ?? "";
@@ -49,60 +56,84 @@ function coverEmojis(entry: EntryWithAuthor): string[] {
   return out.slice(0, 4);
 }
 
-export default function AutoCover({
-  entry,
-  className = "entry-card-cover auto-cover",
-  showTag = true,
-}: {
-  entry: EntryWithAuthor;
-  className?: string;
-  showTag?: boolean;
-}) {
-  const seed = hashCode(entry.id);
-  const rand = mulberry32(seed);
-  const color = COVER_COLORS[seed % COVER_COLORS.length];
-
-  const front = ridgePath(rand, 105, 65);
-  const back = ridgePath(rand, 92, 55);
-  const sunX = 40 + rand() * 280;
-  const sunY = 26 + rand() * 22;
-
-  const emojis = coverEmojis(entry).map((emoji, i) => ({
-    emoji,
-    x: 30 + ((rand() * 300 + i * 83) % 300),
-    y: 24 + rand() * 60,
-    size: 13 + rand() * 6,
-  }));
-
-  const tag = [
+function coverTag(entry: EntryWithAuthor): string {
+  return [
     entry.grade_max ?? entry.rating,
     entry.pitches ? `${entry.pitches}L` : null,
     entry.height_m ? `${entry.height_m} m` : null,
   ]
     .filter(Boolean)
     .join(" · ");
+}
 
+export function CoverPins({ entry }: { entry: EntryWithAuthor }) {
+  const emojis = coverEmojis(entry);
   return (
-    <div className={className} aria-hidden style={{ color }}>
-      <svg viewBox="0 0 360 150" preserveAspectRatio="xMidYMax slice" fill="none">
-        <circle cx={sunX.toFixed(0)} cy={sunY.toFixed(0)} r="18" stroke="currentColor" strokeWidth="2.5" opacity="0.45" />
-        <path d={back} stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" opacity="0.3" />
-        <path d={front} stroke="currentColor" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" opacity="0.8" />
-        {emojis.map((e, i) => (
-          <text
-            key={i}
-            x={e.x.toFixed(0)}
-            y={e.y.toFixed(0)}
-            fontSize={e.size.toFixed(0)}
-            opacity="0.9"
-            fill="currentColor"
-          >
-            {e.emoji}
-          </text>
-        ))}
-      </svg>
-      {showTag && tag && <span className="auto-cover-tag">{tag}</span>}
-    </div>
+    <span className="cover-pins" aria-hidden>
+      {emojis.map((emoji, i) => (
+        <span key={i}>{emoji}</span>
+      ))}
+    </span>
   );
 }
 
+export function CoverTag({ entry }: { entry: EntryWithAuthor }) {
+  const tag = coverTag(entry);
+  if (!tag) return null;
+  return <span className="auto-cover-tag">{tag}</span>;
+}
+
+export default function AutoCover({
+  entry,
+  className = "entry-card-cover auto-cover",
+  wide = false,
+}: {
+  entry: EntryWithAuthor;
+  className?: string;
+  wide?: boolean;
+}) {
+  const seed = hashCode(entry.id);
+  const rand = mulberry32(seed);
+  const color = COVER_COLORS[seed % COVER_COLORS.length];
+
+  const W = wide ? 1200 : 360;
+  const H = wide ? 300 : 150;
+  const front = ridgePath(rand, W, H * 0.7, H * 0.45, H);
+  const back = ridgePath(rand, W, H * 0.6, H * 0.38, H);
+  const sunR = wide ? 34 : 18;
+  const sunX = W * 0.1 + rand() * W * 0.8;
+  const sunY = H * 0.17 + rand() * H * 0.15;
+
+  return (
+    <div className={className} aria-hidden style={{ color }}>
+      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMax slice" fill="none">
+        <circle
+          cx={sunX.toFixed(0)}
+          cy={sunY.toFixed(0)}
+          r={sunR}
+          stroke="currentColor"
+          strokeWidth={wide ? 3 : 2.5}
+          opacity="0.45"
+        />
+        <path
+          d={back}
+          stroke="currentColor"
+          strokeWidth={wide ? 3 : 2.5}
+          strokeLinejoin="round"
+          strokeLinecap="round"
+          opacity="0.3"
+        />
+        <path
+          d={front}
+          stroke="currentColor"
+          strokeWidth={wide ? 3.5 : 3}
+          strokeLinejoin="round"
+          strokeLinecap="round"
+          opacity="0.8"
+        />
+      </svg>
+      <CoverPins entry={entry} />
+      <CoverTag entry={entry} />
+    </div>
+  );
+}

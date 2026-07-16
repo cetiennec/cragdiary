@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { formatDate, type Locale } from "@/lib/i18n";
 import type { EntryWithAuthor } from "@/lib/queries";
-import AutoCover from "@/components/AutoCover";
+import AutoCover, { CoverPins, CoverTag } from "@/components/AutoCover";
 
 const VISIBILITY_BADGES = {
   public: null,
@@ -41,6 +41,8 @@ export default function EntryCard({
           <div className="entry-card-cover">
             {/* eslint-disable-next-line @next/next/no-img-element -- served from our own DB-backed route, already resized/compressed server-side */}
             <img src={`/api/photos/${cover.id}`} alt="" loading="lazy" />
+            <CoverPins entry={entry} />
+            <CoverTag entry={entry} />
           </div>
         ) : (
           <AutoCover entry={entry} />
