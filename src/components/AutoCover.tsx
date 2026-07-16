@@ -21,19 +21,28 @@ function mulberry32(seed: number) {
 // Earthy hues that sit well on both themes.
 const COVER_COLORS = ["#bc5b2e", "#7a8450", "#5a7a94", "#8a5a74", "#a8873a"];
 
+// Strict peak/valley alternation so the silhouette always reads as mountains;
+// randomness only nudges summit heights, col depths, and horizontal placement.
 function ridgePath(
   rand: () => number,
   width: number,
-  base: number,
-  amp: number,
+  peakBand: [number, number],
+  valleyBand: [number, number],
   floor: number
 ): string {
-  let d = `M-10 ${floor} L-10 ${(base + rand() * amp * 0.3).toFixed(0)}`;
-  const step = width / 8;
-  for (let x = step * 0.6; x <= width - step * 0.4; x += step * (0.8 + rand() * 0.5)) {
-    const peak = rand() > 0.45;
-    const y = peak ? base - amp * (0.5 + rand() * 0.9) : base + rand() * amp * 0.35;
-    d += ` L${x.toFixed(0)} ${Math.max(amp * 0.2, y).toFixed(0)}`;
+  const peaks = 3 + Math.floor(rand() * 2); // 3–4 summits
+  const seg = width / peaks;
+  const peakY = () => peakBand[0] + rand() * (peakBand[1] - peakBand[0]);
+  const valleyY = () => valleyBand[0] + rand() * (valleyBand[1] - valleyBand[0]);
+
+  let d = `M-10 ${floor} L-10 ${valleyY().toFixed(0)}`;
+  for (let i = 0; i < peaks; i++) {
+    const px = seg * (i + 0.3 + rand() * 0.4);
+    d += ` L${px.toFixed(0)} ${peakY().toFixed(0)}`;
+    if (i < peaks - 1) {
+      const vx = seg * (i + 0.85 + rand() * 0.15);
+      d += ` L${vx.toFixed(0)} ${valleyY().toFixed(0)}`;
+    }
   }
   d += ` L${width + 10} ${floor}`;
   return d;
@@ -100,8 +109,8 @@ export default function AutoCover({
 
   const W = wide ? 1200 : 360;
   const H = wide ? 300 : 150;
-  const front = ridgePath(rand, W, H * 0.7, H * 0.45, H);
-  const back = ridgePath(rand, W, H * 0.6, H * 0.38, H);
+  const front = ridgePath(rand, W, [H * 0.22, H * 0.42], [H * 0.68, H * 0.82], H);
+  const back = ridgePath(rand, W, [H * 0.38, H * 0.55], [H * 0.6, H * 0.72], H);
   const sunR = wide ? 34 : 18;
   const sunX = W * 0.1 + rand() * W * 0.8;
   const sunY = H * 0.17 + rand() * H * 0.15;
