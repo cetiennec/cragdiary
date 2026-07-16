@@ -18,10 +18,18 @@ function today(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-function SubmitButton({ editing, t }: { editing: boolean; t: EditorDict }) {
+function SubmitButton({
+  editing,
+  blocked,
+  t,
+}: {
+  editing: boolean;
+  blocked: boolean;
+  t: EditorDict;
+}) {
   const { pending } = useFormStatus();
   return (
-    <button type="submit" className="btn-primary" disabled={pending}>
+    <button type="submit" className="btn-primary" disabled={pending || blocked}>
       {pending ? t.saving : editing ? t.saveChanges : t.save}
     </button>
   );
@@ -278,13 +286,32 @@ export default function EntryForm({
     if (fileInputRef.current) fileInputRef.current.files = dt.files;
   }
 
+  // Vercel rejects request bodies over ~4.5 MB, so the whole upload must fit
+  // this budget; when the first pass is too big, recompress smaller.
+  const UPLOAD_BUDGET = 3_500_000;
+  const COMPRESSION_STEPS: [number, number][] = [
+    [1800, 0.82],
+    [1400, 0.78],
+    [1100, 0.72],
+    [900, 0.65],
+  ];
+  const [photoError, setPhotoError] = useState(false);
+
   async function handleFiles(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
     if (files.length === 0) {
       setNewFiles([]);
+      setPhotoError(false);
       return;
     }
-    const compressed = await Promise.all(files.map((f) => compressImage(f)));
+    let compressed: File[] = [];
+    for (const [dim, quality] of COMPRESSION_STEPS) {
+      compressed = await Promise.all(files.map((f) => compressImage(f, dim, quality)));
+      const total = compressed.reduce((sum, f) => sum + f.size, 0);
+      if (total <= UPLOAD_BUDGET) break;
+    }
+    const total = compressed.reduce((sum, f) => sum + f.size, 0);
+    setPhotoError(total > UPLOAD_BUDGET);
     syncFileInput(compressed);
     setNewFiles(compressed);
   }
@@ -886,8 +913,10 @@ export default function EntryForm({
           </div>
         )}
 
+        {photoError && <p className="form-error">{t.tooManyPhotos}</p>}
+
         <div className="notion-editor-actions">
-          <SubmitButton editing={editing} t={t} />
+          <SubmitButton editing={editing} blocked={photoError} t={t} />
         </div>
       </div>
     </form>

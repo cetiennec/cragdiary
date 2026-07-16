@@ -100,6 +100,7 @@ const en = {
     c2cSummaryTitle: "Camptocamp route summary (CC BY-SA):",
     c2cSummaryInclude: "Show this summary on the entry",
     geoAttribution: "data © OpenStreetMap contributors",
+    tooManyPhotos: "Too many photos for one save (upload limit ~3.5 MB even after compression). Remove a few, save, then add the rest by editing the entry.",
     currentPhotos: "Current photos — reorder with the arrows, tick to remove, place in the text with the selector:",
     photoPlacement: "Placement",
     photoPlacementOptions: {
@@ -352,6 +353,7 @@ const fr: Dict = {
     c2cSummaryTitle: "Résumé Camptocamp de la voie (CC BY-SA) :",
     c2cSummaryInclude: "Afficher ce résumé sur l'entrée",
     geoAttribution: "données © contributeurs OpenStreetMap",
+    tooManyPhotos: "Trop de photos pour un seul enregistrement (limite d'envoi ~3,5 Mo même après compression). Retirez-en quelques-unes, enregistrez, puis ajoutez le reste en modifiant l'entrée.",
     currentPhotos: "Photos actuelles — réordonnez avec les flèches, cochez pour retirer, placez dans le texte avec le sélecteur :",
     photoPlacement: "Placement",
     photoPlacementOptions: {
