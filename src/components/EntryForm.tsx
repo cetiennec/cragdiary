@@ -102,8 +102,8 @@ export default function EntryForm({
     });
   }
 
-  function fieldToggle(name: string) {
-    if (!autoFilled.has(name)) return null;
+  function fieldToggle(name: string, always = false) {
+    if (!always && !autoFilled.has(name)) return null;
     const off = excludedFields.has(name);
     return (
       <button
@@ -328,6 +328,24 @@ export default function EntryForm({
   }
 
   const [orderedPhotos, setOrderedPhotos] = useState(entry?.photos ?? []);
+  const [photoLayout, setPhotoLayout] = useState<
+    Record<string, { align: string; size: string; para: string }>
+  >(() =>
+    Object.fromEntries(
+      (entry?.photos ?? []).map((p) => [
+        p.id,
+        {
+          align: p.align ?? "gallery",
+          size: p.size ?? "m",
+          para: p.para != null ? String(p.para + 1) : "1",
+        },
+      ])
+    )
+  );
+
+  function setLayout(id: string, patch: Partial<{ align: string; size: string; para: string }>) {
+    setPhotoLayout((prev) => ({ ...prev, [id]: { ...prev[id], ...patch } }));
+  }
 
   function movePhoto(index: number, delta: number) {
     setOrderedPhotos((photos) => {
@@ -621,14 +639,16 @@ export default function EntryForm({
               {fieldToggle("height_m")}
             </div>
           </div>
-          <div className="notion-prop">
+          <div className={`notion-prop${excludedFields.has("partners") ? " prop-excluded" : ""}`}>
             <label htmlFor="partners">{t.partners}</label>
+            <div className="prop-field">
             <div className="combobox">
               <input
                 id="partners"
                 type="text"
                 name="partners"
                 ref={partnersInputRef}
+                disabled={excludedFields.has("partners")}
                 value={partners}
                 onChange={(e) => {
                   setPartners(e.target.value);
@@ -671,6 +691,8 @@ export default function EntryForm({
                   ))}
                 </ul>
               )}
+            </div>
+            {fieldToggle("partners", true)}
             </div>
           </div>
           <div className="notion-prop">
@@ -800,6 +822,46 @@ export default function EntryForm({
                       <input type="checkbox" name="remove_photos" value={photo.id} />{" "}
                       {t.removePhoto}
                     </label>
+                  </span>
+                  <span className="photo-layout-controls">
+                    <select
+                      name={`photo_align_${photo.id}`}
+                      value={photoLayout[photo.id]?.align ?? "gallery"}
+                      onChange={(e) => setLayout(photo.id, { align: e.target.value })}
+                      aria-label={t.photoPlacement}
+                    >
+                      <option value="gallery">{t.photoPlacementOptions.gallery}</option>
+                      <option value="left">{t.photoPlacementOptions.left}</option>
+                      <option value="right">{t.photoPlacementOptions.right}</option>
+                      <option value="full">{t.photoPlacementOptions.full}</option>
+                    </select>
+                    {photoLayout[photo.id]?.align !== "gallery" && (
+                      <>
+                        {photoLayout[photo.id]?.align !== "full" && (
+                          <select
+                            name={`photo_size_${photo.id}`}
+                            value={photoLayout[photo.id]?.size ?? "m"}
+                            onChange={(e) => setLayout(photo.id, { size: e.target.value })}
+                            aria-label={t.photoSize}
+                          >
+                            <option value="s">S</option>
+                            <option value="m">M</option>
+                            <option value="l">L</option>
+                          </select>
+                        )}
+                        <label className="photo-para-label">
+                          ¶
+                          <input
+                            type="number"
+                            min={1}
+                            name={`photo_para_${photo.id}`}
+                            value={photoLayout[photo.id]?.para ?? "1"}
+                            onChange={(e) => setLayout(photo.id, { para: e.target.value })}
+                            aria-label={t.photoPara}
+                          />
+                        </label>
+                      </>
+                    )}
                   </span>
                 </div>
               ))}

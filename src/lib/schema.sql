@@ -43,6 +43,9 @@ create table if not exists photos (
   content_type text not null,
   data bytea not null,
   position integer not null default 0,
+  size text not null default 'm',
+  align text,
+  para integer,
   created_at timestamptz not null default now()
 );
 

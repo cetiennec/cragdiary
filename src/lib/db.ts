@@ -57,9 +57,14 @@ export type Entry = {
   created_at: string;
 };
 
+export type PhotoAlign = "left" | "right" | "full" | null;
+
 export type Photo = {
   id: string;
   entry_id: string;
   content_type: string;
   position: number;
+  size: string;
+  align: PhotoAlign;
+  para: number | null;
 };

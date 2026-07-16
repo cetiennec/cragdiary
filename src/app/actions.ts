@@ -311,9 +311,16 @@ export async function updateEntry(formData: FormData): Promise<void> {
       .map((s) => s.trim())
       .filter(Boolean);
     for (let i = 0; i < photoOrder.length; i++) {
+      const pid = photoOrder[i];
+      const rawAlign = String(formData.get(`photo_align_${pid}`) ?? "");
+      const align = rawAlign === "left" || rawAlign === "right" || rawAlign === "full" ? rawAlign : null;
+      const rawSize = String(formData.get(`photo_size_${pid}`) ?? "");
+      const size = rawSize === "s" || rawSize === "l" ? rawSize : "m";
+      const rawPara = parseInt(String(formData.get(`photo_para_${pid}`) ?? ""), 10);
+      const para = align && Number.isFinite(rawPara) && rawPara >= 1 ? rawPara - 1 : null;
       await client.query(
-        "update photos set position = $1 where id = $2 and entry_id = $3",
-        [i, photoOrder[i], id]
+        "update photos set position = $1, size = $2, align = $3, para = $4 where id = $5 and entry_id = $6",
+        [i, size, align, para, pid, id]
       );
     }
 

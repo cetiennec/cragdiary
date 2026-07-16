@@ -7,6 +7,47 @@ import DeleteEntryButton from "@/components/DeleteEntryButton";
 
 const MENTION_RE = /@([a-z0-9-]{3,20})/g;
 
+type InlinePhoto = {
+  id: string;
+  size: string;
+  align: "left" | "right" | "full";
+  para: number | null;
+};
+
+function NotesFlow({ notes, photos }: { notes: string | null; photos: InlinePhoto[] }) {
+  const paragraphs = notes ? notes.split(/\n{2,}/) : [];
+  const byPara = new Map<number, InlinePhoto[]>();
+  for (const photo of photos) {
+    const idx = Math.min(photo.para ?? 0, paragraphs.length);
+    const list = byPara.get(idx) ?? [];
+    list.push(photo);
+    byPara.set(idx, list);
+  }
+
+  const figure = (photo: InlinePhoto) => (
+    // eslint-disable-next-line @next/next/no-img-element -- served from our own DB-backed route, already resized/compressed server-side
+    <img
+      key={photo.id}
+      src={`/api/photos/${photo.id}`}
+      alt=""
+      loading="lazy"
+      className={`inline-photo f-${photo.align} sz-${photo.size}`}
+    />
+  );
+
+  return (
+    <div className="notes-flow">
+      {paragraphs.map((para, i) => (
+        <div key={i} className="notes-para-group">
+          {(byPara.get(i) ?? []).map(figure)}
+          <p className="notes-para">{para}</p>
+        </div>
+      ))}
+      {(byPara.get(paragraphs.length) ?? []).map(figure)}
+    </div>
+  );
+}
+
 async function renderPartners(partners: string): Promise<React.ReactNode[]> {
   const mentioned = [...partners.matchAll(MENTION_RE)].map((m) => m[1]);
   const existing = await getExistingUsernames(mentioned);
@@ -47,7 +88,12 @@ export default async function EntryPage({
 
   const badge =
     isAuthor && entry.visibility !== "public" ? t.entry.badges[entry.visibility] : null;
-  const [cover, ...gallery] = entry.photos;
+  const inlinePhotos = entry.photos.filter(
+    (p): p is (typeof entry.photos)[number] & { align: "left" | "right" | "full" } =>
+      p.align === "left" || p.align === "right" || p.align === "full"
+  );
+  const galleryPhotos = entry.photos.filter((p) => !p.align);
+  const [cover, ...gallery] = galleryPhotos;
 
   const pitchesAndHeight = [
     entry.pitches ? `${entry.pitches}L` : null,
@@ -193,7 +239,9 @@ export default async function EntryPage({
           </blockquote>
         )}
 
-        {entry.notes && <div className="notion-notes">{entry.notes}</div>}
+        {(entry.notes || inlinePhotos.length > 0) && (
+          <NotesFlow notes={entry.notes} photos={inlinePhotos} />
+        )}
 
         {entry.pitch_notes && Object.keys(entry.pitch_notes).length > 0 && (
           <div className="pitch-notes-view">
