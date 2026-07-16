@@ -17,6 +17,7 @@ type SettingsLabels = {
   emailHint: string;
   coverLabel: string;
   coverRemove: string;
+  exportLabel: string;
   dangerTitle: string;
   deleteLabel: string;
   deleteConfirmPassword: string;
@@ -102,6 +103,10 @@ export default function ProfileSettingsForm({
         {visibility === "unlisted" && <p className="form-hint">{t.unlistedHint}</p>}
         <SubmitButton label={t.settingsSave} />
       </form>
+
+      <p className="export-link">
+        <a href="/api/export">⬇︎ {t.exportLabel}</a>
+      </p>
 
       <div className="danger-zone">
         <p className="danger-title">{t.dangerTitle}</p>

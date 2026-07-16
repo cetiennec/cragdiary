@@ -1,7 +1,18 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getEntriesByUser, getUserByUsername, getUserStats } from "@/lib/queries";
+import {
+  getEntriesByUser,
+  getEntryYears,
+  getUserByUsername,
+  getUserStats,
+  getWishes,
+  isFollowing,
+  type EntryFilters,
+} from "@/lib/queries";
+import { deleteWish, toggleFollow } from "@/app/actions";
+import FilterBar from "@/components/FilterBar";
+import WishForm from "@/components/WishForm";
 import { currentUser } from "@/lib/auth";
 import { formatMeters, getDict } from "@/lib/i18n";
 import EntryCard from "@/components/EntryCard";
@@ -40,9 +51,16 @@ export default async function ProfilePage({
   searchParams,
 }: {
   params: Promise<{ username: string }>;
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; q?: string; year?: string; loc?: string }>;
 }) {
-  const [{ username }, { error }] = await Promise.all([params, searchParams]);
+  const [{ username }, sp] = await Promise.all([params, searchParams]);
+  const { error } = sp;
+  const yearNum = parseInt(sp.year ?? "", 10);
+  const filters: EntryFilters = {
+    q: sp.q?.trim() || undefined,
+    year: Number.isFinite(yearNum) ? yearNum : null,
+    location: sp.loc?.trim() || undefined,
+  };
 
   const [profile, user, { locale, t }] = await Promise.all([
     getUserByUsername(username),
@@ -53,9 +71,12 @@ export default async function ProfilePage({
 
   const isSelf = user?.id === profile.id;
   if (profile.visibility === "private" && !isSelf) notFound();
-  const [entries, stats] = await Promise.all([
-    getEntriesByUser(profile.id, { includeNonPublic: isSelf }),
+  const [entries, stats, years, wishes, following] = await Promise.all([
+    getEntriesByUser(profile.id, { includeNonPublic: isSelf, filters }),
     getUserStats(profile.id, { includeNonPublic: isSelf }),
+    getEntryYears(profile.id),
+    getWishes(profile.id),
+    user && !isSelf ? isFollowing(user.id, profile.id) : Promise.resolve(false),
   ]);
 
   const tiles = [
@@ -89,6 +110,14 @@ export default async function ProfilePage({
           </p>
           {profile.bio && <p className="profile-bio">{profile.bio}</p>}
         </div>
+        {user && !isSelf && (
+          <form action={toggleFollow} className="follow-form">
+            <input type="hidden" name="username" value={profile.username} />
+            <button type="submit" className={following ? "btn-follow following" : "btn-follow"}>
+              {following ? t.follow.following : t.follow.follow}
+            </button>
+          </form>
+        )}
       </header>
 
       {isSelf && (
@@ -115,6 +144,7 @@ export default async function ProfilePage({
               coverRemove: t.profile.coverRemove,
               dangerTitle: t.profile.dangerTitle,
               deleteLabel: t.profile.deleteLabel,
+              exportLabel: t.exportLabel,
               deleteConfirmPassword: t.profile.deleteConfirmPassword,
               deleteButton: t.profile.deleteButton,
             }}
@@ -137,6 +167,13 @@ export default async function ProfilePage({
         points={entries
           .filter((e) => e.lat != null && e.lon != null)
           .map((e) => ({ id: e.id, title: e.crag, lat: e.lat!, lon: e.lon! }))}
+      />
+
+      <FilterBar
+        t={t.filters}
+        years={years}
+        current={{ q: sp.q ?? "", year: sp.year ?? "", loc: sp.loc ?? "" }}
+        action={`/u/${profile.username}`}
       />
 
       {entries.length === 0 ? (
@@ -163,6 +200,64 @@ export default async function ProfilePage({
             />
           ))}
         </div>
+      )}
+
+      {(wishes.length > 0 || isSelf) && (
+        <section className="wishlist-section">
+          <h2 className="pitch-notes-title">{t.wishlist.title}</h2>
+          {wishes.length === 0 && <p className="form-hint">{t.wishlist.empty}</p>}
+          <ul className="wishlist">
+            {wishes.map((wish) => (
+              <li key={wish.id} className="wish-row">
+                <div className="wish-main">
+                  <span className="wish-title">
+                    {wish.c2c_url ? (
+                      <a href={wish.c2c_url} target="_blank" rel="noopener noreferrer">
+                        {wish.title} ↗
+                      </a>
+                    ) : (
+                      wish.title
+                    )}
+                  </span>
+                  <span className="wish-meta">
+                    {[
+                      wish.location,
+                      wish.grade_max ?? wish.rating,
+                      wish.height_m ? `${wish.height_m} m` : null,
+                      wish.note,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </span>
+                </div>
+                {isSelf && (
+                  <div className="wish-actions">
+                    <Link href={`/entries/new?from_wish=${wish.id}`} className="wish-done">
+                      {t.wishlist.done}
+                    </Link>
+                    <form action={deleteWish}>
+                      <input type="hidden" name="id" value={wish.id} />
+                      <button type="submit" className="delete-btn">
+                        {t.wishlist.remove}
+                      </button>
+                    </form>
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+          {isSelf && (
+            <WishForm
+              locale={locale}
+              t={{
+                titlePlaceholder: t.wishlist.titlePlaceholder,
+                notePlaceholder: t.wishlist.notePlaceholder,
+                add: t.wishlist.add,
+                attribution: t.editor.suggestionsAttribution,
+              }}
+            />
+          )}
+        </section>
       )}
     </div>
   );

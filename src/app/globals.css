@@ -1397,3 +1397,202 @@ a {
   padding: 0.4rem 0.3rem;
   backdrop-filter: blur(2px);
 }
+
+/* Feed tabs */
+
+.feed-tabs {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 1.2rem;
+}
+
+.feed-tabs a {
+  text-decoration: none;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  padding: 0.35rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+}
+
+.feed-tabs a.feed-tab-active {
+  background: var(--accent);
+  color: var(--accent-contrast);
+  border-color: var(--accent);
+}
+
+/* Filter bar */
+
+.filter-bar {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 1.6rem;
+}
+
+.filter-bar input,
+.filter-bar select {
+  font: inherit;
+  font-size: 0.88rem;
+  color: var(--text);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.4rem 0.9rem;
+}
+
+.filter-bar input[type="search"] {
+  min-width: 200px;
+}
+
+.filter-loc {
+  max-width: 140px;
+}
+
+.filter-bar button {
+  font: inherit;
+  font-size: 0.88rem;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  border: none;
+  border-radius: 999px;
+  padding: 0.42rem 1rem;
+  cursor: pointer;
+}
+
+.filter-bar a {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+/* Follow button */
+
+.follow-form {
+  margin-left: auto;
+}
+
+.btn-follow {
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  padding: 0.45rem 1.1rem;
+  cursor: pointer;
+}
+
+.btn-follow.following {
+  background: transparent;
+  color: var(--text-muted);
+  border-color: var(--border);
+}
+
+/* Wishlist */
+
+.wishlist-section {
+  margin-top: 2.4rem;
+}
+
+.wishlist {
+  list-style: none;
+  margin: 0.6rem 0 1rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.wish-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  padding: 0.55rem 0.9rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.wish-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.wish-title {
+  font-weight: 600;
+}
+
+.wish-title a {
+  text-decoration: none;
+  color: var(--accent);
+}
+
+.wish-meta {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.wish-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  flex-shrink: 0;
+}
+
+.wish-done {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--accent);
+  text-decoration: none;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  padding: 0.25rem 0.7rem;
+}
+
+.wish-form {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.wish-form .wish-title {
+  flex: 2;
+  min-width: 220px;
+}
+
+.wish-form input[type="text"],
+.wish-form input[type="search"] {
+  font: inherit;
+  font-size: 0.9rem;
+  color: var(--text);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.45rem 0.9rem;
+  width: 100%;
+}
+
+.wish-note {
+  flex: 1;
+  min-width: 140px;
+}
+
+.export-link {
+  margin: 1.2rem 0 0;
+  font-size: 0.88rem;
+}
+
+.export-link a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.export-link a:hover {
+  text-decoration: underline;
+}

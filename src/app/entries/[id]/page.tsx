@@ -33,7 +33,7 @@ function NotesFlow({ notes, photos }: { notes: string | null; photos: InlinePhot
       src={`/api/photos/${photo.id}`}
       alt=""
       loading="lazy"
-      className={`inline-photo f-${photo.align} sz-${photo.size}`}
+      className={`inline-photo f-${photo.align}${photo.align === "full" ? "" : ` sz-${photo.size}`}`}
     />
   );
 

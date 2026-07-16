@@ -77,3 +77,19 @@ export type Photo = {
   align: PhotoAlign;
   para: number | null;
 };
+
+export type Wish = {
+  id: string;
+  user_id: string;
+  title: string;
+  location: string | null;
+  grade_max: string | null;
+  rating: string | null;
+  pitches: number | null;
+  height_m: number | null;
+  c2c_url: string | null;
+  note: string | null;
+  lat: number | null;
+  lon: number | null;
+  created_at: string;
+};

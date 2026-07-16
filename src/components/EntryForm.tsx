@@ -27,12 +27,27 @@ function SubmitButton({ editing, t }: { editing: boolean; t: EditorDict }) {
   );
 }
 
+export type EntryDefaults = {
+  crag?: string;
+  location?: string;
+  grade_max?: string;
+  rating?: string;
+  pitches?: number | null;
+  height_m?: number | null;
+  c2c_url?: string;
+  lat?: number | null;
+  lon?: number | null;
+  fromWish?: string;
+};
+
 export default function EntryForm({
   entry,
+  defaults,
   t,
   locale,
 }: {
   entry?: EntryWithAuthor;
+  defaults?: EntryDefaults;
   t: EditorDict;
   locale: Locale;
 }) {
@@ -40,17 +55,21 @@ export default function EntryForm({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editing = Boolean(entry);
 
-  const [title, setTitle] = useState(entry?.crag ?? "");
-  const [location, setLocation] = useState(entry?.location ?? "");
-  const [grade, setGrade] = useState(entry?.grade_max ?? "");
-  const [rating, setRating] = useState(entry?.rating ?? "");
+  const [title, setTitle] = useState(entry?.crag ?? defaults?.crag ?? "");
+  const [location, setLocation] = useState(entry?.location ?? defaults?.location ?? "");
+  const [grade, setGrade] = useState(entry?.grade_max ?? defaults?.grade_max ?? "");
+  const [rating, setRating] = useState(entry?.rating ?? defaults?.rating ?? "");
   const [orientation, setOrientation] = useState(entry?.orientation ?? "");
   const [equipment, setEquipment] = useState(entry?.equipment ?? "");
-  const [heightM, setHeightM] = useState(entry?.height_m ? String(entry.height_m) : "");
-  const [c2cUrl, setC2cUrl] = useState(entry?.c2c_url ?? "");
+  const [heightM, setHeightM] = useState(
+    entry?.height_m ? String(entry.height_m) : defaults?.height_m ? String(defaults.height_m) : ""
+  );
+  const [c2cUrl, setC2cUrl] = useState(entry?.c2c_url ?? defaults?.c2c_url ?? "");
   const [c2cSummary, setC2cSummary] = useState(entry?.c2c_summary ?? "");
   const [includeSummary, setIncludeSummary] = useState(Boolean(entry?.c2c_summary));
-  const [pitches, setPitches] = useState(entry?.pitches ? String(entry.pitches) : "");
+  const [pitches, setPitches] = useState(
+    entry?.pitches ? String(entry.pitches) : defaults?.pitches ? String(defaults.pitches) : ""
+  );
 
   const [monthOnly, setMonthOnly] = useState(entry?.month_only ?? false);
   const [dateValue, setDateValue] = useState(
@@ -60,8 +79,12 @@ export default function EntryForm({
         : entry.entry_date
       : today()
   );
-  const [lat, setLat] = useState(entry?.lat != null ? String(entry.lat) : "");
-  const [lon, setLon] = useState(entry?.lon != null ? String(entry.lon) : "");
+  const [lat, setLat] = useState(
+    entry?.lat != null ? String(entry.lat) : defaults?.lat != null ? String(defaults.lat) : ""
+  );
+  const [lon, setLon] = useState(
+    entry?.lon != null ? String(entry.lon) : defaults?.lon != null ? String(defaults.lon) : ""
+  );
 
   const [excludedFields, setExcludedFields] = useState<Set<string>>(new Set());
 
@@ -313,6 +336,7 @@ export default function EntryForm({
     <form action={editing ? updateEntry : createEntry} className="notion-page notion-editor">
       <div className="notion-body">
         {editing && <input type="hidden" name="id" value={entry!.id} />}
+        {defaults?.fromWish && <input type="hidden" name="from_wish" value={defaults.fromWish} />}
         <input type="hidden" name="lat" value={excludedFields.has("location") ? "" : lat} />
         <input type="hidden" name="lon" value={excludedFields.has("location") ? "" : lon} />
         <input type="hidden" name="c2c_summary" value={includeSummary ? c2cSummary : ""} />

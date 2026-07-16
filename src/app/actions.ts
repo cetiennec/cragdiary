@@ -296,6 +296,14 @@ export async function createEntry(formData: FormData): Promise<void> {
     client.release();
   }
 
+  const fromWish = String(formData.get("from_wish") ?? "");
+  if (fromWish) {
+    await pool.query("delete from wishes where id = $1 and user_id = $2", [
+      fromWish,
+      user.id,
+    ]);
+  }
+
   revalidatePath("/");
   revalidatePath(`/u/${user.username}`);
   redirect(`/entries/${entryId}`);
@@ -505,4 +513,72 @@ export async function deleteAccount(formData: FormData): Promise<void> {
   await destroySession();
   revalidatePath("/");
   redirect("/");
+}
+
+export async function toggleFollow(formData: FormData): Promise<void> {
+  const user = await currentUser();
+  if (!user) redirect("/login");
+
+  const username = String(formData.get("username") ?? "").trim().toLowerCase();
+  const target = await pool.query<{ id: string; visibility: string }>(
+    "select id, visibility from users where username = $1",
+    [username]
+  );
+  const followee = target.rows[0];
+  if (!followee || followee.id === user.id || followee.visibility === "private") return;
+
+  const deleted = await pool.query(
+    "delete from follows where follower_id = $1 and followee_id = $2",
+    [user.id, followee.id]
+  );
+  if (deleted.rowCount === 0) {
+    await pool.query(
+      "insert into follows (follower_id, followee_id) values ($1, $2) on conflict do nothing",
+      [user.id, followee.id]
+    );
+  }
+
+  revalidatePath(`/u/${username}`);
+  revalidatePath("/");
+}
+
+export async function addWish(formData: FormData): Promise<void> {
+  const user = await currentUser();
+  if (!user) throw new Error("Unauthorized");
+
+  const title = String(formData.get("title") ?? "").trim();
+  if (!title) return;
+
+  const coords = parseCoords(formData);
+  await pool.query(
+    `insert into wishes (user_id, title, location, grade_max, rating, pitches, height_m, c2c_url, note, lat, lon)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+    [
+      user.id,
+      title,
+      optionalText(formData.get("location")),
+      optionalText(formData.get("grade_max")),
+      optionalText(formData.get("rating")),
+      optionalInt(formData.get("pitches")),
+      optionalInt(formData.get("height_m")),
+      optionalHttpUrl(formData.get("c2c_url")),
+      optionalText(formData.get("note")),
+      coords.lat,
+      coords.lon,
+    ]
+  );
+
+  revalidatePath(`/u/${user.username}`);
+  redirect(`/u/${user.username}`);
+}
+
+export async function deleteWish(formData: FormData): Promise<void> {
+  const user = await currentUser();
+  if (!user) throw new Error("Unauthorized");
+
+  const id = String(formData.get("id") ?? "");
+  if (id) {
+    await pool.query("delete from wishes where id = $1 and user_id = $2", [id, user.id]);
+  }
+  revalidatePath(`/u/${user.username}`);
 }

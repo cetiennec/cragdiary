@@ -1,4 +1,4 @@
-import { pool, type Entry, type Photo, type User, type Visibility } from "@/lib/db";
+import { pool, type Entry, type Photo, type User, type Visibility, type Wish } from "@/lib/db";
 
 export type EntryWithAuthor = Entry & {
   username: string;
@@ -33,13 +33,58 @@ async function attachPhotos<T extends Entry>(
   }));
 }
 
-export async function getFeed(): Promise<EntryWithAuthor[]> {
+export type EntryFilters = {
+  q?: string;
+  year?: number | null;
+  location?: string;
+};
+
+function filterConditions(
+  filters: EntryFilters,
+  params: unknown[],
+  conds: string[]
+): void {
+  if (filters.q) {
+    params.push(`%${filters.q}%`);
+    const i = params.length;
+    conds.push(
+      `(e.crag ilike $${i} or e.location ilike $${i} or e.routes ilike $${i} or e.partners ilike $${i} or e.notes ilike $${i} or e.style ilike $${i} or e.grade_max ilike $${i})`
+    );
+  }
+  if (filters.year) {
+    params.push(filters.year);
+    conds.push(`extract(year from e.entry_date) = $${params.length}`);
+  }
+  if (filters.location) {
+    params.push(`%${filters.location}%`);
+    conds.push(`e.location ilike $${params.length}`);
+  }
+}
+
+export async function getFeed(
+  filters: EntryFilters = {},
+  { followerId = null }: { followerId?: string | null } = {}
+): Promise<EntryWithAuthor[]> {
+  const params: unknown[] = [];
+  const conds = ["e.visibility = 'public'"];
+  if (followerId) {
+    params.push(followerId);
+    conds.push(
+      `e.user_id in (select followee_id from follows where follower_id = $${params.length})`
+    );
+    conds.push("u.visibility != 'private'");
+  } else {
+    conds.push("u.visibility = 'public'");
+  }
+  filterConditions(filters, params, conds);
+
   const result = await pool.query<Entry & { username: string; display_name: string; author_visibility: Visibility }>(
     `select e.*, u.username, u.display_name, u.visibility as author_visibility
      from entries e
      join users u on u.id = e.user_id
-     where e.visibility = 'public' and u.visibility = 'public'
-     order by e.entry_date desc, e.created_at desc`
+     where ${conds.join(" and ")}
+     order by e.entry_date desc, e.created_at desc`,
+    params
   );
   return attachPhotos(result.rows);
 }
@@ -67,18 +112,60 @@ export async function getUserByUsername(username: string): Promise<User | null> 
 
 export async function getEntriesByUser(
   userId: string,
-  { includeNonPublic = false }: { includeNonPublic?: boolean } = {}
+  { includeNonPublic = false, filters = {} }: { includeNonPublic?: boolean; filters?: EntryFilters } = {}
 ): Promise<EntryWithAuthor[]> {
+  const params: unknown[] = [userId, includeNonPublic];
+  const conds = ["e.user_id = $1", "($2 or e.visibility = 'public')"];
+  filterConditions(filters, params, conds);
+
   const result = await pool.query<Entry & { username: string; display_name: string; author_visibility: Visibility }>(
     `select e.*, u.username, u.display_name, u.visibility as author_visibility
      from entries e
      join users u on u.id = e.user_id
-     where e.user_id = $1
-       and ($2 or e.visibility = 'public')
+     where ${conds.join(" and ")}
      order by e.entry_date desc, e.created_at desc`,
-    [userId, includeNonPublic]
+    params
   );
   return attachPhotos(result.rows);
+}
+
+export async function getEntryYears(userId?: string): Promise<number[]> {
+  const result = userId
+    ? await pool.query<{ year: number }>(
+        "select distinct extract(year from entry_date)::int as year from entries where user_id = $1 order by year desc",
+        [userId]
+      )
+    : await pool.query<{ year: number }>(
+        `select distinct extract(year from e.entry_date)::int as year
+         from entries e join users u on u.id = e.user_id
+         where e.visibility = 'public' and u.visibility = 'public'
+         order by year desc`
+      );
+  return result.rows.map((r) => r.year);
+}
+
+export async function isFollowing(followerId: string, followeeId: string): Promise<boolean> {
+  const result = await pool.query(
+    "select 1 from follows where follower_id = $1 and followee_id = $2",
+    [followerId, followeeId]
+  );
+  return result.rows.length > 0;
+}
+
+export async function getWishes(userId: string): Promise<Wish[]> {
+  const result = await pool.query<Wish>(
+    "select * from wishes where user_id = $1 order by created_at desc",
+    [userId]
+  );
+  return result.rows;
+}
+
+export async function getWish(id: string, userId: string): Promise<Wish | null> {
+  const result = await pool.query<Wish>(
+    "select * from wishes where id = $1 and user_id = $2",
+    [id, userId]
+  );
+  return result.rows[0] ?? null;
 }
 
 export type UserStats = {
