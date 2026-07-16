@@ -1080,6 +1080,7 @@ a {
 .entry-form input[type="text"],
 .entry-form input[type="date"],
 .entry-form input[type="password"],
+.entry-form select,
 .entry-form textarea {
   font: inherit;
   color: var(--text);

@@ -230,7 +230,7 @@ export default async function EntryPage({
           <div className="notion-prop">
             <dt>{t.entry.journal}</dt>
             <dd>
-              {entry.author_public || isAuthor ? (
+              {entry.author_visibility !== "private" || isAuthor ? (
                 <Link href={`/u/${entry.username}`}>{entry.display_name}</Link>
               ) : (
                 entry.display_name

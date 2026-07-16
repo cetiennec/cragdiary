@@ -171,14 +171,14 @@ export async function updateProfile(formData: FormData): Promise<void> {
   if (!user) throw new Error("Unauthorized");
 
   const bio = String(formData.get("bio") ?? "").trim() || null;
-  const isPublic = formData.get("is_public") === "1";
+  const profileVisibility = parseVisibility(formData.get("profile_visibility"));
   const rawEmail = String(formData.get("email") ?? "").trim().toLowerCase();
   const email = rawEmail && rawEmail.includes("@") ? rawEmail : null;
 
   try {
     await pool.query(
-      "update users set bio = $1, is_public = $2, email = $3 where id = $4",
-      [bio, isPublic, email, user.id]
+      "update users set bio = $1, visibility = $2, email = $3 where id = $4",
+      [bio, profileVisibility, email, user.id]
     );
   } catch (e) {
     const pgError = e as { code?: string };

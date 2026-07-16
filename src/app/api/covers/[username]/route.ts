@@ -11,9 +11,9 @@ export async function GET(
     id: string;
     cover: Buffer | null;
     cover_type: string | null;
-    is_public: boolean;
+    visibility: string;
   }>(
-    "select id, cover, cover_type, is_public from users where username = $1",
+    "select id, cover, cover_type, visibility from users where username = $1",
     [username]
   );
 
@@ -22,7 +22,7 @@ export async function GET(
     return new Response("Not found", { status: 404 });
   }
 
-  if (!row.is_public) {
+  if (row.visibility === "private") {
     const user = await currentUser();
     if (user?.id !== row.id) {
       return new Response("Not found", { status: 404 });

@@ -8,8 +8,10 @@ type SettingsLabels = {
   bioLabel: string;
   avatarLabel: string;
   avatarRemove: string;
-  publicLabel: string;
+  visibilityLabel: string;
+  visibilityOptions: { public: string; unlisted: string; private: string };
   privateHint: string;
+  unlistedHint: string;
   settingsSave: string;
   emailLabel: string;
   emailHint: string;
@@ -46,14 +48,14 @@ async function shrinkOnChange(
 export default function ProfileSettingsForm({
   bio,
   email,
-  isPublic,
+  visibility,
   hasAvatar,
   hasCover,
   t,
 }: {
   bio: string;
   email: string;
-  isPublic: boolean;
+  visibility: "public" | "unlisted" | "private";
   hasAvatar: boolean;
   hasCover: boolean;
   t: SettingsLabels;
@@ -88,11 +90,16 @@ export default function ProfileSettingsForm({
             <input type="checkbox" name="remove_cover" value="1" /> {t.coverRemove}
           </label>
         )}
-        <label className="profile-public-toggle">
-          <input type="checkbox" name="is_public" value="1" defaultChecked={isPublic} />{" "}
-          {t.publicLabel}
+        <label>
+          {t.visibilityLabel}
+          <select name="profile_visibility" defaultValue={visibility}>
+            <option value="public">{t.visibilityOptions.public}</option>
+            <option value="unlisted">{t.visibilityOptions.unlisted}</option>
+            <option value="private">{t.visibilityOptions.private}</option>
+          </select>
         </label>
-        {!isPublic && <p className="form-hint">{t.privateHint}</p>}
+        {visibility === "private" && <p className="form-hint">{t.privateHint}</p>}
+        {visibility === "unlisted" && <p className="form-hint">{t.unlistedHint}</p>}
         <SubmitButton label={t.settingsSave} />
       </form>
 

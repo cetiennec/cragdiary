@@ -16,7 +16,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { username } = await params;
   const profile = await getUserByUsername(username);
-  if (!profile || !profile.is_public) return {};
+  if (!profile || profile.visibility === "private") return {};
 
   const description = profile.bio ?? `@${profile.username} on Cragdiary`;
   return {
@@ -52,7 +52,7 @@ export default async function ProfilePage({
   if (!profile) notFound();
 
   const isSelf = user?.id === profile.id;
-  if (!profile.is_public && !isSelf) notFound();
+  if (profile.visibility === "private" && !isSelf) notFound();
   const [entries, stats] = await Promise.all([
     getEntriesByUser(profile.id, { includeNonPublic: isSelf }),
     getUserStats(profile.id, { includeNonPublic: isSelf }),
@@ -97,15 +97,17 @@ export default async function ProfilePage({
           <ProfileSettingsForm
             bio={profile.bio ?? ""}
             email={profile.email ?? ""}
-            isPublic={profile.is_public}
+            visibility={profile.visibility}
             hasAvatar={profile.has_avatar}
             hasCover={profile.has_cover}
             t={{
               bioLabel: t.profile.bioLabel,
               avatarLabel: t.profile.avatarLabel,
               avatarRemove: t.profile.avatarRemove,
-              publicLabel: t.profile.publicLabel,
+              visibilityLabel: t.profile.visibilityLabel,
+              visibilityOptions: t.editor.visibilityOptions,
               privateHint: t.profile.privateHint,
+              unlistedHint: t.profile.unlistedHint,
               settingsSave: t.profile.settingsSave,
               emailLabel: t.profile.emailLabel,
               emailHint: t.profile.emailHint,

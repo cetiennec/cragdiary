@@ -6,7 +6,8 @@ create table if not exists users (
   display_name text not null,
   password_hash text not null,
   bio text,
-  is_public boolean not null default true,
+  visibility text not null default 'public'
+    check (visibility in ('public','unlisted','private')),
   avatar bytea,
   avatar_type text,
   cover bytea,

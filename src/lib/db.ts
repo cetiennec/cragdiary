@@ -30,7 +30,7 @@ export type User = {
   username: string;
   display_name: string;
   bio: string | null;
-  is_public: boolean;
+  visibility: Visibility;
   has_avatar: boolean;
   has_cover: boolean;
   email: string | null;
