@@ -53,13 +53,22 @@ export function coverEmojis(entry: EntryWithAuthor): string[] {
   const orientation = entry.orientation?.toUpperCase() ?? "";
   const style = entry.style?.toLowerCase() ?? "";
   const place = `${entry.location ?? ""} ${entry.crag}`.toLowerCase();
+  const notes = entry.notes?.toLowerCase() ?? "";
+  const month = parseInt(entry.entry_date.slice(5, 7), 10);
+
   if (/calanque|canaille/.test(place)) out.push("🌊");
+  if (month === 12 || month <= 2) out.push("❄️");
+  if (/glace|cascade|goulotte|\bice\b/.test(`${place} ${style}`)) out.push("🧊");
   if (orientation.includes("S") || orientation.includes("E")) out.push("☀️");
   else if (orientation.includes("N")) out.push("☁️");
+  else if (orientation.includes("W")) out.push("🌅");
   if (entry.pitches) out.push("🪢");
   if (style.includes("trad") || style.includes("artif") || style.includes("aid")) out.push("🛠️");
   if (entry.partners) out.push("🤝");
-  if ((entry.height_m ?? 0) >= 150) out.push("🦅");
+  const height = entry.height_m ?? 0;
+  if (height >= 400) out.push("🐐");
+  else if (height >= 150) out.push("🦅");
+  if (/à refaire|recommand|magnifique/.test(notes)) out.push("⭐");
   if (entry.notes && entry.notes.length > 200) out.push("✍️");
   if (out.length === 0) out.push("🧗");
   return out.slice(0, 4);

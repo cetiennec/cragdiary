@@ -1644,3 +1644,52 @@ a {
   background: var(--accent);
   color: var(--accent-contrast);
 }
+
+/* Prominent edit button on own entries */
+
+.entry-actions-top {
+  display: flex;
+  justify-content: flex-end;
+  margin: -0.4rem 0 0.8rem;
+}
+
+.edit-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--accent);
+  border: 1.5px solid var(--accent);
+  border-radius: 999px;
+  padding: 0.4rem 1rem;
+  text-decoration: none;
+}
+
+.edit-pill:hover {
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+
+/* Mobile: stack property rows, tame the big title */
+
+@media (max-width: 540px) {
+  .notion-title,
+  .notion-title-input {
+    font-size: 1.55rem;
+  }
+
+  .notion-prop {
+    grid-template-columns: 1fr;
+    gap: 0.2rem;
+    padding: 0.45rem 0;
+  }
+
+  .notion-prop-pair-fields {
+    flex-wrap: wrap;
+  }
+
+  .notion-prop-pair-fields input {
+    max-width: 110px;
+  }
+}

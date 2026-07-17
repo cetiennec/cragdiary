@@ -11,10 +11,9 @@ Live at https://cragdiary.nanocorp.app
 - Next.js 16 (App Router), TypeScript, Tailwind CSS v4
 - Postgres (Neon) via `pg` — entries and photos (photos stored as `bytea`, resized/
   compressed to WebP with `sharp` on upload, served through `/api/photos/[id]`)
-- Single-owner auth: a shared password (`ADMIN_PASSWORD`) gates posting; the feed
-  itself is public/read-only for anyone with the link
-- Two switchable visual themes (Scrapbook / Minimal), toggled client-side and
-  persisted in `localStorage`
+- Multi-user accounts (scrypt password hashes, HMAC session cookies); per-entry
+  and per-profile visibility (public / link-only / private)
+- Single visual theme: Scrapbook/Carnet (see "Visual theme" below)
 
 ## Local development
 
@@ -37,3 +36,16 @@ Postgres client.
 ## Deploy
 
 Push to `main`; Vercel auto-deploys (managed via NanoCorp — see `.nanocorp/project.json`).
+
+## Visual theme
+
+The site ships with the warm Scrapbook/Carnet look only. A second "Minimal"
+theme still exists in `src/app/globals.css` (`:root[data-theme="minimal"]`
+variables) and the switcher component survives at
+`src/components/ThemeToggle.tsx`. To bring the choice back:
+
+1. In `src/app/layout.tsx`, re-import `ThemeToggle` and render
+   `<ThemeToggle labels={t.themes} />` inside the header `<nav>`.
+2. Replace `THEME_INIT_SCRIPT` with the localStorage-reading version (see git
+   history of this file — commit that introduced "Single visual identity").
+3. That's all: both themes' CSS variables are still maintained.

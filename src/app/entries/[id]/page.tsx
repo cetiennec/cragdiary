@@ -157,6 +157,14 @@ export default async function EntryPage({
 
         {badge && <p className="visibility-badge">{badge}</p>}
 
+        {isAuthor && (
+          <div className="entry-actions-top">
+            <Link href={`/entries/${entry.id}/edit`} className="edit-pill">
+              ✏️ {t.entry.edit}
+            </Link>
+          </div>
+        )}
+
         <div className="entry-head">
         <dl className="notion-props">
           <div className="notion-prop">

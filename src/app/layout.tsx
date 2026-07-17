@@ -5,7 +5,6 @@ import "./globals.css";
 import { currentUser } from "@/lib/auth";
 import { getDict } from "@/lib/i18n";
 import { logout, setLocale } from "./actions";
-import ThemeToggle from "@/components/ThemeToggle";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -27,16 +26,9 @@ export const metadata: Metadata = {
   },
 };
 
-const THEME_INIT_SCRIPT = `
-(function () {
-  try {
-    var t = localStorage.getItem('cragdiary-theme');
-    document.documentElement.setAttribute('data-theme', t === 'minimal' ? 'minimal' : 'scrapbook');
-  } catch (e) {
-    document.documentElement.setAttribute('data-theme', 'scrapbook');
-  }
-})();
-`;
+// Single visual identity: the scrapbook/carnet theme. See README "Visual theme"
+// for how to bring the theme toggle back.
+const THEME_INIT_SCRIPT = `document.documentElement.setAttribute('data-theme', 'scrapbook');`;
 
 export default async function RootLayout({
   children,
@@ -61,7 +53,6 @@ export default async function RootLayout({
               Cragdiary
             </Link>
             <nav className="site-nav">
-              <ThemeToggle labels={t.themes} />
               <form action={setLocale} className="lang-toggle theme-toggle">
                 <button type="submit" name="locale" value="fr" data-active={locale === "fr"}>
                   FR
