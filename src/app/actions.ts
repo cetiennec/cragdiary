@@ -107,6 +107,21 @@ async function processPhoto(file: File): Promise<Buffer> {
     .toBuffer();
 }
 
+function parsePhotoLayout(
+  formData: FormData,
+  prefix: string,
+  key: string | number
+): { size: string; align: string | null; para: number | null } {
+  const rawAlign = String(formData.get(`${prefix}_align_${key}`) ?? "");
+  const align =
+    rawAlign === "left" || rawAlign === "right" || rawAlign === "full" ? rawAlign : null;
+  const rawSize = String(formData.get(`${prefix}_size_${key}`) ?? "");
+  const size = rawSize === "s" || rawSize === "l" ? rawSize : "m";
+  const rawPara = parseInt(String(formData.get(`${prefix}_para_${key}`) ?? ""), 10);
+  const para = align && Number.isFinite(rawPara) && rawPara >= 1 ? rawPara - 1 : null;
+  return { size, align, para };
+}
+
 function photoFiles(formData: FormData): File[] {
   return formData
     .getAll("photos")
@@ -285,10 +300,11 @@ export async function createEntry(formData: FormData): Promise<void> {
     let position = 0;
     for (const file of photoFiles(formData)) {
       const processed = await processPhoto(file);
+      const layout = parsePhotoLayout(formData, "new_photo", position);
       await client.query(
-        `insert into photos (entry_id, content_type, data, position)
-         values ($1, $2, $3, $4)`,
-        [entryId, "image/webp", processed, position]
+        `insert into photos (entry_id, content_type, data, position, size, align, para)
+         values ($1, $2, $3, $4, $5, $6, $7)`,
+        [entryId, "image/webp", processed, position, layout.size, layout.align, layout.para]
       );
       position += 1;
     }
@@ -381,15 +397,10 @@ export async function updateEntry(formData: FormData): Promise<void> {
       .filter(Boolean);
     for (let i = 0; i < photoOrder.length; i++) {
       const pid = photoOrder[i];
-      const rawAlign = String(formData.get(`photo_align_${pid}`) ?? "");
-      const align = rawAlign === "left" || rawAlign === "right" || rawAlign === "full" ? rawAlign : null;
-      const rawSize = String(formData.get(`photo_size_${pid}`) ?? "");
-      const size = rawSize === "s" || rawSize === "l" ? rawSize : "m";
-      const rawPara = parseInt(String(formData.get(`photo_para_${pid}`) ?? ""), 10);
-      const para = align && Number.isFinite(rawPara) && rawPara >= 1 ? rawPara - 1 : null;
+      const layout = parsePhotoLayout(formData, "photo", pid);
       await client.query(
         "update photos set position = $1, size = $2, align = $3, para = $4 where id = $5 and entry_id = $6",
-        [i, size, align, para, pid, id]
+        [i, layout.size, layout.align, layout.para, pid, id]
       );
     }
 
@@ -400,14 +411,17 @@ export async function updateEntry(formData: FormData): Promise<void> {
         [id]
       );
       let position = (maxPos.rows[0].max ?? -1) + 1;
+      let newIndex = 0;
       for (const file of newFiles) {
         const processed = await processPhoto(file);
+        const layout = parsePhotoLayout(formData, "new_photo", newIndex);
         await client.query(
-          `insert into photos (entry_id, content_type, data, position)
-           values ($1, $2, $3, $4)`,
-          [id, "image/webp", processed, position]
+          `insert into photos (entry_id, content_type, data, position, size, align, para)
+           values ($1, $2, $3, $4, $5, $6, $7)`,
+          [id, "image/webp", processed, position, layout.size, layout.align, layout.para]
         );
         position += 1;
+        newIndex += 1;
       }
     }
   } finally {

@@ -9,6 +9,7 @@ import type { GeoSuggestion } from "@/app/api/geo/search/route";
 import type { UserSuggestion } from "@/app/api/users/search/route";
 import type { EntryWithAuthor } from "@/lib/queries";
 import { compressImage } from "@/lib/client-image";
+import PhotoPlacement, { type PhotoLayoutValue } from "@/components/PhotoPlacement";
 
 type EditorDict = Dict["editor"];
 
@@ -297,10 +298,17 @@ export default function EntryForm({
   ];
   const [photoError, setPhotoError] = useState(false);
 
+  const [newLayouts, setNewLayouts] = useState<PhotoLayoutValue[]>([]);
+
+  function setNewLayout(index: number, patch: Partial<PhotoLayoutValue>) {
+    setNewLayouts((prev) => prev.map((l, i) => (i === index ? { ...l, ...patch } : l)));
+  }
+
   async function handleFiles(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
     if (files.length === 0) {
       setNewFiles([]);
+      setNewLayouts([]);
       setPhotoError(false);
       return;
     }
@@ -314,15 +322,22 @@ export default function EntryForm({
     setPhotoError(total > UPLOAD_BUDGET);
     syncFileInput(compressed);
     setNewFiles(compressed);
+    setNewLayouts(compressed.map(() => ({ align: "gallery", size: "m", para: "1" })));
   }
 
   function moveNewPhoto(index: number, delta: number) {
+    const target = index + delta;
     setNewFiles((files) => {
-      const target = index + delta;
       if (target < 0 || target >= files.length) return files;
       const next = [...files];
       [next[index], next[target]] = [next[target], next[index]];
       syncFileInput(next);
+      return next;
+    });
+    setNewLayouts((layouts) => {
+      if (target < 0 || target >= layouts.length) return layouts;
+      const next = [...layouts];
+      [next[index], next[target]] = [next[target], next[index]];
       return next;
     });
   }
@@ -836,46 +851,20 @@ export default function EntryForm({
                       {t.removePhoto}
                     </label>
                   </span>
-                  <span className="photo-layout-controls">
-                    <select
-                      name={`photo_align_${photo.id}`}
-                      value={photoLayout[photo.id]?.align ?? "gallery"}
-                      onChange={(e) => setLayout(photo.id, { align: e.target.value })}
-                      aria-label={t.photoPlacement}
-                    >
-                      <option value="gallery">{t.photoPlacementOptions.gallery}</option>
-                      <option value="left">{t.photoPlacementOptions.left}</option>
-                      <option value="right">{t.photoPlacementOptions.right}</option>
-                      <option value="full">{t.photoPlacementOptions.full}</option>
-                    </select>
-                    {photoLayout[photo.id]?.align !== "gallery" && (
-                      <>
-                        {photoLayout[photo.id]?.align !== "full" && (
-                          <select
-                            name={`photo_size_${photo.id}`}
-                            value={photoLayout[photo.id]?.size ?? "m"}
-                            onChange={(e) => setLayout(photo.id, { size: e.target.value })}
-                            aria-label={t.photoSize}
-                          >
-                            <option value="s">S</option>
-                            <option value="m">M</option>
-                            <option value="l">L</option>
-                          </select>
-                        )}
-                        <label className="photo-para-label">
-                          ¶
-                          <input
-                            type="number"
-                            min={1}
-                            name={`photo_para_${photo.id}`}
-                            value={photoLayout[photo.id]?.para ?? "1"}
-                            onChange={(e) => setLayout(photo.id, { para: e.target.value })}
-                            aria-label={t.photoPara}
-                          />
-                        </label>
-                      </>
-                    )}
-                  </span>
+                  <PhotoPlacement
+                    value={photoLayout[photo.id] ?? { align: "gallery", size: "m", para: "1" }}
+                    onChange={(patch) => setLayout(photo.id, patch)}
+                    names={{
+                      align: `photo_align_${photo.id}`,
+                      size: `photo_size_${photo.id}`,
+                      para: `photo_para_${photo.id}`,
+                    }}
+                    t={{
+                      ...t.photoPlacementOptions,
+                      size: t.photoSize,
+                      para: t.photoPara,
+                    }}
+                  />
                 </div>
               ))}
             </div>
@@ -908,6 +897,20 @@ export default function EntryForm({
                     →
                   </button>
                 </span>
+                <PhotoPlacement
+                  value={newLayouts[i] ?? { align: "gallery", size: "m", para: "1" }}
+                  onChange={(patch) => setNewLayout(i, patch)}
+                  names={{
+                    align: `new_photo_align_${i}`,
+                    size: `new_photo_size_${i}`,
+                    para: `new_photo_para_${i}`,
+                  }}
+                  t={{
+                    ...t.photoPlacementOptions,
+                    size: t.photoSize,
+                    para: t.photoPara,
+                  }}
+                />
               </div>
             ))}
           </div>
