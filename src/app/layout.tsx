@@ -89,10 +89,13 @@ export default async function RootLayout({
           💬 {t.feedback.linkLabel}
         </Link>
         <footer className="site-footer">
-          {t.footer} · <Link href="/credits">{t.credits.linkLabel}</Link> ·{" "}
-          <Link href="/privacy">{t.privacy.linkLabel}</Link> ·{" "}
-          <Link href="/feedback">{t.feedback.linkLabel}</Link> ·{" "}
-          <Link href="/install">{t.install.linkLabel}</Link>
+          <p className="footer-tagline">{t.footer}</p>
+          <p className="footer-links">
+            <Link href="/credits">{t.credits.linkLabel}</Link> ·{" "}
+            <Link href="/privacy">{t.privacy.linkLabel}</Link> ·{" "}
+            <Link href="/feedback">{t.feedback.linkLabel}</Link> ·{" "}
+            <Link href="/install">{t.install.linkLabel}</Link>
+          </p>
           <form action={setLocale} className="lang-toggle">
             <button
               type="submit"

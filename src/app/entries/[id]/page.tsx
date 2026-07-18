@@ -7,6 +7,7 @@ import { formatDate, getDict } from "@/lib/i18n";
 import { renderMentions } from "@/lib/mentions";
 import DeleteEntryButton from "@/components/DeleteEntryButton";
 import AutoCover from "@/components/AutoCover";
+import ShareButton from "@/components/ShareButton";
 
 type InlinePhoto = {
   id: string;
@@ -127,8 +128,9 @@ export default async function EntryPage({
         <AutoCover entry={entry} locale={locale} className="notion-cover auto-cover" wide showPins={false} />
       )}
 
-      {isAuthor && (
-        <div className="entry-edit-row">
+      <div className="entry-edit-row">
+        <ShareButton label={t.entry.share} copied={t.entry.shareCopied} />
+        {isAuthor && (
           <Link
             href={`/entries/${entry.id}/edit`}
             className="edit-fab"
@@ -137,8 +139,8 @@ export default async function EntryPage({
           >
             ✏️
           </Link>
-        </div>
-      )}
+        )}
+      </div>
 
       <div className="notion-body">
         <div className="notion-icon" aria-hidden>
@@ -146,9 +148,10 @@ export default async function EntryPage({
         </div>
         <h1 className="notion-title">
           {entry.crag}
-          {entry.starred && (
-            <span className="entry-star" title={t.editor.star}>
-              {" "}⭐
+          {entry.star_level > 0 && (
+            <span className="entry-star" title={t.editor.starLevels[entry.star_level - 1]}>
+              {" "}
+              {"⭐".repeat(entry.star_level)}
             </span>
           )}
         </h1>

@@ -81,7 +81,7 @@ export default function EntryForm({
     entry?.pitches ? String(entry.pitches) : defaults?.pitches ? String(defaults.pitches) : ""
   );
 
-  const [starred, setStarred] = useState(entry?.starred ?? false);
+  const [starLevel, setStarLevel] = useState(entry?.star_level ?? 0);
   const [monthOnly, setMonthOnly] = useState(entry?.month_only ?? false);
 
   const formRef = useRef<HTMLFormElement>(null);
@@ -428,20 +428,27 @@ export default function EntryForm({
                 {autosave === "saving" ? t.autosaving : t.autosaved}
               </span>
             )}
-            <input type="hidden" name="starred" value={starred ? "1" : ""} />
-            <button
-              type="button"
-              className={`star-toggle${starred ? " on" : ""}`}
-              aria-pressed={starred}
-              title={t.starHint}
-              aria-label={t.star}
-              onClick={() => {
-                setStarred(!starred);
-                queueAutosave();
-              }}
-            >
-              {starred ? "⭐" : "☆"}
-            </button>
+            {starLevel > 0 && (
+              <span className="star-level-label">{t.starLevels[starLevel - 1]}</span>
+            )}
+            <input type="hidden" name="star_level" value={String(starLevel)} />
+            <span className="star-rack" title={t.starHint}>
+              {[1, 2, 3].map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  className={`star-toggle${starLevel >= n ? " on" : ""}`}
+                  aria-pressed={starLevel >= n}
+                  aria-label={t.starLevels[n - 1]}
+                  onClick={() => {
+                    setStarLevel(starLevel === n ? 0 : n);
+                    queueAutosave();
+                  }}
+                >
+                  {starLevel >= n ? "⭐" : "☆"}
+                </button>
+              ))}
+            </span>
           </div>
         </div>
 

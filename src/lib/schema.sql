@@ -40,7 +40,8 @@ create table if not exists entries (
   lat double precision,
   lon double precision,
   show_pins boolean not null default true,
-  starred boolean not null default false,
+  starred boolean not null default false, -- legacy, superseded by star_level
+  star_level integer not null default 0,
   country text,
   visibility text not null default 'public'
     check (visibility in ('public','unlisted','private')),
@@ -100,3 +101,4 @@ alter table wishes add column if not exists partners text;
 alter table users add column if not exists wishlist_public boolean not null default true;
 alter table entries add column if not exists starred boolean not null default false;
 alter table entries add column if not exists country text;
+alter table entries add column if not exists star_level integer not null default 0;

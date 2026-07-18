@@ -122,6 +122,14 @@ a {
   text-align: center;
 }
 
+.footer-tagline {
+  margin: 0 0 0.4rem;
+}
+
+.footer-links {
+  margin: 0;
+}
+
 .site-footer .lang-toggle {
   display: block;
   width: fit-content;
@@ -1518,8 +1526,20 @@ a {
   gap: 0.6rem;
 }
 
+.star-rack {
+  display: inline-flex;
+  align-items: center;
+}
+
 .editor-star-row .star-toggle {
-  font-size: 1.7rem;
+  font-size: 1.5rem;
+  padding: 0.1rem 0.1rem;
+}
+
+.star-level-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--accent);
 }
 
 .autosave-status {
@@ -2254,6 +2274,33 @@ a {
 .edit-fab:hover {
   transform: rotate(-8deg) scale(1.08);
   box-shadow: 0 3px 12px color-mix(in srgb, var(--accent) 60%, transparent);
+}
+
+.share-fab {
+  margin-top: 0.7rem;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font: inherit;
+  font-size: 1.05rem;
+  cursor: pointer;
+  background: var(--bg-elevated);
+  border: 1.5px solid var(--accent);
+  color: var(--accent);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 30%, transparent);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.share-fab:hover {
+  transform: rotate(8deg) scale(1.08);
+  box-shadow: 0 3px 12px color-mix(in srgb, var(--accent) 50%, transparent);
+}
+
+.entry-edit-row {
+  gap: 0.5rem;
 }
 
 /* Mobile: stack property rows, tame the big title */

@@ -59,7 +59,7 @@ export type PinSource = Pick<
   | "pitches"
   | "partners"
   | "height_m"
-  | "starred"
+  | "star_level"
 >;
 
 export function coverEmojis(entry: PinSource): string[] {
@@ -82,7 +82,7 @@ export function coverEmojis(entry: PinSource): string[] {
   const height = entry.height_m ?? 0;
   if (height >= 400) out.push("🐐");
   else if (height >= 150) out.push("🦅");
-  if (entry.starred || /à refaire|recommand|magnifique/.test(notes)) out.push("⭐");
+  if (entry.star_level > 0 || /à refaire|recommand|magnifique/.test(notes)) out.push("⭐");
   if (/à éviter|déconseill|décevant|sans intérêt/.test(notes)) out.push("👎");
   if (entry.notes && entry.notes.length > 200) out.push("✍️");
   if (out.length === 0) out.push("🧗");

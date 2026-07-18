@@ -123,6 +123,11 @@ function parsePhotoLayout(
   return { size, align, para };
 }
 
+function parseStarLevel(value: FormDataEntryValue | null): number {
+  const n = parseInt(String(value ?? ""), 10);
+  return Number.isFinite(n) ? Math.min(3, Math.max(0, n)) : 0;
+}
+
 // Country for an entry's coordinates, reusing the stored value when the
 // coordinates haven't moved so saves don't hit the geocoder needlessly.
 async function entryCountry(
@@ -287,7 +292,7 @@ export async function createEntry(formData: FormData): Promise<void> {
       `insert into entries
          (user_id, entry_date, month_only, crag, location, style, grade_max, rating,
           orientation, equipment, pitches, height_m, routes, partners, notes,
-          c2c_url, c2c_summary, pitch_notes, lat, lon, show_pins, starred, country, visibility)
+          c2c_url, c2c_summary, pitch_notes, lat, lon, show_pins, star_level, country, visibility)
        values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)
        returning id`,
       [
@@ -312,7 +317,7 @@ export async function createEntry(formData: FormData): Promise<void> {
         coords.lat,
         coords.lon,
         formData.get("show_pins") === "1",
-        formData.get("starred") === "1",
+        parseStarLevel(formData.get("star_level")),
         await entryCountry(coords),
         visibility,
       ]
@@ -376,7 +381,7 @@ export async function updateEntry(formData: FormData): Promise<void> {
            grade_max = $6, rating = $7, orientation = $8, equipment = $9, pitches = $10,
            height_m = $11, routes = $12, partners = $13, notes = $14, c2c_url = $15,
            c2c_summary = $16, pitch_notes = $17, lat = $18, lon = $19, show_pins = $20,
-           starred = $21, country = $22, visibility = $23
+           star_level = $21, country = $22, visibility = $23
        where id = $24 and user_id = $25`,
       [
         entryDate,
@@ -399,7 +404,7 @@ export async function updateEntry(formData: FormData): Promise<void> {
         coords.lat,
         coords.lon,
         formData.get("show_pins") === "1",
-        formData.get("starred") === "1",
+        parseStarLevel(formData.get("star_level")),
         await entryCountry(coords, id, user.id),
         visibility,
         id,
@@ -480,7 +485,7 @@ export async function autosaveEntry(formData: FormData): Promise<void> {
          grade_max = $6, rating = $7, orientation = $8, equipment = $9, pitches = $10,
          height_m = $11, routes = $12, partners = $13, notes = $14, c2c_url = $15,
          c2c_summary = $16, pitch_notes = $17, lat = $18, lon = $19, show_pins = $20,
-         starred = $21, country = $22, visibility = $23
+         star_level = $21, country = $22, visibility = $23
      where id = $24 and user_id = $25`,
     [
       entryDate,
@@ -503,7 +508,7 @@ export async function autosaveEntry(formData: FormData): Promise<void> {
       coords.lat,
       coords.lon,
       formData.get("show_pins") === "1",
-      formData.get("starred") === "1",
+      parseStarLevel(formData.get("star_level")),
       await entryCountry(coords, id, user.id),
       visibility,
       id,
