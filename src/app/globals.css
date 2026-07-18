@@ -695,7 +695,6 @@ a {
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
   overflow: hidden;
-  margin-bottom: 2rem;
   z-index: 0;
 }
 
@@ -1608,6 +1607,16 @@ a {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
+  margin-bottom: 2rem;
+}
+
+/* When the import pill row follows the map, it carries the bottom spacing. */
+.profile-map-wrap:has(+ .profile-quick-actions) {
+  margin-bottom: 0.5rem;
+}
+
+.profile-quick-actions {
+  margin-bottom: 2rem;
 }
 
 .map-wish-toggle {
@@ -1820,22 +1829,21 @@ a {
   right: 1.1rem;
   bottom: 1.1rem;
   z-index: 1200;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--accent);
-  background: var(--bg-elevated);
-  border: 1.5px solid var(--accent);
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--accent-contrast);
+  background: var(--accent);
+  border: none;
   border-radius: 999px;
-  padding: 0.45rem 1rem;
+  padding: 0.55rem 1.15rem;
   text-decoration: none;
-  box-shadow: 0 6px 16px -6px rgba(58, 44, 34, 0.4);
-  transition: transform 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+  box-shadow: 0 6px 16px -4px color-mix(in srgb, var(--accent) 65%, transparent);
+  transition: transform 0.15s ease, filter 0.15s ease;
 }
 
 .feedback-fab:hover {
-  transform: rotate(-2deg) scale(1.05);
-  background: var(--accent);
-  color: var(--accent-contrast);
+  transform: rotate(-2deg) scale(1.06);
+  filter: brightness(1.08);
 }
 
 .wish-done {
@@ -2081,29 +2089,36 @@ a {
 
 /* Prominent edit button on own entries */
 
-.entry-actions-top {
+/* Pencil-only edit button, top right just under the cover. The row has zero
+   height so the button overlays the empty space beside the page icon. */
+.entry-edit-row {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+  height: 0;
   display: flex;
   justify-content: flex-end;
-  margin: -0.4rem 0 0.8rem;
+  position: relative;
+  z-index: 5;
 }
 
-.edit-pill {
+.edit-fab {
+  margin-top: 0.7rem;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: var(--accent-contrast);
-  background: var(--accent);
-  border: none;
-  border-radius: 999px;
-  padding: 0.55rem 1.3rem;
+  justify-content: center;
+  font-size: 1.15rem;
   text-decoration: none;
+  background: var(--accent);
   box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 45%, transparent);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-.edit-pill:hover {
-  filter: brightness(1.08);
+.edit-fab:hover {
+  transform: rotate(-8deg) scale(1.08);
   box-shadow: 0 3px 12px color-mix(in srgb, var(--accent) 60%, transparent);
 }
 

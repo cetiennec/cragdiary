@@ -1,5 +1,5 @@
 import { getDict } from "@/lib/i18n";
-import { sendFeedback } from "@/app/actions";
+import FeedbackForm from "@/components/FeedbackForm";
 
 export default async function FeedbackPage({
   searchParams,
@@ -14,20 +14,14 @@ export default async function FeedbackPage({
       <p className="form-hint">{t.feedback.hint}</p>
       {sent && <p className="feedback-sent">{t.feedback.sent}</p>}
       {error && <p className="form-error">{t.feedback.error}</p>}
-      <form action={sendFeedback} className="feedback-form">
-        <input type="text" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" />
-        <textarea
-          name="message"
-          rows={8}
-          placeholder={t.feedback.messagePlaceholder}
-          required
-          maxLength={5000}
-        />
-        <input type="email" name="contact" placeholder={t.feedback.contactPlaceholder} />
-        <button type="submit" className="btn-primary">
-          {t.feedback.send}
-        </button>
-      </form>
+      <FeedbackForm
+        t={{
+          messagePlaceholder: t.feedback.messagePlaceholder,
+          contactPlaceholder: t.feedback.contactPlaceholder,
+          send: t.feedback.send,
+          sending: t.feedback.sending,
+        }}
+      />
     </div>
   );
 }

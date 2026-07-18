@@ -198,14 +198,6 @@ export default async function ProfilePage({
         </details>
       )}
 
-      {isSelf && (
-        <div className="profile-quick-actions">
-          <Link href="/import" className="import-pill" title={t.importLabel}>
-            {t.importPromo}
-          </Link>
-        </div>
-      )}
-
       {stats.total > 0 && (
         <div className="stats-row">
           {tiles.map((tile) => (
@@ -238,6 +230,14 @@ export default async function ProfilePage({
           }))}
         wishLabel={t.wishlist.mapToggle}
       />
+
+      {isSelf && (
+        <div className="profile-quick-actions">
+          <Link href="/import" className="import-pill" title={t.importLabel}>
+            {t.importPromo}
+          </Link>
+        </div>
+      )}
 
       <FilterBar
         t={t.filters}

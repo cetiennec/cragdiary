@@ -127,6 +127,19 @@ export default async function EntryPage({
         <AutoCover entry={entry} locale={locale} className="notion-cover auto-cover" wide showPins={false} />
       )}
 
+      {isAuthor && (
+        <div className="entry-edit-row">
+          <Link
+            href={`/entries/${entry.id}/edit`}
+            className="edit-fab"
+            title={t.entry.edit}
+            aria-label={t.entry.edit}
+          >
+            ✏️
+          </Link>
+        </div>
+      )}
+
       <div className="notion-body">
         <div className="notion-icon" aria-hidden>
           🧗
@@ -134,14 +147,6 @@ export default async function EntryPage({
         <h1 className="notion-title">{entry.crag}</h1>
 
         {badge && <p className="visibility-badge">{badge}</p>}
-
-        {isAuthor && (
-          <div className="entry-actions-top">
-            <Link href={`/entries/${entry.id}/edit`} className="edit-pill">
-              ✏️ {t.entry.edit}
-            </Link>
-          </div>
-        )}
 
         <div className="entry-head">
         <dl className="notion-props">

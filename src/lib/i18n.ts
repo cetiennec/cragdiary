@@ -225,6 +225,7 @@ const en = {
     messagePlaceholder: "Your idea or problem…",
     contactPlaceholder: "Your email (optional, only to reply to you)",
     send: "Send",
+    sending: "Sending…",
     sent: "Thanks! Received. 🙌",
     error: "Sending failed — please try again later.",
   },
@@ -276,6 +277,8 @@ const en = {
     pinsTitle: "What the thumbnail pins mean",
     intro:
       "Cragdiary is free and built on open data and open-source software. Photos and texts posted on entries belong to their authors.",
+    philosophy:
+      "Cragdiary is not a performance tracker — no rankings, no stats race. It's a real climbing journal: days on the rock, written down with the people and the light, so you remember them.",
     linkLabel: "Credits",
     items: [
       {
@@ -527,6 +530,7 @@ const fr: Dict = {
     messagePlaceholder: "Votre idée ou votre problème…",
     contactPlaceholder: "Votre email (optionnel, uniquement pour vous répondre)",
     send: "Envoyer",
+    sending: "Envoi en cours…",
     sent: "Merci ! Bien reçu. 🙌",
     error: "L'envoi a échoué — réessayez plus tard.",
   },
@@ -575,6 +579,8 @@ const fr: Dict = {
   },
   credits: {
     title: "Crédits",
+    philosophy:
+      "Cragdiary n'est pas un gestionnaire de performance — pas de classement, pas de course aux stats. C'est un vrai carnet de grimpe : des journées sur le rocher, racontées avec les gens et la lumière, pour s'en souvenir.",
     pinsTitle: "Le sens des pins sur les miniatures",
     intro:
       "Cragdiary est gratuit et construit sur des données ouvertes et des logiciels libres. Les photos et textes publiés dans les entrées appartiennent à leurs auteurs.",

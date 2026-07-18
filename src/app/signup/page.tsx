@@ -22,7 +22,7 @@ export default async function SignupPage({
             required
             autoFocus
             autoComplete="username"
-            pattern="[a-z0-9-]{3,20}"
+            pattern="[a-z0-9\-]{3,20}"
             placeholder={t.signup.usernameHint}
           />
         </label>

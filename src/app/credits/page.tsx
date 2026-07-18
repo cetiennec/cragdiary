@@ -6,6 +6,7 @@ export default async function CreditsPage() {
   return (
     <div className="page-container narrow credits-page">
       <h1 className="page-title">{t.credits.title}</h1>
+      <p className="credits-intro">{t.credits.philosophy}</p>
       <p className="credits-intro">{t.credits.intro}</p>
       <h2 className="pitch-notes-title">{t.credits.pinsTitle}</h2>
       <ul className="pins-legend">

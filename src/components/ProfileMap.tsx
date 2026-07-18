@@ -92,6 +92,7 @@ export default function ProfileMap({
 
   return (
     <div className="profile-map-wrap">
+      {!nothingToShow && <div ref={containerRef} className="profile-map" />}
       {wishPoints.length > 0 && wishLabel && (
         <label className="map-wish-toggle">
           <input
@@ -103,7 +104,6 @@ export default function ProfileMap({
           {wishLabel}
         </label>
       )}
-      {!nothingToShow && <div ref={containerRef} className="profile-map" />}
     </div>
   );
 }
