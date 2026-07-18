@@ -7,6 +7,7 @@ import sharp from "sharp";
 import { pool, type Visibility } from "@/lib/db";
 import { LOCALE_COOKIE, getLocale } from "@/lib/i18n";
 import { sendEmail } from "@/lib/email";
+import { lookupCountry } from "@/lib/geo";
 import { createHash, randomBytes } from "crypto";
 import {
   createSession,
@@ -120,6 +121,25 @@ function parsePhotoLayout(
   const rawPara = parseInt(String(formData.get(`${prefix}_para_${key}`) ?? ""), 10);
   const para = align && Number.isFinite(rawPara) && rawPara >= 1 ? rawPara - 1 : null;
   return { size, align, para };
+}
+
+// Country for an entry's coordinates, reusing the stored value when the
+// coordinates haven't moved so saves don't hit the geocoder needlessly.
+async function entryCountry(
+  coords: { lat: number | null; lon: number | null },
+  id?: string,
+  userId?: string
+): Promise<string | null> {
+  if (coords.lat == null || coords.lon == null) return null;
+  if (id && userId) {
+    const prev = await pool.query<{ lat: number | null; lon: number | null; country: string | null }>(
+      "select lat, lon, country from entries where id = $1 and user_id = $2",
+      [id, userId]
+    );
+    const p = prev.rows[0];
+    if (p?.country && p.lat === coords.lat && p.lon === coords.lon) return p.country;
+  }
+  return lookupCountry(coords.lat, coords.lon);
 }
 
 function photoFiles(formData: FormData): File[] {
@@ -267,8 +287,8 @@ export async function createEntry(formData: FormData): Promise<void> {
       `insert into entries
          (user_id, entry_date, month_only, crag, location, style, grade_max, rating,
           orientation, equipment, pitches, height_m, routes, partners, notes,
-          c2c_url, c2c_summary, pitch_notes, lat, lon, show_pins, starred, visibility)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)
+          c2c_url, c2c_summary, pitch_notes, lat, lon, show_pins, starred, country, visibility)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)
        returning id`,
       [
         user.id,
@@ -293,6 +313,7 @@ export async function createEntry(formData: FormData): Promise<void> {
         coords.lon,
         formData.get("show_pins") === "1",
         formData.get("starred") === "1",
+        await entryCountry(coords),
         visibility,
       ]
     );
@@ -355,8 +376,8 @@ export async function updateEntry(formData: FormData): Promise<void> {
            grade_max = $6, rating = $7, orientation = $8, equipment = $9, pitches = $10,
            height_m = $11, routes = $12, partners = $13, notes = $14, c2c_url = $15,
            c2c_summary = $16, pitch_notes = $17, lat = $18, lon = $19, show_pins = $20,
-           starred = $21, visibility = $22
-       where id = $23 and user_id = $24`,
+           starred = $21, country = $22, visibility = $23
+       where id = $24 and user_id = $25`,
       [
         entryDate,
         monthOnly,
@@ -379,6 +400,7 @@ export async function updateEntry(formData: FormData): Promise<void> {
         coords.lon,
         formData.get("show_pins") === "1",
         formData.get("starred") === "1",
+        await entryCountry(coords, id, user.id),
         visibility,
         id,
         user.id,
@@ -434,6 +456,64 @@ export async function updateEntry(formData: FormData): Promise<void> {
   revalidatePath(`/u/${user.username}`);
   revalidatePath(`/entries/${id}`);
   redirect(`/entries/${id}`);
+}
+
+// Field-only autosave while editing: same row update as updateEntry, but no
+// photo handling and no redirect, so the editor stays in place.
+export async function autosaveEntry(formData: FormData): Promise<void> {
+  const user = await currentUser();
+  if (!user) throw new Error("Unauthorized");
+
+  const id = String(formData.get("id") ?? "");
+  const { date: entryDate, monthOnly } = parseEntryDate(formData);
+  const crag = String(formData.get("crag") ?? "").trim();
+  const visibility = parseVisibility(formData.get("visibility"));
+
+  if (!id || !entryDate || !crag) return;
+
+  const pitches = optionalInt(formData.get("pitches"));
+  const coords = parseCoords(formData);
+
+  await pool.query(
+    `update entries
+     set entry_date = $1, month_only = $2, crag = $3, location = $4, style = $5,
+         grade_max = $6, rating = $7, orientation = $8, equipment = $9, pitches = $10,
+         height_m = $11, routes = $12, partners = $13, notes = $14, c2c_url = $15,
+         c2c_summary = $16, pitch_notes = $17, lat = $18, lon = $19, show_pins = $20,
+         starred = $21, country = $22, visibility = $23
+     where id = $24 and user_id = $25`,
+    [
+      entryDate,
+      monthOnly,
+      crag,
+      optionalText(formData.get("location")),
+      optionalText(formData.get("style")),
+      optionalText(formData.get("grade_max")),
+      optionalText(formData.get("rating")),
+      optionalText(formData.get("orientation")),
+      optionalText(formData.get("equipment")),
+      pitches,
+      optionalInt(formData.get("height_m")),
+      optionalText(formData.get("routes")),
+      optionalText(formData.get("partners")),
+      optionalText(formData.get("notes")),
+      optionalHttpUrl(formData.get("c2c_url")),
+      optionalText(formData.get("c2c_summary")),
+      parsePitchNotes(formData, pitches),
+      coords.lat,
+      coords.lon,
+      formData.get("show_pins") === "1",
+      formData.get("starred") === "1",
+      await entryCountry(coords, id, user.id),
+      visibility,
+      id,
+      user.id,
+    ]
+  );
+
+  revalidatePath("/");
+  revalidatePath(`/u/${user.username}`);
+  revalidatePath(`/entries/${id}`);
 }
 
 export async function deleteEntry(formData: FormData): Promise<void> {

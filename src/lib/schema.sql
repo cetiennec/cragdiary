@@ -41,6 +41,7 @@ create table if not exists entries (
   lon double precision,
   show_pins boolean not null default true,
   starred boolean not null default false,
+  country text,
   visibility text not null default 'public'
     check (visibility in ('public','unlisted','private')),
   created_at timestamptz not null default now()
@@ -98,3 +99,4 @@ create index if not exists wishes_user_id_idx on wishes(user_id);
 alter table wishes add column if not exists partners text;
 alter table users add column if not exists wishlist_public boolean not null default true;
 alter table entries add column if not exists starred boolean not null default false;
+alter table entries add column if not exists country text;

@@ -17,10 +17,12 @@ export default function ProfileMap({
   points,
   wishPoints = [],
   wishLabel,
+  wishTitle,
 }: {
   points: MapPoint[];
   wishPoints?: MapPoint[];
   wishLabel?: string;
+  wishTitle?: string;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [showWishes, setShowWishes] = useState(false);
@@ -94,13 +96,13 @@ export default function ProfileMap({
     <div className="profile-map-wrap">
       {!nothingToShow && <div ref={containerRef} className="profile-map" />}
       {wishPoints.length > 0 && wishLabel && (
-        <label className={`map-wish-toggle${nothingToShow ? "" : " on-map"}`}>
+        <label className={`map-wish-toggle${nothingToShow ? "" : " on-map"}`} title={wishTitle}>
           <input
             type="checkbox"
             checked={showWishes}
             onChange={(e) => setShowWishes(e.target.checked)}
           />
-          <span className="map-wish-dot" aria-hidden />
+          <span className="map-wish-switch" aria-hidden />
           {wishLabel}
         </label>
       )}

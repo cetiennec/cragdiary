@@ -65,6 +65,7 @@ export type Entry = {
   visibility: Visibility;
   show_pins: boolean;
   starred: boolean;
+  country: string | null;
   created_at: string;
 };
 

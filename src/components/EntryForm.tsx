@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { createEntry, updateEntry } from "@/app/actions";
+import { autosaveEntry, createEntry, updateEntry } from "@/app/actions";
 import type { Dict, Locale } from "@/lib/i18n";
 import type { C2cSuggestion } from "@/app/api/c2c/search/route";
 import type { GeoSuggestion } from "@/app/api/geo/search/route";
@@ -83,6 +83,31 @@ export default function EntryForm({
 
   const [starred, setStarred] = useState(entry?.starred ?? false);
   const [monthOnly, setMonthOnly] = useState(entry?.month_only ?? false);
+
+  const formRef = useRef<HTMLFormElement>(null);
+  const [autosave, setAutosave] = useState<"idle" | "saving" | "saved">("idle");
+  const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Debounced field-only autosave while editing an existing entry. Photos are
+  // excluded — they only upload on the explicit save.
+  function queueAutosave() {
+    if (!editing) return;
+    if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    autosaveTimer.current = setTimeout(async () => {
+      const form = formRef.current;
+      if (!form) return;
+      const fd = new FormData(form);
+      fd.delete("photos");
+      fd.delete("remove_photos");
+      setAutosave("saving");
+      try {
+        await autosaveEntry(fd);
+        setAutosave("saved");
+      } catch {
+        setAutosave("idle");
+      }
+    }, 2500);
+  }
   const [dateValue, setDateValue] = useState(
     entry?.entry_date
       ? entry.month_only
@@ -377,13 +402,43 @@ export default function EntryForm({
   const pitchCount = Math.min(parseInt(pitches, 10) || 0, MAX_PITCH_SECTIONS);
 
   return (
-    <form action={editing ? updateEntry : createEntry} className="notion-page notion-editor">
+    <form
+      ref={formRef}
+      action={editing ? updateEntry : createEntry}
+      onInput={queueAutosave}
+      onSubmit={() => {
+        if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+      }}
+      className="notion-page notion-editor"
+    >
       <div className="notion-body">
         {editing && <input type="hidden" name="id" value={entry!.id} />}
         {defaults?.fromWish && <input type="hidden" name="from_wish" value={defaults.fromWish} />}
         <input type="hidden" name="lat" value={excludedFields.has("location") ? "" : lat} />
         <input type="hidden" name="lon" value={excludedFields.has("location") ? "" : lon} />
         <input type="hidden" name="c2c_summary" value={includeSummary ? c2cSummary : ""} />
+
+        <div className="editor-star-row">
+          {editing && autosave !== "idle" && (
+            <span className="autosave-status">
+              {autosave === "saving" ? t.autosaving : t.autosaved}
+            </span>
+          )}
+          <input type="hidden" name="starred" value={starred ? "1" : ""} />
+          <button
+            type="button"
+            className={`star-toggle${starred ? " on" : ""}`}
+            aria-pressed={starred}
+            title={t.starHint}
+            aria-label={t.star}
+            onClick={() => {
+              setStarred(!starred);
+              queueAutosave();
+            }}
+          >
+            {starred ? "⭐" : "☆"}
+          </button>
+        </div>
 
         <div className="notion-icon" aria-hidden>
           🧗
@@ -584,20 +639,6 @@ export default function EntryForm({
                 )
               )}
             </datalist>
-          </div>
-          <div className="notion-prop">
-            <label htmlFor="starred">{t.star}</label>
-            <input type="hidden" name="starred" value={starred ? "1" : ""} />
-            <button
-              id="starred"
-              type="button"
-              className={`star-toggle${starred ? " on" : ""}`}
-              aria-pressed={starred}
-              title={t.starHint}
-              onClick={() => setStarred(!starred)}
-            >
-              {starred ? "⭐" : "☆"}
-            </button>
           </div>
           <div className={`notion-prop${excludedFields.has("orientation") ? " prop-excluded" : ""}`}>
             <label htmlFor="orientation">{t.orientation}</label>

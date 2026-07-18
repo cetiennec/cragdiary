@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Fraunces } from "next/font/google";
 import Link from "next/link";
 import "./globals.css";
@@ -24,6 +24,18 @@ export const metadata: Metadata = {
     siteName: "Cragdiary",
     type: "website",
   },
+  icons: {
+    apple: "/icon-192.png",
+  },
+  appleWebApp: {
+    capable: true,
+    title: "Cragdiary",
+    statusBarStyle: "default",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#f3e8d8",
 };
 
 // Single visual identity: the scrapbook/carnet theme. See README "Visual theme"

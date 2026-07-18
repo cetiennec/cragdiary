@@ -144,7 +144,14 @@ export default async function EntryPage({
         <div className="notion-icon" aria-hidden>
           🧗
         </div>
-        <h1 className="notion-title">{entry.crag}</h1>
+        <h1 className="notion-title">
+          {entry.crag}
+          {entry.starred && (
+            <span className="entry-star" title={t.editor.star}>
+              {" "}⭐
+            </span>
+          )}
+        </h1>
 
         {badge && <p className="visibility-badge">{badge}</p>}
 

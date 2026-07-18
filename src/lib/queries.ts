@@ -164,6 +164,19 @@ export async function isFollowing(followerId: string, followeeId: string): Promi
   return result.rows.length > 0;
 }
 
+// All of a user's entries without their photos — enough to compute the pin
+// collection and climbed countries on the profile, cheaply.
+export async function getPinCollection(
+  userId: string,
+  { includeNonPublic = false } = {}
+): Promise<Entry[]> {
+  const result = await pool.query<Entry>(
+    "select * from entries where user_id = $1 and ($2 or visibility = 'public')",
+    [userId, includeNonPublic]
+  );
+  return result.rows;
+}
+
 export async function getWishes(userId: string): Promise<Wish[]> {
   const result = await pool.query<Wish>(
     "select * from wishes where user_id = $1 order by created_at desc",

@@ -48,7 +48,21 @@ function ridgePath(
   return d;
 }
 
-export function coverEmojis(entry: EntryWithAuthor): string[] {
+export type PinSource = Pick<
+  EntryWithAuthor,
+  | "orientation"
+  | "style"
+  | "location"
+  | "crag"
+  | "notes"
+  | "entry_date"
+  | "pitches"
+  | "partners"
+  | "height_m"
+  | "starred"
+>;
+
+export function coverEmojis(entry: PinSource): string[] {
   const out: string[] = [];
   const orientation = entry.orientation?.toUpperCase() ?? "";
   const style = entry.style?.toLowerCase() ?? "";
