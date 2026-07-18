@@ -52,7 +52,15 @@ export default async function ProfilePage({
   searchParams,
 }: {
   params: Promise<{ username: string }>;
-  searchParams: Promise<{ error?: string; q?: string; year?: string; loc?: string }>;
+  searchParams: Promise<{
+    error?: string;
+    q?: string;
+    year?: string;
+    loc?: string;
+    wloc?: string;
+    wpartner?: string;
+    wsort?: string;
+  }>;
 }) {
   const [{ username }, sp] = await Promise.all([params, searchParams]);
   const { error } = sp;
@@ -79,6 +87,32 @@ export default async function ProfilePage({
     getWishes(profile.id),
     user && !isSelf ? isFollowing(user.id, profile.id) : Promise.resolve(false),
   ]);
+
+  const norm = (s: string) =>
+    s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  const wloc = sp.wloc?.trim();
+  const wpartner = sp.wpartner?.trim();
+  const wsort = sp.wsort === "easy" || sp.wsort === "hard" ? sp.wsort : null;
+  // French sport grades ("6a+", "7c") → sortable number; anything else sorts last.
+  const gradeKey = (g: string | null): number | null => {
+    const m = g?.match(/([3-9])\s*([abc])?\s*([+-])?/i);
+    if (!m) return null;
+    const letter = { a: 0, b: 33, c: 66 }[m[2]?.toLowerCase() as "a" | "b" | "c"] ?? 0;
+    return +m[1] * 100 + letter + (m[3] === "+" ? 15 : m[3] === "-" ? -15 : 0);
+  };
+  let shownWishes = wishes.filter(
+    (w) =>
+      (!wloc || norm(`${w.location ?? ""} ${w.title}`).includes(norm(wloc))) &&
+      (!wpartner || norm(w.partners ?? "").includes(norm(wpartner)))
+  );
+  if (wsort) {
+    shownWishes = [...shownWishes].sort((a, b) => {
+      const ka = gradeKey(a.grade_max);
+      const kb = gradeKey(b.grade_max);
+      if (ka === null || kb === null) return (ka === null ? 1 : 0) - (kb === null ? 1 : 0);
+      return wsort === "easy" ? ka - kb : kb - ka;
+    });
+  }
 
   const wishPartnerNodes = new Map(
     await Promise.all(
@@ -176,7 +210,23 @@ export default async function ProfilePage({
       <ProfileMap
         points={entries
           .filter((e) => e.lat != null && e.lon != null)
-          .map((e) => ({ id: e.id, title: e.crag, lat: e.lat!, lon: e.lon! }))}
+          .map((e) => ({
+            id: e.id,
+            title: e.crag,
+            lat: e.lat!,
+            lon: e.lon!,
+            href: `/entries/${e.id}`,
+          }))}
+        wishPoints={wishes
+          .filter((w) => w.lat != null && w.lon != null)
+          .map((w) => ({
+            id: w.id,
+            title: w.grade_max ? `${w.title} · ${w.grade_max}` : w.title,
+            lat: w.lat!,
+            lon: w.lon!,
+            href: w.c2c_url ?? undefined,
+          }))}
+        wishLabel={t.wishlist.mapToggle}
       />
 
       <FilterBar
@@ -213,11 +263,39 @@ export default async function ProfilePage({
       )}
 
       {(wishes.length > 0 || isSelf) && (
-        <section className="wishlist-section">
+        <section className="wishlist-section" id="wishlist">
           <h2 className="pitch-notes-title">{t.wishlist.title}</h2>
           {wishes.length === 0 && <p className="form-hint">{t.wishlist.empty}</p>}
+          {wishes.length > 1 && (
+            <form method="get" action={`/u/${profile.username}`} className="filter-bar wish-filter">
+              {sp.q && <input type="hidden" name="q" value={sp.q} />}
+              {sp.year && <input type="hidden" name="year" value={sp.year} />}
+              {sp.loc && <input type="hidden" name="loc" value={sp.loc} />}
+              <input
+                type="search"
+                name="wloc"
+                defaultValue={wloc ?? ""}
+                placeholder={t.wishlist.filterLocation}
+              />
+              <input
+                type="search"
+                name="wpartner"
+                defaultValue={wpartner ?? ""}
+                placeholder={t.wishlist.filterPartner}
+              />
+              <select name="wsort" defaultValue={wsort ?? ""}>
+                <option value="">{t.wishlist.sortRecent}</option>
+                <option value="easy">{t.wishlist.sortEasy}</option>
+                <option value="hard">{t.wishlist.sortHard}</option>
+              </select>
+              <button type="submit">{t.filters.apply}</button>
+              {(wloc || wpartner || wsort) && (
+                <a href={`/u/${profile.username}#wishlist`}>{t.filters.clear}</a>
+              )}
+            </form>
+          )}
           <ul className="wishlist">
-            {wishes.map((wish) => (
+            {shownWishes.map((wish) => (
               <li key={wish.id} className="wish-row">
                 <div className="wish-main">
                   <span className="wish-title">
@@ -239,28 +317,26 @@ export default async function ProfilePage({
                       .filter(Boolean)
                       .join(" · ")}
                   </span>
-                  {isSelf ? (
-                    <form action={updateWishPartners} className="wish-partners-form">
-                      <input type="hidden" name="id" value={wish.id} />
-                      <input
-                        type="text"
-                        name="partners"
-                        defaultValue={wish.partners ?? ""}
-                        placeholder={t.wishlist.partnersPlaceholder}
-                        autoComplete="off"
-                      />
-                      <button type="submit" className="wish-partners-save">
-                        {t.wishlist.savePartners}
-                      </button>
-                    </form>
-                  ) : (
-                    wish.partners && (
-                      <span className="wish-partners">
-                        👥 {wishPartnerNodes.get(wish.id)}
-                      </span>
-                    )
-                  )}
                 </div>
+                {isSelf ? (
+                  <form action={updateWishPartners} className="wish-partners-form">
+                    <input type="hidden" name="id" value={wish.id} />
+                    <input
+                      type="text"
+                      name="partners"
+                      defaultValue={wish.partners ?? ""}
+                      placeholder={t.wishlist.partnersPlaceholder}
+                      autoComplete="off"
+                    />
+                    <button type="submit" className="wish-partners-save">
+                      {t.wishlist.savePartners}
+                    </button>
+                  </form>
+                ) : (
+                  wish.partners && (
+                    <span className="wish-partners">👥 {wishPartnerNodes.get(wish.id)}</span>
+                  )
+                )}
                 {isSelf && (
                   <div className="wish-actions">
                     <Link href={`/entries/new?from_wish=${wish.id}`} className="wish-done">

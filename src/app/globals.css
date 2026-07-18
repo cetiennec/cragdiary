@@ -1563,6 +1563,39 @@ a {
 .wish-partners {
   color: var(--text-muted);
   font-size: 0.82rem;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.wish-filter {
+  margin-bottom: 0.8rem;
+}
+
+.profile-map-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.map-wish-toggle {
+  align-self: flex-end;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.map-wish-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #4a7fa5;
+  opacity: 0.75;
+  border: 1.5px solid #fff;
+  box-shadow: 0 0 0 1px #4a7fa5;
 }
 
 .wish-partners a {
@@ -1570,11 +1603,16 @@ a {
   text-decoration: none;
 }
 
+.wish-main {
+  flex: 1;
+}
+
 .wish-partners-form {
   display: flex;
   align-items: center;
   gap: 0.35rem;
-  margin-top: 0.2rem;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .wish-partners-form input {
@@ -1586,8 +1624,7 @@ a {
   border-radius: 999px;
   padding: 0.2rem 0.7rem;
   min-width: 0;
-  flex: 1;
-  max-width: 320px;
+  width: 180px;
 }
 
 .wish-partners-form input:focus {
@@ -1909,5 +1946,20 @@ a {
 
   .notion-prop-pair-fields input {
     max-width: 110px;
+  }
+
+  .wish-row {
+    flex-wrap: wrap;
+  }
+
+  .wish-partners-form {
+    order: 3;
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .wish-partners-form input {
+    flex: 1;
+    width: auto;
   }
 }

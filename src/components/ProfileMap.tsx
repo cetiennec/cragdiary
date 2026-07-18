@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import "leaflet/dist/leaflet.css";
 
 export type MapPoint = {
@@ -8,13 +8,26 @@ export type MapPoint = {
   title: string;
   lat: number;
   lon: number;
+  href?: string;
 };
 
-export default function ProfileMap({ points }: { points: MapPoint[] }) {
+const WISH_COLOR = "#4a7fa5";
+
+export default function ProfileMap({
+  points,
+  wishPoints = [],
+  wishLabel,
+}: {
+  points: MapPoint[];
+  wishPoints?: MapPoint[];
+  wishLabel?: string;
+}) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [showWishes, setShowWishes] = useState(false);
 
   useEffect(() => {
-    if (!containerRef.current || points.length === 0) return;
+    const visible = showWishes ? [...points, ...wishPoints] : points;
+    if (!containerRef.current || visible.length === 0) return;
 
     let disposed = false;
     let map: import("leaflet").Map | undefined;
@@ -36,22 +49,34 @@ export default function ProfileMap({ points }: { points: MapPoint[] }) {
         "#bc5b2e";
 
       const bounds = L.latLngBounds([]);
-      for (const point of points) {
+      const draw = (point: MapPoint, wish: boolean) => {
         const marker = L.circleMarker([point.lat, point.lon], {
           radius: 8,
           color: "#ffffff",
           weight: 2,
-          fillColor: accent,
-          fillOpacity: 0.9,
-        }).addTo(map);
+          fillColor: wish ? WISH_COLOR : accent,
+          fillOpacity: wish ? 0.65 : 0.9,
+          dashArray: wish ? "2 3" : undefined,
+        }).addTo(map!);
 
-        const link = document.createElement("a");
-        link.href = `/entries/${point.id}`;
-        link.textContent = point.title;
-        marker.bindPopup(link);
+        if (point.href) {
+          const link = document.createElement("a");
+          link.href = point.href;
+          if (point.href.startsWith("http")) {
+            link.target = "_blank";
+            link.rel = "noopener noreferrer";
+          }
+          link.textContent = point.title;
+          marker.bindPopup(link);
+        } else {
+          marker.bindPopup(point.title);
+        }
 
         bounds.extend([point.lat, point.lon]);
-      }
+      };
+
+      for (const point of points) draw(point, false);
+      if (showWishes) for (const point of wishPoints) draw(point, true);
 
       map.fitBounds(bounds.pad(0.25), { maxZoom: 11 });
     })();
@@ -60,9 +85,25 @@ export default function ProfileMap({ points }: { points: MapPoint[] }) {
       disposed = true;
       map?.remove();
     };
-  }, [points]);
+  }, [points, wishPoints, showWishes]);
 
-  if (points.length === 0) return null;
+  const nothingToShow = points.length === 0 && (!showWishes || wishPoints.length === 0);
+  if (points.length === 0 && wishPoints.length === 0) return null;
 
-  return <div ref={containerRef} className="profile-map" />;
+  return (
+    <div className="profile-map-wrap">
+      {wishPoints.length > 0 && wishLabel && (
+        <label className="map-wish-toggle">
+          <input
+            type="checkbox"
+            checked={showWishes}
+            onChange={(e) => setShowWishes(e.target.checked)}
+          />
+          <span className="map-wish-dot" aria-hidden />
+          {wishLabel}
+        </label>
+      )}
+      {!nothingToShow && <div ref={containerRef} className="profile-map" />}
+    </div>
+  );
 }
