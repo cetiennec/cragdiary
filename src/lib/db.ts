@@ -89,6 +89,7 @@ export type Wish = {
   height_m: number | null;
   c2c_url: string | null;
   note: string | null;
+  partners: string | null;
   lat: number | null;
   lon: number | null;
   created_at: string;

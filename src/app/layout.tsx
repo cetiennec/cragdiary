@@ -53,14 +53,6 @@ export default async function RootLayout({
               Cragdiary
             </Link>
             <nav className="site-nav">
-              <form action={setLocale} className="lang-toggle theme-toggle">
-                <button type="submit" name="locale" value="fr" data-active={locale === "fr"}>
-                  FR
-                </button>
-                <button type="submit" name="locale" value="en" data-active={locale === "en"}>
-                  EN
-                </button>
-              </form>
               <Link href="/climbers">{t.nav.climbers}</Link>
               {user ? (
                 <>
@@ -82,7 +74,18 @@ export default async function RootLayout({
         <main className="flex-1">{children}</main>
         <footer className="site-footer">
           {t.footer} · <Link href="/credits">{t.credits.linkLabel}</Link> ·{" "}
-          <Link href="/privacy">{t.privacy.linkLabel}</Link>
+          <Link href="/privacy">{t.privacy.linkLabel}</Link> ·{" "}
+          <Link href="/feedback">{t.feedback.linkLabel}</Link>
+          <form action={setLocale} className="lang-toggle">
+            <button
+              type="submit"
+              name="locale"
+              value={locale === "fr" ? "en" : "fr"}
+              title={locale === "fr" ? "Switch to English" : "Passer en français"}
+            >
+              {locale === "fr" ? "🇬🇧 EN" : "🇫🇷 FR"}
+            </button>
+          </form>
         </footer>
       </body>
     </html>

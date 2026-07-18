@@ -29,6 +29,7 @@ export default async function NewEntryPage({
         c2c_url: wish.c2c_url ?? undefined,
         lat: wish.lat,
         lon: wish.lon,
+        partners: wish.partners ?? undefined,
         fromWish: wish.id,
       };
     }

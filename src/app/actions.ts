@@ -565,8 +565,8 @@ export async function addWish(formData: FormData): Promise<void> {
 
   const coords = parseCoords(formData);
   await pool.query(
-    `insert into wishes (user_id, title, location, grade_max, rating, pitches, height_m, c2c_url, note, lat, lon)
-     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+    `insert into wishes (user_id, title, location, grade_max, rating, pitches, height_m, c2c_url, note, partners, lat, lon)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
     [
       user.id,
       title,
@@ -577,6 +577,7 @@ export async function addWish(formData: FormData): Promise<void> {
       optionalInt(formData.get("height_m")),
       optionalHttpUrl(formData.get("c2c_url")),
       optionalText(formData.get("note")),
+      optionalText(formData.get("partners")),
       coords.lat,
       coords.lon,
     ]
@@ -584,6 +585,182 @@ export async function addWish(formData: FormData): Promise<void> {
 
   revalidatePath(`/u/${user.username}`);
   redirect(`/u/${user.username}`);
+}
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+export async function sendFeedback(formData: FormData): Promise<void> {
+  // Honeypot: bots fill every field, humans never see this one.
+  if (String(formData.get("website") ?? "")) redirect("/feedback?sent=1");
+
+  const message = String(formData.get("message") ?? "").trim().slice(0, 5000);
+  if (!message) redirect("/feedback");
+
+  const to = process.env.FEEDBACK_EMAIL;
+  if (!to) {
+    console.error("feedback: FEEDBACK_EMAIL not configured");
+    redirect("/feedback?error=1");
+  }
+
+  const user = await currentUser();
+  const contact = optionalText(formData.get("contact"));
+  const meta = [
+    user ? `Compte : @${user.username}` : "Visiteur non connecté",
+    contact ? `Contact : ${escapeHtml(contact)}` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  const ok = await sendEmail(
+    to,
+    "💡 Cragdiary — idée / feedback",
+    `<p style="white-space:pre-wrap">${escapeHtml(message)}</p><hr><p><small>${meta}</small></p>`
+  );
+
+  redirect(ok ? "/feedback?sent=1" : "/feedback?error=1");
+}
+
+const MAX_IMPORT_ENTRIES = 500;
+const MAX_IMPORT_WISHES = 200;
+const IMPORT_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+function importText(value: unknown, max = 4000): string | null {
+  if (typeof value !== "string") return null;
+  return value.trim().slice(0, max) || null;
+}
+
+function importInt(value: unknown): number | null {
+  const n = typeof value === "number" ? value : parseInt(String(value ?? ""), 10);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : null;
+}
+
+export async function importEntries(formData: FormData): Promise<void> {
+  const user = await currentUser();
+  if (!user) throw new Error("Unauthorized");
+
+  let payload: { entries?: unknown[]; wishes?: unknown[] };
+  try {
+    payload = JSON.parse(String(formData.get("payload") ?? "{}"));
+  } catch {
+    throw new Error("Invalid import payload");
+  }
+
+  const entries = (Array.isArray(payload.entries) ? payload.entries : [])
+    .slice(0, MAX_IMPORT_ENTRIES)
+    .flatMap((raw) => {
+      const e = raw as Record<string, unknown>;
+      const date = String(e.entry_date ?? "").slice(0, 10);
+      const crag = importText(e.crag, 200);
+      if (!IMPORT_DATE_RE.test(date) || !crag) return [];
+      return [
+        {
+          entry_date: date,
+          month_only: e.month_only === true,
+          crag,
+          location: importText(e.location, 200),
+          style: importText(e.style, 100),
+          grade_max: importText(e.grade_max, 30),
+          rating: importText(e.rating, 30),
+          pitches: importInt(e.pitches),
+          height_m: importInt(e.height_m),
+          routes: importText(e.routes, 1000),
+          partners: importText(e.partners, 300),
+          notes: importText(e.notes, 20000),
+          c2c_url: typeof e.c2c_url === "string" && /^https:\/\//.test(e.c2c_url) ? e.c2c_url.slice(0, 500) : null,
+          visibility:
+            e.visibility === "public" || e.visibility === "unlisted" ? e.visibility : "private",
+        },
+      ];
+    });
+
+  const wishes = (Array.isArray(payload.wishes) ? payload.wishes : [])
+    .slice(0, MAX_IMPORT_WISHES)
+    .flatMap((raw) => {
+      const w = raw as Record<string, unknown>;
+      const title = importText(w.title, 200);
+      if (!title) return [];
+      return [
+        {
+          title,
+          location: importText(w.location, 200),
+          grade_max: importText(w.grade_max, 30),
+          note: importText(w.note, 1000),
+          partners: importText(w.partners, 300),
+        },
+      ];
+    });
+
+  if (entries.length === 0 && wishes.length === 0) {
+    throw new Error("Nothing to import");
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query("begin");
+    for (const e of entries) {
+      await client.query(
+        `insert into entries
+           (user_id, entry_date, month_only, crag, location, style, grade_max, rating,
+            pitches, height_m, routes, partners, notes, c2c_url, show_pins, visibility)
+         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, true, $15)`,
+        [
+          user.id,
+          e.entry_date,
+          e.month_only,
+          e.crag,
+          e.location,
+          e.style,
+          e.grade_max,
+          e.rating,
+          e.pitches,
+          e.height_m,
+          e.routes,
+          e.partners,
+          e.notes,
+          e.c2c_url,
+          e.visibility,
+        ]
+      );
+    }
+    for (const w of wishes) {
+      await client.query(
+        `insert into wishes (user_id, title, location, grade_max, note, partners)
+         values ($1, $2, $3, $4, $5, $6)`,
+        [user.id, w.title, w.location, w.grade_max, w.note, w.partners]
+      );
+    }
+    await client.query("commit");
+  } catch (err) {
+    await client.query("rollback");
+    throw err;
+  } finally {
+    client.release();
+  }
+
+  revalidatePath("/");
+  revalidatePath(`/u/${user.username}`);
+  redirect(`/u/${user.username}`);
+}
+
+export async function updateWishPartners(formData: FormData): Promise<void> {
+  const user = await currentUser();
+  if (!user) throw new Error("Unauthorized");
+
+  const id = String(formData.get("id") ?? "");
+  if (id) {
+    await pool.query("update wishes set partners = $1 where id = $2 and user_id = $3", [
+      optionalText(formData.get("partners")),
+      id,
+      user.id,
+    ]);
+  }
+  revalidatePath(`/u/${user.username}`);
 }
 
 export async function deleteWish(formData: FormData): Promise<void> {

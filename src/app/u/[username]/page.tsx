@@ -10,7 +10,8 @@ import {
   isFollowing,
   type EntryFilters,
 } from "@/lib/queries";
-import { deleteWish, toggleFollow } from "@/app/actions";
+import { deleteWish, toggleFollow, updateWishPartners } from "@/app/actions";
+import { renderMentions } from "@/lib/mentions";
 import FilterBar from "@/components/FilterBar";
 import WishForm from "@/components/WishForm";
 import { currentUser } from "@/lib/auth";
@@ -79,6 +80,14 @@ export default async function ProfilePage({
     user && !isSelf ? isFollowing(user.id, profile.id) : Promise.resolve(false),
   ]);
 
+  const wishPartnerNodes = new Map(
+    await Promise.all(
+      wishes
+        .filter((w) => w.partners)
+        .map(async (w) => [w.id, await renderMentions(w.partners!)] as const)
+    )
+  );
+
   const tiles = [
     { label: t.profile.stats.entries, value: String(stats.total) },
     { label: t.profile.stats.meters, value: formatMeters(stats.meters, locale) },
@@ -145,6 +154,7 @@ export default async function ProfilePage({
               dangerTitle: t.profile.dangerTitle,
               deleteLabel: t.profile.deleteLabel,
               exportLabel: t.exportLabel,
+              importLabel: t.importLabel,
               deleteConfirmPassword: t.profile.deleteConfirmPassword,
               deleteButton: t.profile.deleteButton,
             }}
@@ -229,6 +239,27 @@ export default async function ProfilePage({
                       .filter(Boolean)
                       .join(" · ")}
                   </span>
+                  {isSelf ? (
+                    <form action={updateWishPartners} className="wish-partners-form">
+                      <input type="hidden" name="id" value={wish.id} />
+                      <input
+                        type="text"
+                        name="partners"
+                        defaultValue={wish.partners ?? ""}
+                        placeholder={t.wishlist.partnersPlaceholder}
+                        autoComplete="off"
+                      />
+                      <button type="submit" className="wish-partners-save">
+                        {t.wishlist.savePartners}
+                      </button>
+                    </form>
+                  ) : (
+                    wish.partners && (
+                      <span className="wish-partners">
+                        👥 {wishPartnerNodes.get(wish.id)}
+                      </span>
+                    )
+                  )}
                 </div>
                 {isSelf && (
                   <div className="wish-actions">
@@ -252,6 +283,7 @@ export default async function ProfilePage({
               t={{
                 titlePlaceholder: t.wishlist.titlePlaceholder,
                 notePlaceholder: t.wishlist.notePlaceholder,
+                partnersPlaceholder: t.wishlist.partnersPlaceholder,
                 add: t.wishlist.add,
                 attribution: t.editor.suggestionsAttribution,
               }}

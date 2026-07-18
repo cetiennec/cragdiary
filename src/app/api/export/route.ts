@@ -29,7 +29,7 @@ export async function GET() {
     ),
     pool.query(
       `select id, title, location, grade_max, rating, pitches, height_m, c2c_url, note,
-              lat, lon, created_at
+              partners, lat, lon, created_at
        from wishes where user_id = $1 order by created_at desc`,
       [user.id]
     ),

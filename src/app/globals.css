@@ -123,6 +123,29 @@ a {
   text-align: center;
 }
 
+.site-footer .lang-toggle {
+  display: block;
+  width: fit-content;
+  margin: 0.7rem auto 0;
+}
+
+.site-footer .lang-toggle button {
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.35rem 0.95rem;
+  cursor: pointer;
+}
+
+.site-footer .lang-toggle button:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
 /* Theme toggle */
 
 .theme-toggle {
@@ -1537,6 +1560,59 @@ a {
   font-size: 0.82rem;
 }
 
+.wish-partners {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.wish-partners a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.wish-partners-form {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.2rem;
+}
+
+.wish-partners-form input {
+  font: inherit;
+  font-size: 0.8rem;
+  color: var(--text);
+  background: transparent;
+  border: 1px dashed var(--border);
+  border-radius: 999px;
+  padding: 0.2rem 0.7rem;
+  min-width: 0;
+  flex: 1;
+  max-width: 320px;
+}
+
+.wish-partners-form input:focus {
+  border-style: solid;
+  outline: none;
+  border-color: var(--accent);
+}
+
+.wish-partners-save {
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.2rem 0.6rem;
+  cursor: pointer;
+}
+
+.wish-partners-save:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
 .wish-actions {
   display: flex;
   align-items: center;
@@ -1581,6 +1657,146 @@ a {
 .wish-note {
   flex: 1;
   min-width: 140px;
+}
+
+/* Feedback */
+
+.feedback-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  margin-top: 1rem;
+}
+
+.feedback-form textarea,
+.feedback-form input[type="email"] {
+  font: inherit;
+  font-size: 0.92rem;
+  color: var(--text);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.7rem 0.9rem;
+}
+
+.feedback-form textarea {
+  resize: vertical;
+}
+
+.feedback-form input[name="website"] {
+  position: absolute;
+  left: -9999px;
+  height: 0;
+  width: 0;
+  border: none;
+  padding: 0;
+}
+
+.feedback-sent {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* Import tool */
+
+.import-tool {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  margin-top: 1rem;
+}
+
+.import-tool textarea {
+  font: inherit;
+  font-size: 0.9rem;
+  color: var(--text);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.7rem 0.9rem;
+  resize: vertical;
+}
+
+.import-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  flex-wrap: wrap;
+}
+
+.import-file {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.import-back {
+  font: inherit;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.4rem 0.9rem;
+  cursor: pointer;
+}
+
+.import-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-elevated);
+}
+
+.import-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.85rem;
+}
+
+.import-table th,
+.import-table td {
+  text-align: left;
+  padding: 0.35rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.import-table tr[data-excluded="true"] td {
+  opacity: 0.4;
+}
+
+.import-table input[type="text"],
+.import-table input[type="date"] {
+  font: inherit;
+  font-size: 0.85rem;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 0.15rem 0.3rem;
+  min-width: 7rem;
+}
+
+.import-table input[type="text"]:focus,
+.import-table input[type="date"]:focus {
+  border-color: var(--accent);
+  outline: none;
+  background: var(--bg);
+}
+
+.import-col-grade input {
+  min-width: 4rem !important;
+  max-width: 5rem;
+}
+
+.import-col-notes {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-muted);
 }
 
 .export-link {
@@ -1656,19 +1872,21 @@ a {
 .edit-pill {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--accent);
-  border: 1.5px solid var(--accent);
+  gap: 0.45rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--accent-contrast);
+  background: var(--accent);
+  border: none;
   border-radius: 999px;
-  padding: 0.4rem 1rem;
+  padding: 0.55rem 1.3rem;
   text-decoration: none;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 45%, transparent);
 }
 
 .edit-pill:hover {
-  background: var(--accent);
-  color: var(--accent-contrast);
+  filter: brightness(1.08);
+  box-shadow: 0 3px 12px color-mix(in srgb, var(--accent) 60%, transparent);
 }
 
 /* Mobile: stack property rows, tame the big title */

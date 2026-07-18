@@ -9,6 +9,7 @@ import type { Locale } from "@/lib/i18n";
 export type WishFormLabels = {
   titlePlaceholder: string;
   notePlaceholder: string;
+  partnersPlaceholder: string;
   add: string;
   attribution: string;
 };
@@ -149,6 +150,13 @@ export default function WishForm({ t, locale }: { t: WishFormLabels; locale: Loc
         )}
       </div>
       <input type="text" name="note" placeholder={t.notePlaceholder} className="wish-note" />
+      <input
+        type="text"
+        name="partners"
+        placeholder={t.partnersPlaceholder}
+        className="wish-note"
+        autoComplete="off"
+      />
       <SubmitButton label={t.add} />
     </form>
   );

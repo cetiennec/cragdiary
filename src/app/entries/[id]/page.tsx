@@ -1,13 +1,12 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getEntry, getExistingUsernames } from "@/lib/queries";
+import { getEntry } from "@/lib/queries";
 import { currentUser } from "@/lib/auth";
 import { formatDate, getDict } from "@/lib/i18n";
+import { renderMentions } from "@/lib/mentions";
 import DeleteEntryButton from "@/components/DeleteEntryButton";
 import AutoCover from "@/components/AutoCover";
-
-const MENTION_RE = /@([a-z0-9-]{3,20})/g;
 
 type InlinePhoto = {
   id: string;
@@ -48,27 +47,6 @@ function NotesFlow({ notes, photos }: { notes: string | null; photos: InlinePhot
       {(byPara.get(paragraphs.length) ?? []).map(figure)}
     </div>
   );
-}
-
-async function renderPartners(partners: string): Promise<React.ReactNode[]> {
-  const mentioned = [...partners.matchAll(MENTION_RE)].map((m) => m[1]);
-  const existing = await getExistingUsernames(mentioned);
-
-  const nodes: React.ReactNode[] = [];
-  let cursor = 0;
-  for (const match of partners.matchAll(MENTION_RE)) {
-    const username = match[1];
-    if (!existing.has(username)) continue;
-    if (match.index > cursor) nodes.push(partners.slice(cursor, match.index));
-    nodes.push(
-      <Link key={`${username}-${match.index}`} href={`/u/${username}`}>
-        @{username}
-      </Link>
-    );
-    cursor = match.index + match[0].length;
-  }
-  if (cursor < partners.length) nodes.push(partners.slice(cursor));
-  return nodes;
 }
 
 export async function generateMetadata({
@@ -222,7 +200,7 @@ export default async function EntryPage({
           {entry.partners && (
             <div className="notion-prop">
               <dt>{t.entry.partners}</dt>
-              <dd>{await renderPartners(entry.partners)}</dd>
+              <dd>{await renderMentions(entry.partners)}</dd>
             </div>
           )}
           {entry.c2c_url && (

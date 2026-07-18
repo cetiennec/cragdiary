@@ -18,6 +18,7 @@ type SettingsLabels = {
   coverLabel: string;
   coverRemove: string;
   exportLabel: string;
+  importLabel: string;
   dangerTitle: string;
   deleteLabel: string;
   deleteConfirmPassword: string;
@@ -105,7 +106,8 @@ export default function ProfileSettingsForm({
       </form>
 
       <p className="export-link">
-        <a href="/api/export">⬇︎ {t.exportLabel}</a>
+        <a href="/api/export">⬇︎ {t.exportLabel}</a> ·{" "}
+        <a href="/import">⬆︎ {t.importLabel}</a>
       </p>
 
       <div className="danger-zone">

@@ -87,8 +87,10 @@ create table if not exists wishes (
   height_m integer,
   c2c_url text,
   note text,
+  partners text,
   lat double precision,
   lon double precision,
   created_at timestamptz not null default now()
 );
 create index if not exists wishes_user_id_idx on wishes(user_id);
+alter table wishes add column if not exists partners text;

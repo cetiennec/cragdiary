@@ -46,6 +46,7 @@ export type EntryDefaults = {
   c2c_url?: string;
   lat?: number | null;
   lon?: number | null;
+  partners?: string;
   fromWish?: string;
 };
 
@@ -133,7 +134,7 @@ export default function EntryForm({
   const geoArmed = useRef(false);
   const geoAbortRef = useRef<AbortController | null>(null);
 
-  const [partners, setPartners] = useState(entry?.partners ?? "");
+  const [partners, setPartners] = useState(entry?.partners ?? defaults?.partners ?? "");
   const [mentionSuggestions, setMentionSuggestions] = useState<UserSuggestion[]>([]);
   const [mentionOpen, setMentionOpen] = useState(false);
   const [mentionHighlighted, setMentionHighlighted] = useState(-1);
