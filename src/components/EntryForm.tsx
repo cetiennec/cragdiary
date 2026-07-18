@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { autosaveEntry, createEntry, updateEntry } from "@/app/actions";
+import { useRouter } from "next/navigation";
+import { addEntryPhoto, autosaveEntry, createEntry, updateEntry } from "@/app/actions";
 import type { Dict, Locale } from "@/lib/i18n";
 import type { C2cSuggestion } from "@/app/api/c2c/search/route";
 import type { GeoSuggestion } from "@/app/api/geo/search/route";
@@ -84,6 +85,7 @@ export default function EntryForm({
   const [starLevel, setStarLevel] = useState(entry?.star_level ?? 0);
   const [monthOnly, setMonthOnly] = useState(entry?.month_only ?? false);
 
+  const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const [autosave, setAutosave] = useState<"idle" | "saving" | "saved">("idle");
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -314,9 +316,9 @@ export default function EntryForm({
     if (fileInputRef.current) fileInputRef.current.files = dt.files;
   }
 
-  // Vercel rejects request bodies over ~4.5 MB, so the whole upload must fit
-  // this budget; when the first pass is too big, recompress smaller.
-  const UPLOAD_BUDGET = 3_500_000;
+  // Photos upload one request each, so only a single photo has to fit under
+  // Vercel's ~4.5 MB body cap; recompress it smaller if the first pass is big.
+  const PER_PHOTO_BUDGET = 3_000_000;
   const COMPRESSION_STEPS: [number, number][] = [
     [1800, 0.82],
     [1400, 0.78],
@@ -324,6 +326,9 @@ export default function EntryForm({
     [900, 0.65],
   ];
   const [photoError, setPhotoError] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState(false);
 
   const [newLayouts, setNewLayouts] = useState<PhotoLayoutValue[]>([]);
 
@@ -339,14 +344,17 @@ export default function EntryForm({
       setPhotoError(false);
       return;
     }
-    let compressed: File[] = [];
-    for (const [dim, quality] of COMPRESSION_STEPS) {
-      compressed = await Promise.all(files.map((f) => compressImage(f, dim, quality)));
-      const total = compressed.reduce((sum, f) => sum + f.size, 0);
-      if (total <= UPLOAD_BUDGET) break;
-    }
-    const total = compressed.reduce((sum, f) => sum + f.size, 0);
-    setPhotoError(total > UPLOAD_BUDGET);
+    const compressed = await Promise.all(
+      files.map(async (f) => {
+        let out = f;
+        for (const [dim, quality] of COMPRESSION_STEPS) {
+          out = await compressImage(f, dim, quality);
+          if (out.size <= PER_PHOTO_BUDGET) break;
+        }
+        return out;
+      })
+    );
+    setPhotoError(compressed.some((f) => f.size > PER_PHOTO_BUDGET));
     syncFileInput(compressed);
     setNewFiles(compressed);
     setNewLayouts(compressed.map(() => ({ align: "gallery", size: "m", para: "1" })));
@@ -404,10 +412,51 @@ export default function EntryForm({
   return (
     <form
       ref={formRef}
-      action={editing ? updateEntry : createEntry}
+      action={
+        editing
+          ? updateEntry
+          : async (fd: FormData) => {
+              await createEntry(fd); // redirects server-side; string return is only for the photo path
+            }
+      }
       onInput={queueAutosave}
-      onSubmit={() => {
+      onSubmit={(e) => {
         if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+        if (newFiles.length === 0) return; // no photos: plain server-action submit
+        // Photos go up one request at a time, so any number of them fits
+        // under Vercel's body cap; then navigate to the saved entry.
+        e.preventDefault();
+        if (submitting) return;
+        const form = formRef.current;
+        if (!form || !form.reportValidity()) return;
+        (async () => {
+          setSubmitting(true);
+          setSubmitError(false);
+          try {
+            const fd = new FormData(form);
+            fd.delete("photos");
+            fd.append("no_redirect", "1");
+            const savedId = editing
+              ? (await updateEntry(fd), entry!.id)
+              : ((await createEntry(fd)) as string);
+            for (let i = 0; i < newFiles.length; i++) {
+              setUploadProgress(`${i + 1}/${newFiles.length}`);
+              const pfd = new FormData();
+              pfd.append("id", savedId);
+              pfd.append("photo", newFiles[i]);
+              const layout = newLayouts[i];
+              pfd.append("new_photo_align_0", layout.align === "gallery" ? "" : layout.align);
+              pfd.append("new_photo_size_0", layout.size);
+              pfd.append("new_photo_para_0", layout.para);
+              await addEntryPhoto(pfd);
+            }
+            router.push(`/entries/${savedId}`);
+          } catch {
+            setSubmitError(true);
+            setSubmitting(false);
+            setUploadProgress(null);
+          }
+        })();
       }}
       className="notion-page notion-editor"
     >
@@ -982,9 +1031,16 @@ export default function EntryForm({
         )}
 
         {photoError && <p className="form-error">{t.tooManyPhotos}</p>}
+        {submitError && <p className="form-error">{t.uploadFailed}</p>}
 
         <div className="notion-editor-actions">
-          <SubmitButton editing={editing} blocked={photoError} t={t} />
+          {submitting && (
+            <span className="autosave-status">
+              {t.uploadingPhotos}
+              {uploadProgress ? ` ${uploadProgress}` : ""}
+            </span>
+          )}
+          <SubmitButton editing={editing} blocked={photoError || submitting} t={t} />
         </div>
       </div>
     </form>

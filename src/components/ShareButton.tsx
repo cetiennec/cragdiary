@@ -4,7 +4,15 @@ import { useState } from "react";
 
 // On phones, opens the native share sheet (WhatsApp, Messages…); elsewhere
 // copies the page URL and flips to a ✓ for a moment as feedback.
-export default function ShareButton({ label, copied }: { label: string; copied: string }) {
+export default function ShareButton({
+  label,
+  copied,
+  text,
+}: {
+  label: string;
+  copied: string;
+  text?: string;
+}) {
   const [done, setDone] = useState(false);
 
   return (
@@ -17,7 +25,7 @@ export default function ShareButton({ label, copied }: { label: string; copied: 
         const url = window.location.href;
         if (navigator.share) {
           try {
-            await navigator.share({ url, title: document.title });
+            await navigator.share({ url, title: document.title, text });
           } catch {
             // User closed the share sheet — nothing to do.
           }

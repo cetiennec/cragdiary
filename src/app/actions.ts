@@ -270,7 +270,10 @@ export async function updateProfile(formData: FormData): Promise<void> {
   redirect(`/u/${user.username}`);
 }
 
-export async function createEntry(formData: FormData): Promise<void> {
+// With `no_redirect`, returns the entry id instead of redirecting — the client
+// then uploads photos one request at a time (Vercel caps request bodies at
+// ~4.5 MB, so a single multi-photo submit cannot scale) and navigates itself.
+export async function createEntry(formData: FormData): Promise<string | void> {
   const user = await currentUser();
   if (!user) throw new Error("Unauthorized");
 
@@ -349,6 +352,7 @@ export async function createEntry(formData: FormData): Promise<void> {
 
   revalidatePath("/");
   revalidatePath(`/u/${user.username}`);
+  if (formData.get("no_redirect")) return entryId;
   redirect(`/entries/${entryId}`);
 }
 
@@ -460,7 +464,49 @@ export async function updateEntry(formData: FormData): Promise<void> {
   revalidatePath("/");
   revalidatePath(`/u/${user.username}`);
   revalidatePath(`/entries/${id}`);
+  if (formData.get("no_redirect")) return;
   redirect(`/entries/${id}`);
+}
+
+// Uploads one photo for an entry the user owns; called once per photo so each
+// request stays well under Vercel's body-size cap.
+export async function addEntryPhoto(formData: FormData): Promise<void> {
+  const user = await currentUser();
+  if (!user) throw new Error("Unauthorized");
+
+  const id = String(formData.get("id") ?? "");
+  const file = formData.get("photo");
+  if (!id || !(file instanceof File) || file.size === 0) return;
+
+  const owned = await pool.query("select 1 from entries where id = $1 and user_id = $2", [
+    id,
+    user.id,
+  ]);
+  if (owned.rows.length === 0) throw new Error("Not found");
+
+  const processed = await processPhoto(file);
+  const layout = parsePhotoLayout(formData, "new_photo", 0);
+  const maxPos = await pool.query<{ max: number | null }>(
+    "select max(position)::int as max from photos where entry_id = $1",
+    [id]
+  );
+  await pool.query(
+    `insert into photos (entry_id, content_type, data, position, size, align, para)
+     values ($1, $2, $3, $4, $5, $6, $7)`,
+    [
+      id,
+      "image/webp",
+      processed,
+      (maxPos.rows[0].max ?? -1) + 1,
+      layout.size,
+      layout.align,
+      layout.para,
+    ]
+  );
+
+  revalidatePath("/");
+  revalidatePath(`/u/${user.username}`);
+  revalidatePath(`/entries/${id}`);
 }
 
 // Field-only autosave while editing: same row update as updateEntry, but no

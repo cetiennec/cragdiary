@@ -8,6 +8,7 @@ import { renderMentions } from "@/lib/mentions";
 import DeleteEntryButton from "@/components/DeleteEntryButton";
 import AutoCover from "@/components/AutoCover";
 import ShareButton from "@/components/ShareButton";
+import PhotoGallery from "@/components/PhotoGallery";
 
 type InlinePhoto = {
   id: string;
@@ -129,7 +130,13 @@ export default async function EntryPage({
       )}
 
       <div className="entry-edit-row">
-        <ShareButton label={t.entry.share} copied={t.entry.shareCopied} />
+        <ShareButton
+          label={t.entry.share}
+          copied={t.entry.shareCopied}
+          text={`🧗 ${entry.crag}${entry.grade_max ? ` · ${entry.grade_max}` : ""}${
+            entry.star_level === 3 ? " · ⭐⭐⭐" : ""
+          } — ${t.entry.shareTagline}`}
+        />
         {isAuthor && (
           <Link
             href={`/entries/${entry.id}/edit`}
@@ -310,12 +317,11 @@ export default async function EntryPage({
         {gallery.length > 0 && (
           <>
           <h2 className="pitch-notes-title notion-gallery-title">{t.entry.galleryTitle}</h2>
-          <div className="photo-grid notion-gallery">
-            {gallery.map((photo) => (
-              // eslint-disable-next-line @next/next/no-img-element -- served from our own DB-backed route, already resized/compressed server-side
-              <img key={photo.id} src={`/api/photos/${photo.id}`} alt="" loading="lazy" />
-            ))}
-          </div>
+          <PhotoGallery
+            photoIds={gallery.map((photo) => photo.id)}
+            className="photo-grid notion-gallery"
+            closeLabel={t.entry.lightboxClose}
+          />
           </>
         )}
 
