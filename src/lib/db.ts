@@ -34,6 +34,7 @@ export type User = {
   has_avatar: boolean;
   has_cover: boolean;
   email: string | null;
+  wishlist_public: boolean;
   created_at: string;
 };
 

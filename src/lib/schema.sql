@@ -13,6 +13,7 @@ create table if not exists users (
   cover bytea,
   cover_type text,
   email text,
+  wishlist_public boolean not null default true,
   created_at timestamptz not null default now()
 );
 
@@ -94,3 +95,4 @@ create table if not exists wishes (
 );
 create index if not exists wishes_user_id_idx on wishes(user_id);
 alter table wishes add column if not exists partners text;
+alter table users add column if not exists wishlist_public boolean not null default true;

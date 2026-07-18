@@ -763,6 +763,16 @@ export async function updateWishPartners(formData: FormData): Promise<void> {
   revalidatePath(`/u/${user.username}`);
 }
 
+export async function toggleWishlistVisibility(): Promise<void> {
+  const user = await currentUser();
+  if (!user) throw new Error("Unauthorized");
+
+  await pool.query("update users set wishlist_public = not wishlist_public where id = $1", [
+    user.id,
+  ]);
+  revalidatePath(`/u/${user.username}`);
+}
+
 export async function deleteWish(formData: FormData): Promise<void> {
   const user = await currentUser();
   if (!user) throw new Error("Unauthorized");

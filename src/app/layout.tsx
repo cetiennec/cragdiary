@@ -58,6 +58,7 @@ export default async function RootLayout({
                 <>
                   <Link href="/entries/new">{t.nav.newEntry}</Link>
                   <Link href={`/u/${user.username}`}>{t.nav.myJournal}</Link>
+                  <Link href={`/u/${user.username}#wishlist`}>{t.nav.myWishlist}</Link>
                   <form action={logout}>
                     <button type="submit">{t.nav.logout}</button>
                   </form>
@@ -72,6 +73,9 @@ export default async function RootLayout({
           </div>
         </header>
         <main className="flex-1">{children}</main>
+        <Link href="/feedback" className="feedback-fab" title={t.feedback.title}>
+          💬 {t.feedback.linkLabel}
+        </Link>
         <footer className="site-footer">
           {t.footer} · <Link href="/credits">{t.credits.linkLabel}</Link> ·{" "}
           <Link href="/privacy">{t.privacy.linkLabel}</Link> ·{" "}

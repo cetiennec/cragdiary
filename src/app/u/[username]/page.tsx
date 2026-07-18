@@ -10,10 +10,11 @@ import {
   isFollowing,
   type EntryFilters,
 } from "@/lib/queries";
-import { deleteWish, toggleFollow, updateWishPartners } from "@/app/actions";
+import { deleteWish, toggleFollow, toggleWishlistVisibility } from "@/app/actions";
 import { renderMentions } from "@/lib/mentions";
 import FilterBar from "@/components/FilterBar";
 import WishForm from "@/components/WishForm";
+import WishPartnersEditor from "@/components/WishPartnersEditor";
 import { currentUser } from "@/lib/auth";
 import { formatMeters, getDict } from "@/lib/i18n";
 import EntryCard from "@/components/EntryCard";
@@ -79,6 +80,7 @@ export default async function ProfilePage({
   if (!profile) notFound();
 
   const isSelf = user?.id === profile.id;
+  const showWishlist = isSelf || profile.wishlist_public;
   if (profile.visibility === "private" && !isSelf) notFound();
   const [entries, stats, years, wishes, following] = await Promise.all([
     getEntriesByUser(profile.id, { includeNonPublic: isSelf, filters }),
@@ -196,6 +198,14 @@ export default async function ProfilePage({
         </details>
       )}
 
+      {isSelf && (
+        <div className="profile-quick-actions">
+          <Link href="/import" className="import-pill" title={t.importLabel}>
+            {t.importPromo}
+          </Link>
+        </div>
+      )}
+
       {stats.total > 0 && (
         <div className="stats-row">
           {tiles.map((tile) => (
@@ -217,7 +227,7 @@ export default async function ProfilePage({
             lon: e.lon!,
             href: `/entries/${e.id}`,
           }))}
-        wishPoints={wishes
+        wishPoints={(showWishlist ? wishes : [])
           .filter((w) => w.lat != null && w.lon != null)
           .map((w) => ({
             id: w.id,
@@ -239,11 +249,16 @@ export default async function ProfilePage({
       {entries.length === 0 ? (
         <div className="empty-state">
           {isSelf ? (
-            <p>
-              {t.profile.emptySelfPre}
-              <Link href="/entries/new">{t.profile.emptySelfLink}</Link>
-              {t.profile.emptySelfPost}
-            </p>
+            <>
+              <p>
+                {t.profile.emptySelfPre}
+                <Link href="/entries/new">{t.profile.emptySelfLink}</Link>
+                {t.profile.emptySelfPost}
+              </p>
+              <p>
+                <Link href="/import">{t.importPromo}</Link>
+              </p>
+            </>
           ) : (
             <p>{t.profile.emptyOther}</p>
           )}
@@ -262,9 +277,28 @@ export default async function ProfilePage({
         </div>
       )}
 
-      {(wishes.length > 0 || isSelf) && (
+      {showWishlist && (wishes.length > 0 || isSelf) && (
         <section className="wishlist-section" id="wishlist">
-          <h2 className="pitch-notes-title">{t.wishlist.title}</h2>
+          <div className="wishlist-header">
+            <h2 className="pitch-notes-title">{t.wishlist.title}</h2>
+            {isSelf && (
+              <form action={toggleWishlistVisibility}>
+                <button
+                  type="submit"
+                  className={`wishlist-visibility${profile.wishlist_public ? "" : " private"}`}
+                  title={
+                    profile.wishlist_public
+                      ? t.wishlist.visibilityPublicHint
+                      : t.wishlist.visibilityPrivateHint
+                  }
+                >
+                  {profile.wishlist_public
+                    ? t.wishlist.visibilityPublic
+                    : t.wishlist.visibilityPrivate}
+                </button>
+              </form>
+            )}
+          </div>
           {wishes.length === 0 && <p className="form-hint">{t.wishlist.empty}</p>}
           {wishes.length > 1 && (
             <form method="get" action={`/u/${profile.username}`} className="filter-bar wish-filter">
@@ -319,19 +353,18 @@ export default async function ProfilePage({
                   </span>
                 </div>
                 {isSelf ? (
-                  <form action={updateWishPartners} className="wish-partners-form">
-                    <input type="hidden" name="id" value={wish.id} />
-                    <input
-                      type="text"
-                      name="partners"
-                      defaultValue={wish.partners ?? ""}
-                      placeholder={t.wishlist.partnersPlaceholder}
-                      autoComplete="off"
-                    />
-                    <button type="submit" className="wish-partners-save">
-                      {t.wishlist.savePartners}
-                    </button>
-                  </form>
+                  <WishPartnersEditor
+                    wishId={wish.id}
+                    partners={wish.partners ?? ""}
+                    partnersNode={wishPartnerNodes.get(wish.id)}
+                    t={{
+                      placeholder: t.wishlist.partnersPlaceholder,
+                      save: t.wishlist.savePartners,
+                      saved: t.wishlist.partnersSaved,
+                      edit: t.wishlist.editPartners,
+                      add: t.wishlist.addPartners,
+                    }}
+                  />
                 ) : (
                   wish.partners && (
                     <span className="wish-partners">👥 {wishPartnerNodes.get(wish.id)}</span>

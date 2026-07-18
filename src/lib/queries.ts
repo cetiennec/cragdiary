@@ -116,7 +116,7 @@ export async function getEntry(id: string): Promise<EntryWithAuthor | null> {
 
 export async function getUserByUsername(username: string): Promise<User | null> {
   const result = await pool.query<User>(
-    "select id, username, display_name, bio, visibility, email, avatar is not null as has_avatar, cover is not null as has_cover, created_at from users where username = $1",
+    "select id, username, display_name, bio, visibility, email, avatar is not null as has_avatar, cover is not null as has_cover, wishlist_public, created_at from users where username = $1",
     [username]
   );
   return result.rows[0] ?? null;
