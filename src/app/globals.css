@@ -87,31 +87,30 @@ a {
 .site-nav {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.35rem;
   font-size: 0.92rem;
+  font-weight: 600;
   flex-wrap: wrap;
 }
 
-.site-nav a {
+.site-nav a,
+.site-nav form button {
   text-decoration: none;
   color: var(--text-muted);
-}
-
-.site-nav a:hover {
-  color: var(--text);
-}
-
-.site-nav form button {
   background: none;
   border: none;
-  color: var(--text-muted);
   font: inherit;
   cursor: pointer;
-  padding: 0;
+  padding: 0.35rem 0.8rem;
+  border-radius: 999px;
+  transition: background-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
 }
 
+.site-nav a:hover,
 .site-nav form button:hover {
-  color: var(--text);
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  transform: rotate(-1deg);
 }
 
 .site-footer {
@@ -1467,14 +1466,18 @@ a {
   margin-bottom: 0;
 }
 
-/* Sticker strip of every pin earned across the journal, plus country flags. */
-.pin-collection {
-  list-style: none;
+.install-page ol {
+  padding-left: 1.3rem;
+  line-height: 1.8;
+  margin: 0.4rem 0 1.4rem;
+}
+
+/* Earned-pin stickers offered under the bio field in the settings. */
+.bio-pins {
   display: flex;
   flex-wrap: wrap;
   gap: 0.45rem;
-  margin: -0.6rem 0 1.4rem;
-  padding: 0;
+  margin: 0.1rem 0 0.6rem;
 }
 
 .pin-badge {
@@ -1483,48 +1486,46 @@ a {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  font: inherit;
   font-size: 1.15rem;
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: 50%;
   box-shadow: 0 2px 6px -2px rgba(58, 44, 34, 0.25);
-  cursor: default;
-  transition: transform 0.15s ease;
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease;
 }
 
 .pin-badge:hover {
   transform: rotate(-6deg) scale(1.15);
 }
 
-:root[data-theme="scrapbook"] .pin-collection .pin-badge:nth-child(2n) {
-  transform: rotate(3deg);
+.pin-badge.in-bio {
+  border: 2px solid var(--accent);
 }
 
-:root[data-theme="scrapbook"] .pin-collection .pin-badge:nth-child(2n):hover {
-  transform: rotate(-6deg) scale(1.15);
+/* 🧗 icon left, star + autosave status right, on one line. */
+.editor-head-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
 }
 
-/* Star + autosave status floated top right of the editor, above the 🧗 icon row. */
 .editor-star-row {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
   gap: 0.6rem;
-  height: 0;
-  position: relative;
-  z-index: 5;
 }
 
 .editor-star-row .star-toggle {
   font-size: 1.7rem;
-  margin-top: 0.5rem;
 }
 
 .autosave-status {
   font-size: 0.78rem;
   font-weight: 600;
   color: var(--text-muted);
-  margin-top: 0.5rem;
 }
 
 .entry-star {

@@ -157,7 +157,7 @@ const en = {
     emptySelfPost: ".",
     emptyOther: "No entries yet.",
     settingsTitle: "Profile settings",
-    pinCollection: "Pin collection and climbed countries",
+    bioPinsHint: "Your earned pins and climbed countries — click to add them to your bio:",
     bioLabel: "Bio",
     avatarLabel: "Profile picture",
     avatarRemove: "Remove the picture",
@@ -224,6 +224,25 @@ const en = {
   exportLabel: "Download my journal (JSON)",
   importLabel: "Import entries (JSON, CSV, free text)",
   importPromo: "⬆︎ Import an existing logbook",
+  install: {
+    linkLabel: "📱 Mobile app",
+    title: "Cragdiary on your phone",
+    intro:
+      "Cragdiary is an installable web app: added to your home screen, it opens full screen with its own icon, just like an app — no app store, always up to date.",
+    iosTitle: "iPhone / iPad (Safari)",
+    iosSteps: [
+      "Open cragdiary.nanocorp.app in Safari.",
+      "Tap the Share button (the square with an arrow).",
+      "Choose “Add to Home Screen”, then “Add”.",
+    ],
+    androidTitle: "Android (Chrome)",
+    androidSteps: [
+      "Open cragdiary.nanocorp.app in Chrome.",
+      "Tap the ⋮ menu (or the “Install app” banner if it appears).",
+      "Choose “Add to Home screen” / “Install app”, then confirm.",
+    ],
+    note: "That's it — the Cragdiary icon is on your home screen and the journal opens like a native app.",
+  },
   feedback: {
     linkLabel: "Feedback",
     title: "An idea? A bug?",
@@ -466,7 +485,7 @@ const fr: Dict = {
     emptySelfPost: ".",
     emptyOther: "Aucune entrée pour l'instant.",
     settingsTitle: "Réglages du profil",
-    pinCollection: "Collection de pins et pays grimpés",
+    bioPinsHint: "Vos pins gagnés et pays grimpés — cliquez pour les ajouter à votre bio :",
     bioLabel: "Bio",
     avatarLabel: "Photo de profil",
     avatarRemove: "Retirer la photo",
@@ -535,6 +554,25 @@ const fr: Dict = {
   exportLabel: "Télécharger mon carnet (JSON)",
   importLabel: "Importer des entrées (JSON, CSV, texte libre)",
   importPromo: "⬆︎ Importer un carnet existant",
+  install: {
+    linkLabel: "📱 App mobile",
+    title: "Cragdiary sur votre téléphone",
+    intro:
+      "Cragdiary est une webapp installable : ajoutée à l'écran d'accueil, elle s'ouvre en plein écran avec sa propre icône, comme une app — pas de store, toujours à jour.",
+    iosTitle: "iPhone / iPad (Safari)",
+    iosSteps: [
+      "Ouvrez cragdiary.nanocorp.app dans Safari.",
+      "Touchez le bouton Partager (le carré avec une flèche).",
+      "Choisissez « Sur l'écran d'accueil », puis « Ajouter ».",
+    ],
+    androidTitle: "Android (Chrome)",
+    androidSteps: [
+      "Ouvrez cragdiary.nanocorp.app dans Chrome.",
+      "Touchez le menu ⋮ (ou la bannière « Installer l'application » si elle apparaît).",
+      "Choisissez « Ajouter à l'écran d'accueil » / « Installer », puis confirmez.",
+    ],
+    note: "C'est tout — l'icône Cragdiary est sur votre écran d'accueil et le carnet s'ouvre comme une app native.",
+  },
   feedback: {
     linkLabel: "Feedback",
     title: "Une idée ? Un bug ?",

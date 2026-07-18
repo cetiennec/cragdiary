@@ -418,30 +418,31 @@ export default function EntryForm({
         <input type="hidden" name="lon" value={excludedFields.has("location") ? "" : lon} />
         <input type="hidden" name="c2c_summary" value={includeSummary ? c2cSummary : ""} />
 
-        <div className="editor-star-row">
-          {editing && autosave !== "idle" && (
-            <span className="autosave-status">
-              {autosave === "saving" ? t.autosaving : t.autosaved}
-            </span>
-          )}
-          <input type="hidden" name="starred" value={starred ? "1" : ""} />
-          <button
-            type="button"
-            className={`star-toggle${starred ? " on" : ""}`}
-            aria-pressed={starred}
-            title={t.starHint}
-            aria-label={t.star}
-            onClick={() => {
-              setStarred(!starred);
-              queueAutosave();
-            }}
-          >
-            {starred ? "⭐" : "☆"}
-          </button>
-        </div>
-
-        <div className="notion-icon" aria-hidden>
-          🧗
+        <div className="editor-head-row">
+          <div className="notion-icon" aria-hidden>
+            🧗
+          </div>
+          <div className="editor-star-row">
+            {editing && autosave !== "idle" && (
+              <span className="autosave-status">
+                {autosave === "saving" ? t.autosaving : t.autosaved}
+              </span>
+            )}
+            <input type="hidden" name="starred" value={starred ? "1" : ""} />
+            <button
+              type="button"
+              className={`star-toggle${starred ? " on" : ""}`}
+              aria-pressed={starred}
+              title={t.starHint}
+              aria-label={t.star}
+              onClick={() => {
+                setStarred(!starred);
+                queueAutosave();
+              }}
+            >
+              {starred ? "⭐" : "☆"}
+            </button>
+          </div>
         </div>
 
         <div className="combobox">

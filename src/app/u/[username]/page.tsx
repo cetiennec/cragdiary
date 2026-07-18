@@ -13,7 +13,6 @@ import {
 } from "@/lib/queries";
 import { coverEmojis } from "@/components/AutoCover";
 import { flagEmoji } from "@/lib/geo";
-import { PIN_LABELS } from "@/lib/i18n";
 import { deleteWish, toggleFollow, toggleWishlistVisibility } from "@/app/actions";
 import { renderMentions } from "@/lib/mentions";
 import FilterBar from "@/components/FilterBar";
@@ -92,17 +91,21 @@ export default async function ProfilePage({
     getEntryYears(profile.id),
     getWishes(profile.id),
     user && !isSelf ? isFollowing(user.id, profile.id) : Promise.resolve(false),
-    getPinCollection(profile.id, { includeNonPublic: isSelf }),
+    isSelf ? getPinCollection(profile.id, { includeNonPublic: true }) : Promise.resolve([]),
   ]);
 
-  const collectedPins: string[] = [];
+  // Earned pins + climbed-country flags, offered in the settings as one-click
+  // additions to the bio (never displayed automatically).
+  const pinSuggestions: string[] = [];
+  const countryCodes = [
+    ...new Set(pinEntries.map((e) => e.country).filter((c): c is string => Boolean(c))),
+  ];
+  for (const cc of countryCodes) pinSuggestions.push(flagEmoji(cc));
   for (const e of pinEntries) {
     for (const emoji of coverEmojis(e)) {
-      if (!collectedPins.includes(emoji)) collectedPins.push(emoji);
+      if (!pinSuggestions.includes(emoji)) pinSuggestions.push(emoji);
     }
   }
-  const countries = [...new Set(pinEntries.map((e) => e.country).filter((c): c is string => Boolean(c)))];
-  const regionNames = new Intl.DisplayNames([locale], { type: "region" });
 
   const norm = (s: string) =>
     s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
@@ -212,7 +215,9 @@ export default async function ProfilePage({
             visibility={profile.visibility}
             hasAvatar={profile.has_avatar}
             hasCover={profile.has_cover}
+            pinSuggestions={pinSuggestions}
             t={{
+              bioPinsHint: t.profile.bioPinsHint,
               bioLabel: t.profile.bioLabel,
               avatarLabel: t.profile.avatarLabel,
               avatarRemove: t.profile.avatarRemove,
@@ -247,20 +252,6 @@ export default async function ProfilePage({
         </div>
       )}
 
-      {(collectedPins.length > 0 || countries.length > 0) && (
-        <ul className="pin-collection" aria-label={t.profile.pinCollection}>
-          {countries.map((cc) => (
-            <li key={cc} className="pin-badge" title={regionNames.of(cc) ?? cc}>
-              {flagEmoji(cc)}
-            </li>
-          ))}
-          {collectedPins.map((emoji) => (
-            <li key={emoji} className="pin-badge" title={PIN_LABELS[locale][emoji]}>
-              {emoji}
-            </li>
-          ))}
-        </ul>
-      )}
 
       <ProfileMap
         points={mapPoints}

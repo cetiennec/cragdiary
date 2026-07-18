@@ -1,11 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { useFormStatus } from "react-dom";
 import { deleteAccount, updateProfile } from "@/app/actions";
 import { compressImage } from "@/lib/client-image";
 
 type SettingsLabels = {
   bioLabel: string;
+  bioPinsHint: string;
   avatarLabel: string;
   avatarRemove: string;
   visibilityLabel: string;
@@ -53,6 +55,7 @@ export default function ProfileSettingsForm({
   visibility,
   hasAvatar,
   hasCover,
+  pinSuggestions = [],
   t,
 }: {
   bio: string;
@@ -60,15 +63,48 @@ export default function ProfileSettingsForm({
   visibility: "public" | "unlisted" | "private";
   hasAvatar: boolean;
   hasCover: boolean;
+  pinSuggestions?: string[];
   t: SettingsLabels;
 }) {
+  const [bioValue, setBioValue] = useState(bio);
+
+  // One click drops an earned pin into the bio; a second click takes it out.
+  function togglePin(emoji: string) {
+    setBioValue((v) =>
+      v.includes(emoji) ? v.replace(emoji, "").replace(/  +/g, " ").trim() : v ? `${v} ${emoji}` : emoji
+    );
+  }
+
   return (
     <>
       <form action={updateProfile} className="entry-form profile-settings-form">
         <label>
           {t.bioLabel}
-          <textarea name="bio" rows={3} defaultValue={bio} />
+          <textarea
+            name="bio"
+            rows={3}
+            value={bioValue}
+            onChange={(e) => setBioValue(e.target.value)}
+          />
         </label>
+        {pinSuggestions.length > 0 && (
+          <>
+            <p className="form-hint">{t.bioPinsHint}</p>
+            <div className="bio-pins">
+              {pinSuggestions.map((emoji) => (
+                <button
+                  key={emoji}
+                  type="button"
+                  className={`pin-badge${bioValue.includes(emoji) ? " in-bio" : ""}`}
+                  aria-pressed={bioValue.includes(emoji)}
+                  onClick={() => togglePin(emoji)}
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
         <label>
           {t.emailLabel}
           <input type="email" name="email" defaultValue={email} autoComplete="email" />

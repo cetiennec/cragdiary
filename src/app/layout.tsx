@@ -91,7 +91,8 @@ export default async function RootLayout({
         <footer className="site-footer">
           {t.footer} · <Link href="/credits">{t.credits.linkLabel}</Link> ·{" "}
           <Link href="/privacy">{t.privacy.linkLabel}</Link> ·{" "}
-          <Link href="/feedback">{t.feedback.linkLabel}</Link>
+          <Link href="/feedback">{t.feedback.linkLabel}</Link> ·{" "}
+          <Link href="/install">{t.install.linkLabel}</Link>
           <form action={setLocale} className="lang-toggle">
             <button
               type="submit"
