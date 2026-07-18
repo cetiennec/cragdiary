@@ -142,7 +142,6 @@ export default async function ProfilePage({
       lon: w.lon!,
       href: w.c2c_url ?? undefined,
     }));
-  const hasMap = mapPoints.length > 0 || mapWishPoints.length > 0;
   const importPill = isSelf ? (
     <Link href="/import" className="import-pill" title={t.importLabel}>
       {t.importPromo}
@@ -238,10 +237,7 @@ export default async function ProfilePage({
         points={mapPoints}
         wishPoints={mapWishPoints}
         wishLabel={t.wishlist.mapToggle}
-        footer={importPill}
       />
-
-      {hasMap ? null : importPill && <div className="profile-quick-actions">{importPill}</div>}
 
       <div className="filter-row">
         <FilterBar
@@ -250,6 +246,7 @@ export default async function ProfilePage({
           current={{ q: sp.q ?? "", year: sp.year ?? "", loc: sp.loc ?? "" }}
           action={`/u/${profile.username}`}
         />
+        {importPill}
         {isSelf && (
           <Link
             href="/entries/new"

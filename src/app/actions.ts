@@ -267,8 +267,8 @@ export async function createEntry(formData: FormData): Promise<void> {
       `insert into entries
          (user_id, entry_date, month_only, crag, location, style, grade_max, rating,
           orientation, equipment, pitches, height_m, routes, partners, notes,
-          c2c_url, c2c_summary, pitch_notes, lat, lon, show_pins, visibility)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
+          c2c_url, c2c_summary, pitch_notes, lat, lon, show_pins, starred, visibility)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)
        returning id`,
       [
         user.id,
@@ -292,6 +292,7 @@ export async function createEntry(formData: FormData): Promise<void> {
         coords.lat,
         coords.lon,
         formData.get("show_pins") === "1",
+        formData.get("starred") === "1",
         visibility,
       ]
     );
@@ -354,8 +355,8 @@ export async function updateEntry(formData: FormData): Promise<void> {
            grade_max = $6, rating = $7, orientation = $8, equipment = $9, pitches = $10,
            height_m = $11, routes = $12, partners = $13, notes = $14, c2c_url = $15,
            c2c_summary = $16, pitch_notes = $17, lat = $18, lon = $19, show_pins = $20,
-           visibility = $21
-       where id = $22 and user_id = $23`,
+           starred = $21, visibility = $22
+       where id = $23 and user_id = $24`,
       [
         entryDate,
         monthOnly,
@@ -377,6 +378,7 @@ export async function updateEntry(formData: FormData): Promise<void> {
         coords.lat,
         coords.lon,
         formData.get("show_pins") === "1",
+        formData.get("starred") === "1",
         visibility,
         id,
         user.id,

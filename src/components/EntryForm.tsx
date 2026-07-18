@@ -81,6 +81,7 @@ export default function EntryForm({
     entry?.pitches ? String(entry.pitches) : defaults?.pitches ? String(defaults.pitches) : ""
   );
 
+  const [starred, setStarred] = useState(entry?.starred ?? false);
   const [monthOnly, setMonthOnly] = useState(entry?.month_only ?? false);
   const [dateValue, setDateValue] = useState(
     entry?.entry_date
@@ -583,6 +584,20 @@ export default function EntryForm({
                 )
               )}
             </datalist>
+          </div>
+          <div className="notion-prop">
+            <label htmlFor="starred">{t.star}</label>
+            <input type="hidden" name="starred" value={starred ? "1" : ""} />
+            <button
+              id="starred"
+              type="button"
+              className={`star-toggle${starred ? " on" : ""}`}
+              aria-pressed={starred}
+              title={t.starHint}
+              onClick={() => setStarred(!starred)}
+            >
+              {starred ? "⭐" : "☆"}
+            </button>
           </div>
           <div className={`notion-prop${excludedFields.has("orientation") ? " prop-excluded" : ""}`}>
             <label htmlFor="orientation">{t.orientation}</label>

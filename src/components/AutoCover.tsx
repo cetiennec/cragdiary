@@ -68,7 +68,8 @@ export function coverEmojis(entry: EntryWithAuthor): string[] {
   const height = entry.height_m ?? 0;
   if (height >= 400) out.push("🐐");
   else if (height >= 150) out.push("🦅");
-  if (/à refaire|recommand|magnifique/.test(notes)) out.push("⭐");
+  if (entry.starred || /à refaire|recommand|magnifique/.test(notes)) out.push("⭐");
+  if (/à éviter|déconseill|décevant|sans intérêt/.test(notes)) out.push("👎");
   if (entry.notes && entry.notes.length > 200) out.push("✍️");
   if (out.length === 0) out.push("🧗");
   return out.slice(0, 4);

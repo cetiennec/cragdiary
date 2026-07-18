@@ -64,6 +64,7 @@ export type Entry = {
   lon: number | null;
   visibility: Visibility;
   show_pins: boolean;
+  starred: boolean;
   created_at: string;
 };
 
