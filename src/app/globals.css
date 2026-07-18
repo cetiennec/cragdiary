@@ -1453,6 +1453,40 @@ a {
   margin-bottom: 1.6rem;
 }
 
+.filter-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.filter-row .filter-bar {
+  flex: 1;
+}
+
+.new-entry-bubble {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--accent-contrast);
+  background: var(--accent);
+  text-decoration: none;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 45%, transparent);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.new-entry-bubble:hover {
+  transform: rotate(90deg) scale(1.08);
+  box-shadow: 0 3px 12px color-mix(in srgb, var(--accent) 60%, transparent);
+}
+
 .filter-bar input,
 .filter-bar select {
   font: inherit;
@@ -1606,13 +1640,16 @@ a {
 .profile-map-wrap {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.5rem;
   margin-bottom: 2rem;
 }
 
-/* When the import pill row follows the map, it carries the bottom spacing. */
-.profile-map-wrap:has(+ .profile-quick-actions) {
-  margin-bottom: 0.5rem;
+.map-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  flex-wrap: wrap;
 }
 
 .profile-quick-actions {
@@ -1620,7 +1657,6 @@ a {
 }
 
 .map-wish-toggle {
-  align-self: flex-end;
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;

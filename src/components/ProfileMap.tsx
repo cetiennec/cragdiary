@@ -17,10 +17,12 @@ export default function ProfileMap({
   points,
   wishPoints = [],
   wishLabel,
+  footer,
 }: {
   points: MapPoint[];
   wishPoints?: MapPoint[];
   wishLabel?: string;
+  footer?: React.ReactNode;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [showWishes, setShowWishes] = useState(false);
@@ -90,19 +92,26 @@ export default function ProfileMap({
   const nothingToShow = points.length === 0 && (!showWishes || wishPoints.length === 0);
   if (points.length === 0 && wishPoints.length === 0) return null;
 
+  const toggle = wishPoints.length > 0 && wishLabel && (
+    <label className="map-wish-toggle">
+      <input
+        type="checkbox"
+        checked={showWishes}
+        onChange={(e) => setShowWishes(e.target.checked)}
+      />
+      <span className="map-wish-dot" aria-hidden />
+      {wishLabel}
+    </label>
+  );
+
   return (
     <div className="profile-map-wrap">
       {!nothingToShow && <div ref={containerRef} className="profile-map" />}
-      {wishPoints.length > 0 && wishLabel && (
-        <label className="map-wish-toggle">
-          <input
-            type="checkbox"
-            checked={showWishes}
-            onChange={(e) => setShowWishes(e.target.checked)}
-          />
-          <span className="map-wish-dot" aria-hidden />
-          {wishLabel}
-        </label>
+      {(toggle || footer) && (
+        <div className="map-footer">
+          {toggle || <span />}
+          {footer}
+        </div>
       )}
     </div>
   );

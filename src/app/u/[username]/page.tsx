@@ -124,6 +124,31 @@ export default async function ProfilePage({
     )
   );
 
+  const mapPoints = entries
+    .filter((e) => e.lat != null && e.lon != null)
+    .map((e) => ({
+      id: e.id,
+      title: e.crag,
+      lat: e.lat!,
+      lon: e.lon!,
+      href: `/entries/${e.id}`,
+    }));
+  const mapWishPoints = (showWishlist ? wishes : [])
+    .filter((w) => w.lat != null && w.lon != null)
+    .map((w) => ({
+      id: w.id,
+      title: w.grade_max ? `${w.title} · ${w.grade_max}` : w.title,
+      lat: w.lat!,
+      lon: w.lon!,
+      href: w.c2c_url ?? undefined,
+    }));
+  const hasMap = mapPoints.length > 0 || mapWishPoints.length > 0;
+  const importPill = isSelf ? (
+    <Link href="/import" className="import-pill" title={t.importLabel}>
+      {t.importPromo}
+    </Link>
+  ) : undefined;
+
   const tiles = [
     { label: t.profile.stats.entries, value: String(stats.total) },
     { label: t.profile.stats.meters, value: formatMeters(stats.meters, locale) },
@@ -210,41 +235,32 @@ export default async function ProfilePage({
       )}
 
       <ProfileMap
-        points={entries
-          .filter((e) => e.lat != null && e.lon != null)
-          .map((e) => ({
-            id: e.id,
-            title: e.crag,
-            lat: e.lat!,
-            lon: e.lon!,
-            href: `/entries/${e.id}`,
-          }))}
-        wishPoints={(showWishlist ? wishes : [])
-          .filter((w) => w.lat != null && w.lon != null)
-          .map((w) => ({
-            id: w.id,
-            title: w.grade_max ? `${w.title} · ${w.grade_max}` : w.title,
-            lat: w.lat!,
-            lon: w.lon!,
-            href: w.c2c_url ?? undefined,
-          }))}
+        points={mapPoints}
+        wishPoints={mapWishPoints}
         wishLabel={t.wishlist.mapToggle}
+        footer={importPill}
       />
 
-      {isSelf && (
-        <div className="profile-quick-actions">
-          <Link href="/import" className="import-pill" title={t.importLabel}>
-            {t.importPromo}
+      {hasMap ? null : importPill && <div className="profile-quick-actions">{importPill}</div>}
+
+      <div className="filter-row">
+        <FilterBar
+          t={t.filters}
+          years={years}
+          current={{ q: sp.q ?? "", year: sp.year ?? "", loc: sp.loc ?? "" }}
+          action={`/u/${profile.username}`}
+        />
+        {isSelf && (
+          <Link
+            href="/entries/new"
+            className="new-entry-bubble"
+            title={t.nav.newEntry}
+            aria-label={t.nav.newEntry}
+          >
+            ＋
           </Link>
-        </div>
-      )}
-
-      <FilterBar
-        t={t.filters}
-        years={years}
-        current={{ q: sp.q ?? "", year: sp.year ?? "", loc: sp.loc ?? "" }}
-        action={`/u/${profile.username}`}
-      />
+        )}
+      </div>
 
       {entries.length === 0 ? (
         <div className="empty-state">
