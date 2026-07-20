@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getEntry } from "@/lib/queries";
@@ -15,6 +16,9 @@ type InlinePhoto = {
   size: string;
   align: "left" | "right" | "full";
   para: number | null;
+  width: number | null;
+  height: number | null;
+  caption: string | null;
 };
 
 function NotesFlow({ notes, photos }: { notes: string | null; photos: InlinePhoto[] }) {
@@ -28,25 +32,53 @@ function NotesFlow({ notes, photos }: { notes: string | null; photos: InlinePhot
   }
 
   const figure = (photo: InlinePhoto) => (
-    // eslint-disable-next-line @next/next/no-img-element -- served from our own DB-backed route, already resized/compressed server-side
-    <img
+    <figure
       key={photo.id}
-      src={`/api/photos/${photo.id}`}
-      alt=""
-      loading="lazy"
       className={`inline-photo f-${photo.align}${photo.align === "full" ? "" : ` sz-${photo.size}`}`}
-    />
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element -- served from our own DB-backed route, already resized/compressed server-side */}
+      <img
+        src={`/api/photos/${photo.id}`}
+        alt={photo.caption ?? ""}
+        loading="lazy"
+        width={photo.width ?? undefined}
+        height={photo.height ?? undefined}
+      />
+      {photo.caption && <figcaption>{photo.caption}</figcaption>}
+    </figure>
   );
+
+  // Two adjacent gallery-width photos anchored to the same spot pair up
+  // side by side; a lone photo or a full-width one stands on its own.
+  const renderGroup = (list: InlinePhoto[]) => {
+    const out: ReactNode[] = [];
+    for (let i = 0; i < list.length; i++) {
+      const a = list[i];
+      const b = list[i + 1];
+      if (a.align !== "full" && b && b.align !== "full") {
+        out.push(
+          <div key={a.id} className="inline-photo-duo">
+            {figure(a)}
+            {figure(b)}
+          </div>
+        );
+        i += 1;
+      } else {
+        out.push(figure(a));
+      }
+    }
+    return out;
+  };
 
   return (
     <div className="notes-flow">
       {paragraphs.map((para, i) => (
         <div key={i} className="notes-para-group">
-          {(byPara.get(i) ?? []).map(figure)}
+          {renderGroup(byPara.get(i) ?? [])}
           <p className="notes-para">{para}</p>
         </div>
       ))}
-      {(byPara.get(paragraphs.length) ?? []).map(figure)}
+      {renderGroup(byPara.get(paragraphs.length) ?? [])}
     </div>
   );
 }
@@ -318,7 +350,12 @@ export default async function EntryPage({
           <>
           <h2 className="pitch-notes-title notion-gallery-title">{t.entry.galleryTitle}</h2>
           <PhotoGallery
-            photoIds={gallery.map((photo) => photo.id)}
+            photos={gallery.map((photo) => ({
+              id: photo.id,
+              caption: photo.caption,
+              width: photo.width,
+              height: photo.height,
+            }))}
             className="photo-grid notion-gallery"
             closeLabel={t.entry.lightboxClose}
           />

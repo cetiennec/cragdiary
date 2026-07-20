@@ -375,6 +375,7 @@ export default function EntryForm({
         pfd.append("new_photo_align_0", layout.align === "gallery" ? "" : layout.align);
         pfd.append("new_photo_size_0", layout.size);
         pfd.append("new_photo_para_0", layout.para);
+        pfd.append("new_photo_caption_0", layout.caption);
         await addEntryPhoto(pfd);
         return;
       } catch (err) {
@@ -441,7 +442,7 @@ export default function EntryForm({
     setPhotoError(compressed.some((f) => f.size > PER_PHOTO_BUDGET));
     syncFileInput(compressed);
     setNewFiles(compressed);
-    setNewLayouts(compressed.map(() => ({ align: "gallery", size: "m", para: "1" })));
+    setNewLayouts(compressed.map(() => ({ align: "gallery", size: "m", para: "1", caption: "" })));
   }
 
   function moveNewPhoto(index: number, delta: number) {
@@ -483,9 +484,7 @@ export default function EntryForm({
     });
   }
 
-  const [photoLayout, setPhotoLayout] = useState<
-    Record<string, { align: string; size: string; para: string }>
-  >(() =>
+  const [photoLayout, setPhotoLayout] = useState<Record<string, PhotoLayoutValue>>(() =>
     Object.fromEntries(
       (entry?.photos ?? []).map((p) => [
         p.id,
@@ -493,12 +492,13 @@ export default function EntryForm({
           align: p.align ?? "gallery",
           size: p.size ?? "m",
           para: p.para != null ? String(p.para + 1) : "1",
+          caption: p.caption ?? "",
         },
       ])
     )
   );
 
-  function setLayout(id: string, patch: Partial<{ align: string; size: string; para: string }>) {
+  function setLayout(id: string, patch: Partial<PhotoLayoutValue>) {
     setPhotoLayout((prev) => ({ ...prev, [id]: { ...prev[id], ...patch } }));
   }
 
@@ -1088,20 +1088,31 @@ export default function EntryForm({
                       </span>
                     )}
                     {!removed && (
-                      <PhotoPlacement
-                        value={photoLayout[photo.id] ?? { align: "gallery", size: "m", para: "1" }}
-                        onChange={(patch) => setLayout(photo.id, patch)}
-                        names={{
-                          align: `photo_align_${photo.id}`,
-                          size: `photo_size_${photo.id}`,
-                          para: `photo_para_${photo.id}`,
-                        }}
-                        t={{
-                          ...t.photoPlacementOptions,
-                          size: t.photoSize,
-                          para: t.photoPara,
-                        }}
-                      />
+                      <>
+                        <input
+                          type="text"
+                          className="photo-caption-input"
+                          name={`photo_caption_${photo.id}`}
+                          value={photoLayout[photo.id]?.caption ?? ""}
+                          onChange={(e) => setLayout(photo.id, { caption: e.target.value })}
+                          placeholder={t.photoCaption}
+                          maxLength={200}
+                        />
+                        <PhotoPlacement
+                          value={photoLayout[photo.id] ?? { align: "gallery", size: "m", para: "1", caption: "" }}
+                          onChange={(patch) => setLayout(photo.id, patch)}
+                          names={{
+                            align: `photo_align_${photo.id}`,
+                            size: `photo_size_${photo.id}`,
+                            para: `photo_para_${photo.id}`,
+                          }}
+                          t={{
+                            ...t.photoPlacementOptions,
+                            size: t.photoSize,
+                            para: t.photoPara,
+                          }}
+                        />
+                      </>
                     )}
                   </div>
                 );
@@ -1145,8 +1156,16 @@ export default function EntryForm({
                     →
                   </button>
                 </span>
+                <input
+                  type="text"
+                  className="photo-caption-input"
+                  value={newLayouts[i]?.caption ?? ""}
+                  onChange={(e) => setNewLayout(i, { caption: e.target.value })}
+                  placeholder={t.photoCaption}
+                  maxLength={200}
+                />
                 <PhotoPlacement
-                  value={newLayouts[i] ?? { align: "gallery", size: "m", para: "1" }}
+                  value={newLayouts[i] ?? { align: "gallery", size: "m", para: "1", caption: "" }}
                   onChange={(patch) => setNewLayout(i, patch)}
                   names={{
                     align: `new_photo_align_${i}`,

@@ -1,6 +1,6 @@
 "use client";
 
-export type PhotoLayoutValue = { align: string; size: string; para: string };
+export type PhotoLayoutValue = { align: string; size: string; para: string; caption: string };
 
 export type PlacementLabels = {
   gallery: string;

@@ -96,9 +96,11 @@ export async function setLocale(formData: FormData): Promise<void> {
   });
 }
 
-async function processPhoto(file: File): Promise<Buffer> {
+async function processPhoto(
+  file: File
+): Promise<{ data: Buffer; width: number | null; height: number | null }> {
   const inputBuffer = Buffer.from(await file.arrayBuffer());
-  return sharp(inputBuffer)
+  const { data, info } = await sharp(inputBuffer)
     .rotate()
     .resize({
       width: MAX_PHOTO_DIMENSION,
@@ -107,7 +109,8 @@ async function processPhoto(file: File): Promise<Buffer> {
       withoutEnlargement: true,
     })
     .webp({ quality: PHOTO_QUALITY, smartSubsample: true })
-    .toBuffer();
+    .toBuffer({ resolveWithObject: true });
+  return { data, width: info.width ?? null, height: info.height ?? null };
 }
 
 function parsePhotoLayout(
@@ -334,9 +337,20 @@ export async function createEntry(formData: FormData): Promise<string | void> {
       const processed = await processPhoto(file);
       const layout = parsePhotoLayout(formData, "new_photo", position);
       await client.query(
-        `insert into photos (entry_id, content_type, data, position, size, align, para)
-         values ($1, $2, $3, $4, $5, $6, $7)`,
-        [entryId, "image/webp", processed, position, layout.size, layout.align, layout.para]
+        `insert into photos (entry_id, content_type, data, position, size, align, para, width, height, caption)
+         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+        [
+          entryId,
+          "image/webp",
+          processed.data,
+          position,
+          layout.size,
+          layout.align,
+          layout.para,
+          processed.width,
+          processed.height,
+          optionalText(formData.get(`new_photo_caption_${position}`)),
+        ]
       );
       position += 1;
     }
@@ -434,8 +448,8 @@ export async function updateEntry(formData: FormData): Promise<void> {
       const pid = photoOrder[i];
       const layout = parsePhotoLayout(formData, "photo", pid);
       await client.query(
-        "update photos set position = $1, size = $2, align = $3, para = $4 where id = $5 and entry_id = $6",
-        [i, layout.size, layout.align, layout.para, pid, id]
+        "update photos set position = $1, size = $2, align = $3, para = $4, caption = $5 where id = $6 and entry_id = $7",
+        [i, layout.size, layout.align, layout.para, optionalText(formData.get(`photo_caption_${pid}`)), pid, id]
       );
     }
 
@@ -451,9 +465,20 @@ export async function updateEntry(formData: FormData): Promise<void> {
         const processed = await processPhoto(file);
         const layout = parsePhotoLayout(formData, "new_photo", newIndex);
         await client.query(
-          `insert into photos (entry_id, content_type, data, position, size, align, para)
-           values ($1, $2, $3, $4, $5, $6, $7)`,
-          [id, "image/webp", processed, position, layout.size, layout.align, layout.para]
+          `insert into photos (entry_id, content_type, data, position, size, align, para, width, height, caption)
+           values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+          [
+            id,
+            "image/webp",
+            processed.data,
+            position,
+            layout.size,
+            layout.align,
+            layout.para,
+            processed.width,
+            processed.height,
+            optionalText(formData.get(`new_photo_caption_${newIndex}`)),
+          ]
         );
         position += 1;
         newIndex += 1;
@@ -501,9 +526,20 @@ export async function addEntryPhoto(formData: FormData): Promise<void> {
           )
         ).rows[0].max ?? -1) + 1;
   await pool.query(
-    `insert into photos (entry_id, content_type, data, position, size, align, para)
-     values ($1, $2, $3, $4, $5, $6, $7)`,
-    [id, "image/webp", processed, position, layout.size, layout.align, layout.para]
+    `insert into photos (entry_id, content_type, data, position, size, align, para, width, height, caption)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+    [
+      id,
+      "image/webp",
+      processed.data,
+      position,
+      layout.size,
+      layout.align,
+      layout.para,
+      processed.width,
+      processed.height,
+      optionalText(formData.get("new_photo_caption_0")),
+    ]
   );
 
   revalidatePath("/");

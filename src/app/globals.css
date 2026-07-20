@@ -780,13 +780,26 @@ a {
 }
 
 .inline-photo {
-  border-radius: var(--radius-photo);
   display: block;
-  height: auto;
   margin: 0.25rem 0 0.8rem;
 }
 
-:root[data-theme="scrapbook"] .inline-photo {
+.inline-photo img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius-photo);
+}
+
+.inline-photo figcaption {
+  margin-top: 0.35rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-style: italic;
+  line-height: 1.35;
+}
+
+:root[data-theme="scrapbook"] .inline-photo img {
   box-shadow: 0 8px 20px -8px rgba(58, 44, 34, 0.4);
 }
 
@@ -818,6 +831,21 @@ a {
   width: 62%;
 }
 
+/* Two photos anchored together sit side by side */
+.inline-photo-duo {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.7rem;
+  clear: both;
+  margin: 0.25rem 0 0.8rem;
+}
+
+.inline-photo-duo .inline-photo {
+  width: 100%;
+  float: none;
+  margin: 0;
+}
+
 @media (max-width: 560px) {
   .inline-photo.f-left,
   .inline-photo.f-right {
@@ -833,6 +861,18 @@ a {
 }
 
 /* Photo layout controls (editor) */
+
+.photo-caption-input {
+  width: 100%;
+  margin: 0.35rem 0;
+  padding: 0.3rem 0.45rem;
+  font: inherit;
+  font-size: 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-elevated);
+  color: var(--text);
+}
 
 .photo-layout-controls {
   display: flex;
@@ -1548,12 +1588,30 @@ a {
   justify-content: center;
 }
 
+.lightbox-figure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  max-width: 94vw;
+}
+
 .lightbox img {
   max-width: 94vw;
-  max-height: 88vh;
+  max-height: 84vh;
   object-fit: contain;
   border-radius: 10px;
   box-shadow: 0 20px 60px -20px rgba(0, 0, 0, 0.8);
+}
+
+.lightbox-caption {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.9rem;
+  text-align: center;
+  max-width: 60ch;
+  padding: 0 1rem;
+  line-height: 1.4;
 }
 
 .lightbox-close,

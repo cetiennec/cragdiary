@@ -13,7 +13,7 @@ async function attachPhotos<T extends Entry>(
   if (entries.length === 0) return [];
 
   const photosResult = await pool.query<Photo>(
-    `select id, entry_id, content_type, position, size, align, para
+    `select id, entry_id, content_type, position, size, align, para, width, height, caption
      from photos
      where entry_id = any($1)
      order by position asc`,

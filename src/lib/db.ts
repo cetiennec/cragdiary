@@ -79,6 +79,9 @@ export type Photo = {
   size: string;
   align: PhotoAlign;
   para: number | null;
+  width: number | null;
+  height: number | null;
+  caption: string | null;
 };
 
 export type Wish = {

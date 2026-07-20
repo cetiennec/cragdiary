@@ -2,14 +2,21 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+export type GalleryPhoto = {
+  id: string;
+  caption: string | null;
+  width: number | null;
+  height: number | null;
+};
+
 // Gallery grid whose photos open in a fullscreen lightbox — tap to zoom,
 // swipe (or arrow keys) to move between photos, Escape or tap outside to close.
 export default function PhotoGallery({
-  photoIds,
+  photos,
   className,
   closeLabel,
 }: {
-  photoIds: string[];
+  photos: GalleryPhoto[];
   className: string;
   closeLabel: string;
 }) {
@@ -19,10 +26,10 @@ export default function PhotoGallery({
   const step = useCallback(
     (delta: number) => {
       setOpen((cur) =>
-        cur === null ? cur : (cur + delta + photoIds.length) % photoIds.length
+        cur === null ? cur : (cur + delta + photos.length) % photos.length
       );
     },
-    [photoIds.length]
+    [photos.length]
   );
 
   useEffect(() => {
@@ -43,12 +50,13 @@ export default function PhotoGallery({
   return (
     <>
       <div className={className}>
-        {photoIds.map((id, i) => (
+        {photos.map((photo, i) => (
           // eslint-disable-next-line @next/next/no-img-element -- served from our own DB-backed route, already resized/compressed server-side
           <img
-            key={id}
-            src={`/api/photos/${id}`}
-            alt=""
+            key={photo.id}
+            src={`/api/photos/${photo.id}`}
+            alt={photo.caption ?? ""}
+            title={photo.caption ?? undefined}
             loading="lazy"
             className="gallery-zoomable"
             onClick={() => setOpen(i)}
@@ -70,12 +78,13 @@ export default function PhotoGallery({
             if (Math.abs(dx) > 40) step(dx > 0 ? -1 : 1);
           }}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element -- served from our own DB-backed route, already resized/compressed server-side */}
-          <img
-            src={`/api/photos/${photoIds[open]}`}
-            alt=""
-            onClick={(e) => e.stopPropagation()}
-          />
+          <figure className="lightbox-figure" onClick={(e) => e.stopPropagation()}>
+            {/* eslint-disable-next-line @next/next/no-img-element -- served from our own DB-backed route, already resized/compressed server-side */}
+            <img src={`/api/photos/${photos[open].id}`} alt={photos[open].caption ?? ""} />
+            {photos[open].caption && (
+              <figcaption className="lightbox-caption">{photos[open].caption}</figcaption>
+            )}
+          </figure>
           <button
             type="button"
             className="lightbox-close"
@@ -84,7 +93,7 @@ export default function PhotoGallery({
           >
             ×
           </button>
-          {photoIds.length > 1 && (
+          {photos.length > 1 && (
             <>
               <button
                 type="button"
@@ -109,7 +118,7 @@ export default function PhotoGallery({
                 ›
               </button>
               <span className="lightbox-counter">
-                {open + 1} / {photoIds.length}
+                {open + 1} / {photos.length}
               </span>
             </>
           )}
