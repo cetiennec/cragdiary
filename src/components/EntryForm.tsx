@@ -316,17 +316,17 @@ export default function EntryForm({
     if (fileInputRef.current) fileInputRef.current.files = dt.files;
   }
 
-  // Photos upload one request each, so a single photo only has to fit under
-  // Vercel's ~4.5 MB body cap. This client pass is deliberately near-lossless
-  // (high quality, generous size) so it stays a light intermediate — the server
-  // does the final downscale + WebP encode, avoiding stacked lossy passes. The
-  // fallback steps only kick in for the rare photo still over budget.
-  const PER_PHOTO_BUDGET = 4_000_000;
+  // Compress on the client straight to the final target (≈2048 px, good WebP
+  // quality) so the upload is small — ~0.5 MB instead of several MB. Small,
+  // fast uploads are far less likely to be cut off on flaky mobile networks or
+  // when iOS suspends the PWA, which is the main cause of failed uploads. The
+  // server re-encodes at the same size/quality, so the visible result matches.
+  const PER_PHOTO_BUDGET = 1_500_000;
   const COMPRESSION_STEPS: [number, number][] = [
-    [2560, 0.92],
-    [2048, 0.88],
-    [1600, 0.82],
-    [1200, 0.74],
+    [2048, 0.86],
+    [1800, 0.82],
+    [1500, 0.78],
+    [1200, 0.72],
   ];
   const [photoError, setPhotoError] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -343,7 +343,8 @@ export default function EntryForm({
   // with an explicit position so concurrent uploads keep their chosen order, and
   // a couple of retries so one flaky request on mobile doesn't fail the batch.
   const UPLOAD_CONCURRENCY = 3;
-  const UPLOAD_RETRIES = 2;
+  const UPLOAD_RETRIES = 3;
+  const UPLOAD_BACKOFF_MS = [600, 1500, 3000];
 
   async function uploadOne(entryId: string, index: number, position: number) {
     const layout = newLayouts[index];
@@ -360,7 +361,9 @@ export default function EntryForm({
         return;
       } catch (err) {
         if (attempt >= UPLOAD_RETRIES) throw err;
-        await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+        await new Promise((r) =>
+          setTimeout(r, UPLOAD_BACKOFF_MS[Math.min(attempt, UPLOAD_BACKOFF_MS.length - 1)])
+        );
       }
     }
   }
