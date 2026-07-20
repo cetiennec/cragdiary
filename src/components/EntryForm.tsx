@@ -336,6 +336,52 @@ export default function EntryForm({
     setNewLayouts((prev) => prev.map((l, i) => (i === index ? { ...l, ...patch } : l)));
   }
 
+  // Uploads photos a few at a time (each request stays under Vercel's body cap)
+  // with an explicit position so concurrent uploads keep their chosen order, and
+  // a couple of retries so one flaky request on mobile doesn't fail the batch.
+  const UPLOAD_CONCURRENCY = 3;
+  const UPLOAD_RETRIES = 2;
+
+  async function uploadOne(entryId: string, index: number, position: number) {
+    const layout = newLayouts[index];
+    for (let attempt = 0; ; attempt++) {
+      try {
+        const pfd = new FormData();
+        pfd.append("id", entryId);
+        pfd.append("photo", newFiles[index]);
+        pfd.append("position", String(position));
+        pfd.append("new_photo_align_0", layout.align === "gallery" ? "" : layout.align);
+        pfd.append("new_photo_size_0", layout.size);
+        pfd.append("new_photo_para_0", layout.para);
+        await addEntryPhoto(pfd);
+        return;
+      } catch (err) {
+        if (attempt >= UPLOAD_RETRIES) throw err;
+        await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+      }
+    }
+  }
+
+  async function uploadPhotos(entryId: string, basePosition: number) {
+    let done = 0;
+    let next = 0;
+    setUploadProgress(`0/${newFiles.length}`);
+    async function worker() {
+      while (true) {
+        const i = next++;
+        if (i >= newFiles.length) return;
+        await uploadOne(entryId, i, basePosition + i);
+        done += 1;
+        setUploadProgress(`${done}/${newFiles.length}`);
+      }
+    }
+    const workers = Array.from(
+      { length: Math.min(UPLOAD_CONCURRENCY, newFiles.length) },
+      worker
+    );
+    await Promise.all(workers);
+  }
+
   async function handleFiles(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
     if (files.length === 0) {
@@ -377,7 +423,28 @@ export default function EntryForm({
     });
   }
 
+  function removeNewPhoto(index: number) {
+    setNewFiles((files) => {
+      const next = files.filter((_, i) => i !== index);
+      syncFileInput(next);
+      setPhotoError(next.some((f) => f.size > PER_PHOTO_BUDGET));
+      return next;
+    });
+    setNewLayouts((layouts) => layouts.filter((_, i) => i !== index));
+  }
+
   const [orderedPhotos, setOrderedPhotos] = useState(entry?.photos ?? []);
+  const [removedPhotos, setRemovedPhotos] = useState<Set<string>>(new Set());
+
+  function toggleRemovePhoto(id: string) {
+    setRemovedPhotos((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
   const [photoLayout, setPhotoLayout] = useState<
     Record<string, { align: string; size: string; para: string }>
   >(() =>
@@ -439,17 +506,10 @@ export default function EntryForm({
             const savedId = editing
               ? (await updateEntry(fd), entry!.id)
               : ((await createEntry(fd)) as string);
-            for (let i = 0; i < newFiles.length; i++) {
-              setUploadProgress(`${i + 1}/${newFiles.length}`);
-              const pfd = new FormData();
-              pfd.append("id", savedId);
-              pfd.append("photo", newFiles[i]);
-              const layout = newLayouts[i];
-              pfd.append("new_photo_align_0", layout.align === "gallery" ? "" : layout.align);
-              pfd.append("new_photo_size_0", layout.size);
-              pfd.append("new_photo_para_0", layout.para);
-              await addEntryPhoto(pfd);
-            }
+            // New photos land after any existing ones (updateEntry has already
+            // renumbered kept photos to 0..length-1).
+            const basePosition = editing ? orderedPhotos.length : 0;
+            await uploadPhotos(savedId, basePosition);
             router.push(`/entries/${savedId}`);
           } catch {
             setSubmitError(true);
@@ -937,50 +997,68 @@ export default function EntryForm({
               value={orderedPhotos.map((p) => p.id).join(",")}
             />
             <div className="photo-grid">
-              {orderedPhotos.map((photo, i) => (
-                <div key={photo.id} className="photo-removable">
-                  {/* eslint-disable-next-line @next/next/no-img-element -- served from our own DB-backed route, already resized/compressed server-side */}
-                  <img src={`/api/photos/${photo.id}`} alt="" />
-                  <span className="photo-remove-check">
+              {orderedPhotos.map((photo, i) => {
+                const removed = removedPhotos.has(photo.id);
+                return (
+                  <div
+                    key={photo.id}
+                    className={`photo-removable${removed ? " photo-removed" : ""}`}
+                  >
+                    {removed && (
+                      <input type="hidden" name="remove_photos" value={photo.id} />
+                    )}
+                    {/* eslint-disable-next-line @next/next/no-img-element -- served from our own DB-backed route, already resized/compressed server-side */}
+                    <img src={`/api/photos/${photo.id}`} alt="" />
                     <button
                       type="button"
-                      className="photo-move-btn"
-                      aria-label={t.movePhotoEarlier}
-                      disabled={i === 0}
-                      onClick={() => movePhoto(i, -1)}
+                      className="photo-remove-x"
+                      aria-label={removed ? t.undoRemovePhoto : t.removePhoto}
+                      title={removed ? t.undoRemovePhoto : t.removePhoto}
+                      onClick={() => toggleRemovePhoto(photo.id)}
                     >
-                      ←
+                      {removed ? "↺" : "×"}
                     </button>
-                    <button
-                      type="button"
-                      className="photo-move-btn"
-                      aria-label={t.movePhotoLater}
-                      disabled={i === orderedPhotos.length - 1}
-                      onClick={() => movePhoto(i, 1)}
-                    >
-                      →
-                    </button>
-                    <label>
-                      <input type="checkbox" name="remove_photos" value={photo.id} />{" "}
-                      {t.removePhoto}
-                    </label>
-                  </span>
-                  <PhotoPlacement
-                    value={photoLayout[photo.id] ?? { align: "gallery", size: "m", para: "1" }}
-                    onChange={(patch) => setLayout(photo.id, patch)}
-                    names={{
-                      align: `photo_align_${photo.id}`,
-                      size: `photo_size_${photo.id}`,
-                      para: `photo_para_${photo.id}`,
-                    }}
-                    t={{
-                      ...t.photoPlacementOptions,
-                      size: t.photoSize,
-                      para: t.photoPara,
-                    }}
-                  />
-                </div>
-              ))}
+                    {!removed && (
+                      <span className="photo-remove-check">
+                        <button
+                          type="button"
+                          className="photo-move-btn"
+                          aria-label={t.movePhotoEarlier}
+                          disabled={i === 0}
+                          onClick={() => movePhoto(i, -1)}
+                        >
+                          ←
+                        </button>
+                        <button
+                          type="button"
+                          className="photo-move-btn"
+                          aria-label={t.movePhotoLater}
+                          disabled={i === orderedPhotos.length - 1}
+                          onClick={() => movePhoto(i, 1)}
+                        >
+                          →
+                        </button>
+                      </span>
+                    )}
+                    {!removed && (
+                      <PhotoPlacement
+                        value={photoLayout[photo.id] ?? { align: "gallery", size: "m", para: "1" }}
+                        onChange={(patch) => setLayout(photo.id, patch)}
+                        names={{
+                          align: `photo_align_${photo.id}`,
+                          size: `photo_size_${photo.id}`,
+                          para: `photo_para_${photo.id}`,
+                        }}
+                        t={{
+                          ...t.photoPlacementOptions,
+                          size: t.photoSize,
+                          para: t.photoPara,
+                        }}
+                      />
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </>
         )}
@@ -991,6 +1069,15 @@ export default function EntryForm({
               <div key={`${file.name}-${i}`} className="photo-removable">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={URL.createObjectURL(file)} alt="" />
+                <button
+                  type="button"
+                  className="photo-remove-x"
+                  aria-label={t.removePhoto}
+                  title={t.removePhoto}
+                  onClick={() => removeNewPhoto(i)}
+                >
+                  ×
+                </button>
                 <span className="photo-remove-check">
                   <button
                     type="button"

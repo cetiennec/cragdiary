@@ -486,22 +486,22 @@ export async function addEntryPhoto(formData: FormData): Promise<void> {
 
   const processed = await processPhoto(file);
   const layout = parsePhotoLayout(formData, "new_photo", 0);
-  const maxPos = await pool.query<{ max: number | null }>(
-    "select max(position)::int as max from photos where entry_id = $1",
-    [id]
-  );
+  // The client uploads photos concurrently, so it sends an explicit position to
+  // keep order deterministic; fall back to max+1 when it isn't provided.
+  const rawPos = formData.get("position");
+  const position =
+    rawPos != null && String(rawPos).trim() !== ""
+      ? parseInt(String(rawPos), 10)
+      : ((
+          await pool.query<{ max: number | null }>(
+            "select max(position)::int as max from photos where entry_id = $1",
+            [id]
+          )
+        ).rows[0].max ?? -1) + 1;
   await pool.query(
     `insert into photos (entry_id, content_type, data, position, size, align, para)
      values ($1, $2, $3, $4, $5, $6, $7)`,
-    [
-      id,
-      "image/webp",
-      processed,
-      (maxPos.rows[0].max ?? -1) + 1,
-      layout.size,
-      layout.align,
-      layout.para,
-    ]
+    [id, "image/webp", processed, position, layout.size, layout.align, layout.para]
   );
 
   revalidatePath("/");

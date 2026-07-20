@@ -108,7 +108,7 @@ const en = {
     tooManyPhotos: "One of the photos is too heavy even after compression — try a smaller image.",
     uploadingPhotos: "Uploading photos…",
     uploadFailed: "Saving the photos failed — check your connection and try again.",
-    currentPhotos: "Current photos — reorder with the arrows, tick to remove, place in the text with the selector:",
+    currentPhotos: "Current photos — reorder with the arrows, tap × to remove, place in the text with the selector:",
     photoPlacement: "Placement",
     photoPlacementOptions: {
       gallery: "Gallery",
@@ -119,6 +119,7 @@ const en = {
     photoSize: "Size",
     photoPara: "Before paragraph",
     removePhoto: "Remove",
+    undoRemovePhoto: "Keep photo",
     movePhotoEarlier: "Move photo earlier",
     movePhotoLater: "Move photo later",
     save: "Save entry",
@@ -442,7 +443,7 @@ const fr: Dict = {
     tooManyPhotos: "Une des photos reste trop lourde même compressée — essayez une image plus petite.",
     uploadingPhotos: "Envoi des photos…",
     uploadFailed: "L'envoi des photos a échoué — vérifiez votre connexion et réessayez.",
-    currentPhotos: "Photos actuelles — réordonnez avec les flèches, cochez pour retirer, placez dans le texte avec le sélecteur :",
+    currentPhotos: "Photos actuelles — réordonnez avec les flèches, touchez × pour retirer, placez dans le texte avec le sélecteur :",
     photoPlacement: "Placement",
     photoPlacementOptions: {
       gallery: "Galerie",
@@ -453,6 +454,7 @@ const fr: Dict = {
     photoSize: "Taille",
     photoPara: "Avant le paragraphe",
     removePhoto: "Retirer",
+    undoRemovePhoto: "Conserver la photo",
     movePhotoEarlier: "Déplacer la photo plus tôt",
     movePhotoLater: "Déplacer la photo plus tard",
     save: "Enregistrer",

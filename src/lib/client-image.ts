@@ -1,5 +1,22 @@
 // Browser-side photo downscaling. Vercel caps request bodies at ~4.5 MB, so
-// full-size phone photos must be compressed before upload.
+// full-size phone photos must be compressed before upload. We prefer WebP
+// output (smaller than JPEG at equal quality) and fall back to JPEG where the
+// browser can't encode it.
+
+let webpSupport: boolean | null = null;
+
+function supportsWebp(): boolean {
+  if (webpSupport !== null) return webpSupport;
+  try {
+    const canvas = document.createElement("canvas");
+    canvas.width = 1;
+    canvas.height = 1;
+    webpSupport = canvas.toDataURL("image/webp").startsWith("data:image/webp");
+  } catch {
+    webpSupport = false;
+  }
+  return webpSupport;
+}
 
 export async function compressImage(
   file: File,
@@ -17,13 +34,13 @@ export async function compressImage(
     const ctx = canvas.getContext("2d");
     if (!ctx) return file;
     ctx.drawImage(bitmap, 0, 0, width, height);
+    const type = supportsWebp() ? "image/webp" : "image/jpeg";
+    const ext = type === "image/webp" ? ".webp" : ".jpg";
     const blob = await new Promise<Blob | null>((resolve) =>
-      canvas.toBlob(resolve, "image/jpeg", quality)
+      canvas.toBlob(resolve, type, quality)
     );
     if (!blob || blob.size >= file.size) return file;
-    return new File([blob], file.name.replace(/\.\w+$/, "") + ".jpg", {
-      type: "image/jpeg",
-    });
+    return new File([blob], file.name.replace(/\.\w+$/, "") + ext, { type });
   } catch {
     return file;
   }

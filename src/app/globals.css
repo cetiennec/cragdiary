@@ -1174,15 +1174,40 @@ a {
 /* Removable photos (edit form) */
 
 .photo-removable {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
   cursor: pointer;
 }
 
-.photo-removable:has(input:checked) img {
+.photo-removed img {
   opacity: 0.35;
   filter: grayscale(1);
+}
+
+.photo-remove-x {
+  position: absolute;
+  top: 0.3rem;
+  right: 0.3rem;
+  width: 1.6rem;
+  height: 1.6rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 1.05rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.15s;
+}
+
+.photo-remove-x:hover {
+  background: rgba(0, 0, 0, 0.82);
 }
 
 .photo-remove-check {
