@@ -687,6 +687,9 @@ export default function EntryForm({
                 {t.monthOnly}
               </label>
             </div>
+            {!editing && photoDate && usePhotoDate && (
+              <p className="date-photo-note">{t.dateFromPhotoNote}</p>
+            )}
           </div>
           <div className={`notion-prop${excludedFields.has("location") ? " prop-excluded" : ""}`}>
             <label htmlFor="location">{t.location}</label>
@@ -1162,24 +1165,21 @@ export default function EntryForm({
         )}
 
         {!editing && photoDate && (
-          <div className="date-photo-block">
-            <label className="date-photo-banner">
-              <input
-                type="checkbox"
-                checked={usePhotoDate}
-                onChange={(e) => {
-                  const next = e.target.checked;
-                  setUsePhotoDate(next);
-                  const base = next ? photoDate : today();
-                  setDateValue(monthOnly ? base.slice(0, 7) : base);
-                }}
-              />
-              <span>
-                📅 {t.dateFromPhotoQuestion} <strong>{formatDate(photoDate)}</strong>
-              </span>
-            </label>
-            {usePhotoDate && <p className="date-photo-note">{t.dateFromPhotoNote}</p>}
-          </div>
+          <label className="date-photo-banner">
+            <input
+              type="checkbox"
+              checked={usePhotoDate}
+              onChange={(e) => {
+                const next = e.target.checked;
+                setUsePhotoDate(next);
+                const base = next ? photoDate : today();
+                setDateValue(monthOnly ? base.slice(0, 7) : base);
+              }}
+            />
+            <span>
+              📅 {t.dateFromPhotoQuestion} <strong>{formatDate(photoDate)}</strong>
+            </span>
+          </label>
         )}
 
         {photoError && <p className="form-error">{t.tooManyPhotos}</p>}
