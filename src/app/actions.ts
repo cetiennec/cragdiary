@@ -17,8 +17,10 @@ import {
   verifyPassword,
 } from "@/lib/auth";
 
-const MAX_PHOTO_DIMENSION = 1800;
-const PHOTO_QUALITY = 82;
+// 2048 px keeps photos crisp in the fullscreen lightbox (incl. high-DPI
+// screens); quality 86 is visibly cleaner than 82 at a modest size cost.
+const MAX_PHOTO_DIMENSION = 2048;
+const PHOTO_QUALITY = 86;
 const USERNAME_RE = /^[a-z0-9-]{3,20}$/;
 
 function parseVisibility(value: FormDataEntryValue | null): Visibility {
@@ -104,7 +106,7 @@ async function processPhoto(file: File): Promise<Buffer> {
       fit: "inside",
       withoutEnlargement: true,
     })
-    .webp({ quality: PHOTO_QUALITY })
+    .webp({ quality: PHOTO_QUALITY, smartSubsample: true })
     .toBuffer();
 }
 

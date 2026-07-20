@@ -316,14 +316,17 @@ export default function EntryForm({
     if (fileInputRef.current) fileInputRef.current.files = dt.files;
   }
 
-  // Photos upload one request each, so only a single photo has to fit under
-  // Vercel's ~4.5 MB body cap; recompress it smaller if the first pass is big.
-  const PER_PHOTO_BUDGET = 3_000_000;
+  // Photos upload one request each, so a single photo only has to fit under
+  // Vercel's ~4.5 MB body cap. This client pass is deliberately near-lossless
+  // (high quality, generous size) so it stays a light intermediate — the server
+  // does the final downscale + WebP encode, avoiding stacked lossy passes. The
+  // fallback steps only kick in for the rare photo still over budget.
+  const PER_PHOTO_BUDGET = 4_000_000;
   const COMPRESSION_STEPS: [number, number][] = [
-    [1800, 0.82],
-    [1400, 0.78],
-    [1100, 0.72],
-    [900, 0.65],
+    [2560, 0.92],
+    [2048, 0.88],
+    [1600, 0.82],
+    [1200, 0.74],
   ];
   const [photoError, setPhotoError] = useState(false);
   const [submitting, setSubmitting] = useState(false);
