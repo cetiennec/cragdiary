@@ -1162,21 +1162,24 @@ export default function EntryForm({
         )}
 
         {!editing && photoDate && (
-          <label className="date-photo-banner">
-            <input
-              type="checkbox"
-              checked={usePhotoDate}
-              onChange={(e) => {
-                const next = e.target.checked;
-                setUsePhotoDate(next);
-                const base = next ? photoDate : today();
-                setDateValue(monthOnly ? base.slice(0, 7) : base);
-              }}
-            />
-            <span>
-              📅 {t.dateFromPhotoQuestion} <strong>{formatDate(photoDate)}</strong>
-            </span>
-          </label>
+          <div className="date-photo-block">
+            <label className="date-photo-banner">
+              <input
+                type="checkbox"
+                checked={usePhotoDate}
+                onChange={(e) => {
+                  const next = e.target.checked;
+                  setUsePhotoDate(next);
+                  const base = next ? photoDate : today();
+                  setDateValue(monthOnly ? base.slice(0, 7) : base);
+                }}
+              />
+              <span>
+                📅 {t.dateFromPhotoQuestion} <strong>{formatDate(photoDate)}</strong>
+              </span>
+            </label>
+            {usePhotoDate && <p className="date-photo-note">{t.dateFromPhotoNote}</p>}
+          </div>
         )}
 
         {photoError && <p className="form-error">{t.tooManyPhotos}</p>}

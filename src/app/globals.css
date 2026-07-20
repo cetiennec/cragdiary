@@ -1181,6 +1181,13 @@ a {
   cursor: pointer;
 }
 
+.date-photo-note {
+  margin: 0.3rem 0 0 0.35rem;
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
 .form-error-detail {
   font-size: 0.78rem;
   opacity: 0.75;
