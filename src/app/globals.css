@@ -1159,9 +1159,32 @@ a {
   color: var(--accent);
 }
 
-.date-photo-hint {
-  margin: 0.25rem 0 0;
+.date-photo-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+  padding: 0.6rem 0.85rem;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  background: var(--bg-elevated);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.date-photo-banner input {
+  width: 1.05rem;
+  height: 1.05rem;
+  flex-shrink: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.form-error-detail {
   font-size: 0.78rem;
+  opacity: 0.75;
+  word-break: break-word;
 }
 
 /* Visibility badge */

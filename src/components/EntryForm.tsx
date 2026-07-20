@@ -119,7 +119,19 @@ export default function EntryForm({
   );
   // Once the user edits the date themselves, stop auto-deriving it from photos.
   const dateTouched = useRef(false);
-  const [dateFromPhoto, setDateFromPhoto] = useState(false);
+  // Capture date read from an added photo's EXIF; a banner asks the user to
+  // confirm it's the climb's date (checkbox on by default).
+  const [photoDate, setPhotoDate] = useState<string | null>(null);
+  const [usePhotoDate, setUsePhotoDate] = useState(true);
+
+  function formatDate(d: string): string {
+    const [y, m, day] = d.split("-").map(Number);
+    return new Date(y, m - 1, day).toLocaleDateString(locale, {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+  }
   const [lat, setLat] = useState(
     entry?.lat != null ? String(entry.lat) : defaults?.lat != null ? String(defaults.lat) : ""
   );
@@ -335,6 +347,9 @@ export default function EntryForm({
   const [submitting, setSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState(false);
+  // Real failure detail — uploads fail client-side/at the edge and never reach
+  // the server logs, so surface the message to make the cause diagnosable.
+  const [submitErrorDetail, setSubmitErrorDetail] = useState<string | null>(null);
 
   const [newLayouts, setNewLayouts] = useState<PhotoLayoutValue[]>([]);
 
@@ -408,8 +423,9 @@ export default function EntryForm({
       );
       if (dates.length > 0) {
         dates.sort();
+        setPhotoDate(dates[0]);
+        setUsePhotoDate(true);
         setDateValue(monthOnly ? dates[0].slice(0, 7) : dates[0]);
-        setDateFromPhoto(true);
       }
     }
     const compressed = await Promise.all(
@@ -521,6 +537,7 @@ export default function EntryForm({
         (async () => {
           setSubmitting(true);
           setSubmitError(false);
+          setSubmitErrorDetail(null);
           try {
             const fd = new FormData(form);
             fd.delete("photos");
@@ -533,8 +550,9 @@ export default function EntryForm({
             const basePosition = editing ? orderedPhotos.length : 0;
             await uploadPhotos(savedId, basePosition);
             router.push(`/entries/${savedId}`);
-          } catch {
+          } catch (err) {
             setSubmitError(true);
+            setSubmitErrorDetail(err instanceof Error ? err.message : String(err));
             setSubmitting(false);
             setUploadProgress(null);
           }
@@ -651,7 +669,7 @@ export default function EntryForm({
                 value={dateValue}
                 onChange={(e) => {
                   dateTouched.current = true;
-                  setDateFromPhoto(false);
+                  setPhotoDate(null);
                   setDateValue(e.target.value);
                 }}
                 required
@@ -669,11 +687,6 @@ export default function EntryForm({
                 {t.monthOnly}
               </label>
             </div>
-            {!editing && (
-              <p className="form-hint date-photo-hint">
-                {dateFromPhoto ? t.dateFromPhotoSet : t.dateFromPhotoHint}
-              </p>
-            )}
           </div>
           <div className={`notion-prop${excludedFields.has("location") ? " prop-excluded" : ""}`}>
             <label htmlFor="location">{t.location}</label>
@@ -1148,8 +1161,36 @@ export default function EntryForm({
           </div>
         )}
 
+        {!editing && photoDate && (
+          <label className="date-photo-banner">
+            <input
+              type="checkbox"
+              checked={usePhotoDate}
+              onChange={(e) => {
+                const next = e.target.checked;
+                setUsePhotoDate(next);
+                const base = next ? photoDate : today();
+                setDateValue(monthOnly ? base.slice(0, 7) : base);
+              }}
+            />
+            <span>
+              📅 {t.dateFromPhotoQuestion} <strong>{formatDate(photoDate)}</strong>
+            </span>
+          </label>
+        )}
+
         {photoError && <p className="form-error">{t.tooManyPhotos}</p>}
-        {submitError && <p className="form-error">{t.uploadFailed}</p>}
+        {submitError && (
+          <p className="form-error">
+            {t.uploadFailed}
+            {submitErrorDetail && (
+              <>
+                <br />
+                <span className="form-error-detail">{submitErrorDetail}</span>
+              </>
+            )}
+          </p>
+        )}
 
         <div className="notion-editor-actions">
           {submitting && (
