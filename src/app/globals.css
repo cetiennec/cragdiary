@@ -1159,6 +1159,11 @@ a {
   color: var(--accent);
 }
 
+.date-photo-hint {
+  margin: 0.25rem 0 0;
+  font-size: 0.78rem;
+}
+
 /* Visibility badge */
 
 .visibility-badge {

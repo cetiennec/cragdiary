@@ -9,7 +9,7 @@ import type { C2cSuggestion } from "@/app/api/c2c/search/route";
 import type { GeoSuggestion } from "@/app/api/geo/search/route";
 import type { UserSuggestion } from "@/app/api/users/search/route";
 import type { EntryWithAuthor } from "@/lib/queries";
-import { compressImage } from "@/lib/client-image";
+import { compressImage, readPhotoDate } from "@/lib/client-image";
 import PhotoPlacement, { type PhotoLayoutValue } from "@/components/PhotoPlacement";
 
 type EditorDict = Dict["editor"];
@@ -117,6 +117,9 @@ export default function EntryForm({
         : entry.entry_date
       : today()
   );
+  // Once the user edits the date themselves, stop auto-deriving it from photos.
+  const dateTouched = useRef(false);
+  const [dateFromPhoto, setDateFromPhoto] = useState(false);
   const [lat, setLat] = useState(
     entry?.lat != null ? String(entry.lat) : defaults?.lat != null ? String(defaults.lat) : ""
   );
@@ -396,6 +399,19 @@ export default function EntryForm({
       setPhotoError(false);
       return;
     }
+    // Derive the entry date from the photos' capture date (oldest first) when
+    // creating an entry and the user hasn't set the date themselves. Read from
+    // the originals — compression below strips EXIF.
+    if (!editing && !dateTouched.current) {
+      const dates = (await Promise.all(files.map((f) => readPhotoDate(f)))).filter(
+        (d): d is string => Boolean(d)
+      );
+      if (dates.length > 0) {
+        dates.sort();
+        setDateValue(monthOnly ? dates[0].slice(0, 7) : dates[0]);
+        setDateFromPhoto(true);
+      }
+    }
     const compressed = await Promise.all(
       files.map(async (f) => {
         let out = f;
@@ -633,7 +649,11 @@ export default function EntryForm({
                 type={monthOnly ? "month" : "date"}
                 name="entry_date"
                 value={dateValue}
-                onChange={(e) => setDateValue(e.target.value)}
+                onChange={(e) => {
+                  dateTouched.current = true;
+                  setDateFromPhoto(false);
+                  setDateValue(e.target.value);
+                }}
                 required
               />
               <label className="notion-prop-inline-label date-precision-toggle">
@@ -649,6 +669,11 @@ export default function EntryForm({
                 {t.monthOnly}
               </label>
             </div>
+            {!editing && (
+              <p className="form-hint date-photo-hint">
+                {dateFromPhoto ? t.dateFromPhotoSet : t.dateFromPhotoHint}
+              </p>
+            )}
           </div>
           <div className={`notion-prop${excludedFields.has("location") ? " prop-excluded" : ""}`}>
             <label htmlFor="location">{t.location}</label>
