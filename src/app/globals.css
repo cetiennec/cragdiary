@@ -927,105 +927,132 @@ a {
   max-width: 130px;
 }
 
-/* Paragraph anchor: drop a photo (or tap) onto one of these chips to place it
-   next to that paragraph of the notes. */
-.photo-anchor {
-  flex-basis: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-  margin-top: 0.15rem;
-}
-
-.photo-anchor-hint {
-  font-size: 0.72rem;
-  color: var(--text-muted);
-}
-
-.photo-anchor-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.3rem;
-}
-
-.anchor-chip {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 0.3rem;
-  max-width: 15rem;
-  font: inherit;
-  font-size: 0.72rem;
-  line-height: 1.2;
-  color: var(--text);
-  background: var(--bg-elevated);
+/* "+" placement strip: a live outline of the notes' paragraphs with an
+   insertion point at every gap. Tap a + to drop a photo into the text there. */
+.photo-placer {
+  margin: 0.6rem 0 0.2rem;
+  padding: 0.7rem 0.9rem;
   border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 0.2rem 0.55rem;
-  cursor: pointer;
-  text-align: left;
+  border-radius: var(--radius-card, 10px);
+  background: var(--bg-elevated);
 }
 
-.anchor-chip-num {
-  flex: none;
-  font-weight: 600;
+.placer-hint,
+.placer-empty {
+  font-size: 0.78rem;
   color: var(--text-muted);
+  margin: 0 0 0.4rem;
 }
 
-.anchor-chip-text {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.placer-empty {
+  font-style: italic;
+  margin: 0;
 }
 
-.anchor-chip[data-active="true"] {
+.placer-para {
+  margin: 0.15rem 0;
+  padding-left: 0.6rem;
+  border-left: 2px solid var(--border);
+  font-size: 0.82rem;
+  color: var(--text);
+  line-height: 1.35;
+}
+
+.placer-point-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  min-height: 1.6rem;
+}
+
+.placer-add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  font-size: 1rem;
+  line-height: 1;
+  color: var(--text-muted);
+  background: var(--bg);
+  border: 1px dashed var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.placer-add:hover,
+.placer-add[data-open="true"] {
+  color: var(--accent-contrast);
   background: var(--accent);
   border-color: var(--accent);
-  color: var(--accent-contrast);
+  border-style: solid;
 }
 
-.anchor-chip[data-active="true"] .anchor-chip-num {
-  color: var(--accent-contrast);
-}
-
-.anchor-chip[data-drop-hover="true"] {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--accent);
-}
-
-.anchor-empty {
+.placer-end-label {
   font-size: 0.72rem;
   color: var(--text-muted);
   font-style: italic;
 }
 
-/* While a drag is in progress the chips read as active drop zones. */
-body[data-anchoring] .anchor-chip {
-  border-style: dashed;
+.placer-thumb {
+  position: relative;
+  display: inline-block;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 6px;
+  background-size: cover;
+  background-position: center;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+.placer-thumb-x {
+  position: absolute;
+  top: -0.4rem;
+  right: -0.4rem;
+  width: 1.1rem;
+  height: 1.1rem;
+  padding: 0;
+  font-size: 0.8rem;
+  line-height: 1;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.7);
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.placer-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.4rem 0 0.2rem 0.3rem;
+  padding: 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+}
+
+.placer-pick {
+  width: 3rem;
+  height: 3rem;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  background-size: cover;
+  background-position: center;
+  cursor: pointer;
+}
+
+.placer-pick:hover {
   border-color: var(--accent);
 }
 
-.photo-draggable {
-  cursor: grab;
-  touch-action: none;
-  -webkit-user-select: none;
-  user-select: none;
-  -webkit-user-drag: none;
-}
-
-.anchor-drag-ghost {
-  position: fixed;
-  z-index: 1000;
-  width: 64px;
-  height: 64px;
-  margin: 0;
-  border-radius: 8px;
-  background-size: cover;
-  background-position: center;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
-  border: 2px solid var(--bg-elevated);
-  transform: translate(-50%, -50%) rotate(-4deg);
-  pointer-events: none;
-  opacity: 0.92;
+.placer-nophotos {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-style: italic;
 }
 
 /* Entry head: props left, small map right */

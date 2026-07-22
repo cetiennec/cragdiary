@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
 import { addEntryPhoto, autosaveEntry, createEntry, updateEntry } from "@/app/actions";
@@ -11,6 +11,9 @@ import type { UserSuggestion } from "@/app/api/users/search/route";
 import type { EntryWithAuthor } from "@/lib/queries";
 import { compressImage, readPhotoDate } from "@/lib/client-image";
 import PhotoPlacement, { type PhotoLayoutValue } from "@/components/PhotoPlacement";
+import PhotoTextPlacer, { type PlacerPhoto } from "@/components/PhotoTextPlacer";
+
+const DEFAULT_LAYOUT: PhotoLayoutValue = { align: "gallery", size: "m", para: "1", caption: "" };
 
 type EditorDict = Dict["editor"];
 
@@ -85,106 +88,10 @@ export default function EntryForm({
   const [starLevel, setStarLevel] = useState(entry?.star_level ?? 0);
   const [monthOnly, setMonthOnly] = useState(entry?.month_only ?? false);
 
-  // Live copy of the notes so the photo-placement chips reflect the current
+  // Live copy of the notes so the "+" placement strip reflects the current
   // paragraphs as you type. The textarea itself stays uncontrolled (defaultValue).
   const [notesText, setNotesText] = useState(entry?.notes ?? "");
   const paragraphs = notesText.trim() ? notesText.split(/\n{2,}/) : [];
-
-  // Drag a photo thumbnail onto a paragraph chip to anchor it there. Uses
-  // pointer events (so it works with a finger) with a small movement threshold
-  // so a tap still falls through to the buttons underneath.
-  const dragRef = useRef<{
-    owner: string;
-    onDrop: (para: string) => void;
-    startX: number;
-    startY: number;
-    active: boolean;
-    ghost: HTMLElement | null;
-    hover: Element | null;
-  } | null>(null);
-
-  function beginAnchorDrag(
-    e: React.PointerEvent<HTMLImageElement>,
-    owner: string,
-    onDrop: (para: string) => void
-  ) {
-    if (e.button !== 0 && e.pointerType === "mouse") return;
-    const img = e.currentTarget;
-    const pointerId = e.pointerId;
-    dragRef.current = {
-      owner,
-      onDrop,
-      startX: e.clientX,
-      startY: e.clientY,
-      active: false,
-      ghost: null,
-      hover: null,
-    };
-
-    function clearHover() {
-      const d = dragRef.current;
-      if (d?.hover) {
-        d.hover.removeAttribute("data-drop-hover");
-        d.hover = null;
-      }
-    }
-
-    function onMove(ev: PointerEvent) {
-      const d = dragRef.current;
-      if (!d) return;
-      if (!d.active) {
-        if (Math.hypot(ev.clientX - d.startX, ev.clientY - d.startY) < 8) return;
-        d.active = true;
-        try {
-          img.setPointerCapture(pointerId);
-        } catch {}
-        const ghost = document.createElement("div");
-        ghost.className = "anchor-drag-ghost";
-        ghost.style.backgroundImage = `url("${img.src}")`;
-        document.body.appendChild(ghost);
-        document.body.setAttribute("data-anchoring", "true");
-        d.ghost = ghost;
-      }
-      ev.preventDefault();
-      if (d.ghost) {
-        d.ghost.style.left = `${ev.clientX}px`;
-        d.ghost.style.top = `${ev.clientY}px`;
-      }
-      const el = document.elementFromPoint(ev.clientX, ev.clientY);
-      const chip =
-        el?.closest<HTMLElement>(
-          `[data-anchor-chip][data-anchor-owner="${d.owner}"]`
-        ) ?? null;
-      if (chip !== d.hover) {
-        clearHover();
-        if (chip) {
-          chip.setAttribute("data-drop-hover", "true");
-          d.hover = chip;
-        }
-      }
-    }
-
-    function onUp() {
-      const d = dragRef.current;
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", onUp);
-      window.removeEventListener("pointercancel", onUp);
-      if (d) {
-        if (d.active && d.hover) {
-          const v = d.hover.getAttribute("data-anchor-value");
-          if (v) d.onDrop(v);
-        }
-        clearHover();
-        d.ghost?.remove();
-      }
-      document.body.removeAttribute("data-anchoring");
-      dragRef.current = null;
-    }
-
-    window.addEventListener("pointermove", onMove, { passive: false });
-    window.addEventListener("pointerup", onUp);
-    window.addEventListener("pointercancel", onUp);
-  }
 
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
@@ -602,6 +509,67 @@ export default function EntryForm({
   function setLayout(id: string, patch: Partial<PhotoLayoutValue>) {
     setPhotoLayout((prev) => ({ ...prev, [id]: { ...prev[id], ...patch } }));
   }
+
+  // Stable object URLs for the not-yet-uploaded files, revoked on change so we
+  // don't leak a new blob URL on every keystroke-triggered re-render.
+  const newFileUrls = useMemo(
+    () => newFiles.map((f) => URL.createObjectURL(f)),
+    [newFiles]
+  );
+  useEffect(
+    () => () => newFileUrls.forEach((u) => URL.revokeObjectURL(u)),
+    [newFileUrls]
+  );
+
+  // Photo layouts live in two stores (saved photos by id, new files by index);
+  // these route a change to the right one from a single "key".
+  function layoutFor(key: string): PhotoLayoutValue {
+    if (key.startsWith("new-")) return newLayouts[Number(key.slice(4))] ?? DEFAULT_LAYOUT;
+    return photoLayout[key] ?? DEFAULT_LAYOUT;
+  }
+  function setLayoutFor(key: string, patch: Partial<PhotoLayoutValue>) {
+    if (key.startsWith("new-")) setNewLayout(Number(key.slice(4)), patch);
+    else setLayout(key, patch);
+  }
+
+  const paraCount = paragraphs.length;
+  const clampPara = (n: number) => Math.min(Math.max(n || 1, 1), paraCount + 1);
+
+  // Placing a gallery photo into the text defaults it to full width; an
+  // already-inline photo keeps its side/size and just moves.
+  function placeInText(key: string, para: number) {
+    const cur = layoutFor(key);
+    setLayoutFor(key, {
+      para: String(para),
+      align: cur.align === "gallery" ? "full" : cur.align,
+    });
+  }
+  function removeFromText(key: string) {
+    setLayoutFor(key, { align: "gallery" });
+  }
+
+  const placerPhotos: PlacerPhoto[] = [
+    ...orderedPhotos
+      .filter((p) => !removedPhotos.has(p.id))
+      .map((p) => {
+        const l = photoLayout[p.id] ?? DEFAULT_LAYOUT;
+        return {
+          key: p.id,
+          src: `/api/photos/${p.id}`,
+          para: clampPara(Number(l.para)),
+          inline: (l.align ?? "gallery") !== "gallery",
+        };
+      }),
+    ...newFiles.map((_, i) => {
+      const l = newLayouts[i] ?? DEFAULT_LAYOUT;
+      return {
+        key: `new-${i}`,
+        src: newFileUrls[i],
+        para: clampPara(Number(l.para)),
+        inline: (l.align ?? "gallery") !== "gallery",
+      };
+    }),
+  ];
 
   function movePhoto(index: number, delta: number) {
     setOrderedPhotos((photos) => {
@@ -1119,6 +1087,16 @@ export default function EntryForm({
           aria-label={t.notesAria}
         />
 
+        {placerPhotos.length > 0 && (
+          <PhotoTextPlacer
+            paragraphs={paragraphs}
+            photos={placerPhotos}
+            onPlace={placeInText}
+            onUnplace={removeFromText}
+            t={t.photoPlacer}
+          />
+        )}
+
         {pitchCount > 0 && (
           <div className="pitch-notes">
             <p className="form-hint">{t.pitchNotesHint}</p>
@@ -1156,27 +1134,8 @@ export default function EntryForm({
                     {removed && (
                       <input type="hidden" name="remove_photos" value={photo.id} />
                     )}
-                    {(() => {
-                      const anchored =
-                        !removed &&
-                        (photoLayout[photo.id]?.align ?? "gallery") !== "gallery";
-                      return (
-                        /* eslint-disable-next-line @next/next/no-img-element -- served from our own DB-backed route, already resized/compressed server-side */
-                        <img
-                          src={`/api/photos/${photo.id}`}
-                          alt=""
-                          className={anchored ? "photo-draggable" : undefined}
-                          onPointerDown={
-                            anchored
-                              ? (e) =>
-                                  beginAnchorDrag(e, photo.id, (para) =>
-                                    setLayout(photo.id, { para })
-                                  )
-                              : undefined
-                          }
-                        />
-                      );
-                    })()}
+                    {/* eslint-disable-next-line @next/next/no-img-element -- served from our own DB-backed route, already resized/compressed server-side */}
+                    <img src={`/api/photos/${photo.id}`} alt="" />
                     <button
                       type="button"
                       className="photo-remove-x"
@@ -1220,10 +1179,8 @@ export default function EntryForm({
                           maxLength={200}
                         />
                         <PhotoPlacement
-                          value={photoLayout[photo.id] ?? { align: "gallery", size: "m", para: "1", caption: "" }}
+                          value={photoLayout[photo.id] ?? DEFAULT_LAYOUT}
                           onChange={(patch) => setLayout(photo.id, patch)}
-                          paragraphs={paragraphs}
-                          photoKey={photo.id}
                           names={{
                             align: `photo_align_${photo.id}`,
                             size: `photo_size_${photo.id}`,
@@ -1232,10 +1189,6 @@ export default function EntryForm({
                           t={{
                             ...t.photoPlacementOptions,
                             size: t.photoSize,
-                            para: t.photoPara,
-                            anchorHint: t.photoAnchorHint,
-                            anchorEnd: t.photoAnchorEnd,
-                            anchorEmpty: t.photoAnchorEmpty,
                           }}
                         />
                       </>
@@ -1251,25 +1204,8 @@ export default function EntryForm({
           <div className="photo-grid notion-gallery">
             {newFiles.map((file, i) => (
               <div key={`${file.name}-${i}`} className="photo-removable">
-                {(() => {
-                  const anchored = (newLayouts[i]?.align ?? "gallery") !== "gallery";
-                  return (
-                    /* eslint-disable-next-line @next/next/no-img-element */
-                    <img
-                      src={URL.createObjectURL(file)}
-                      alt=""
-                      className={anchored ? "photo-draggable" : undefined}
-                      onPointerDown={
-                        anchored
-                          ? (e) =>
-                              beginAnchorDrag(e, `new-${i}`, (para) =>
-                                setNewLayout(i, { para })
-                              )
-                          : undefined
-                      }
-                    />
-                  );
-                })()}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={newFileUrls[i]} alt="" />
                 <button
                   type="button"
                   className="photo-remove-x"
@@ -1308,10 +1244,8 @@ export default function EntryForm({
                   maxLength={200}
                 />
                 <PhotoPlacement
-                  value={newLayouts[i] ?? { align: "gallery", size: "m", para: "1", caption: "" }}
+                  value={newLayouts[i] ?? DEFAULT_LAYOUT}
                   onChange={(patch) => setNewLayout(i, patch)}
-                  paragraphs={paragraphs}
-                  photoKey={`new-${i}`}
                   names={{
                     align: `new_photo_align_${i}`,
                     size: `new_photo_size_${i}`,
@@ -1320,10 +1254,6 @@ export default function EntryForm({
                   t={{
                     ...t.photoPlacementOptions,
                     size: t.photoSize,
-                    para: t.photoPara,
-                    anchorHint: t.photoAnchorHint,
-                    anchorEnd: t.photoAnchorEnd,
-                    anchorEmpty: t.photoAnchorEmpty,
                   }}
                 />
               </div>
