@@ -1676,6 +1676,22 @@ a {
   padding: 0.15rem 0.6rem;
 }
 
+/* Star rating badge (top-right of covers) */
+
+.cover-stars {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.55rem;
+  font-size: 0.8rem;
+  line-height: 1;
+  letter-spacing: -0.05em;
+  background: color-mix(in srgb, var(--bg-elevated) 82%, transparent);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.25rem 0.45rem;
+  backdrop-filter: blur(2px);
+}
+
 /* Vertical pins bubble (top-left of covers) */
 
 .cover-pins {

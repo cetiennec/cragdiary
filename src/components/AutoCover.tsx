@@ -1,5 +1,5 @@
 import type { EntryWithAuthor } from "@/lib/queries";
-import { PIN_LABELS, type Locale } from "@/lib/i18n";
+import { PIN_LABELS, STAR_LABELS, type Locale } from "@/lib/i18n";
 
 function hashCode(str: string): number {
   let h = 0;
@@ -118,6 +118,17 @@ export function CoverTag({ entry }: { entry: EntryWithAuthor }) {
   return <span className="auto-cover-tag">{tag}</span>;
 }
 
+// Star rating overlaid on a cover, with its meaning as a tooltip.
+export function CoverStars({ entry, locale }: { entry: EntryWithAuthor; locale: Locale }) {
+  if (!entry.star_level || entry.star_level < 1) return null;
+  const label = STAR_LABELS[locale][entry.star_level - 1];
+  return (
+    <span className="cover-stars" title={label} aria-label={label}>
+      {"⭐".repeat(entry.star_level)}
+    </span>
+  );
+}
+
 export default function AutoCover({
   entry,
   locale,
@@ -173,6 +184,7 @@ export default function AutoCover({
       </svg>
       {showPins && <CoverPins entry={entry} locale={locale} />}
       {!wide && <CoverTag entry={entry} />}
+      {!wide && <CoverStars entry={entry} locale={locale} />}
     </div>
   );
 }

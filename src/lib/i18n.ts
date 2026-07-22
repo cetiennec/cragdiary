@@ -715,6 +715,12 @@ export async function getDict(): Promise<{ locale: Locale; t: Dict }> {
   return { locale, t: dictionaries[locale] };
 }
 
+// Meaning of each star level (index 0 = ⭐, 1 = ⭐⭐, 2 = ⭐⭐⭐), used on covers.
+export const STAR_LABELS: Record<Locale, [string, string, string]> = {
+  en: ["Great memory", "Classic", "All-time classic"],
+  fr: ["Super souvenir", "Majeur", "Majeurissime"],
+};
+
 export const PIN_LABELS: Record<Locale, Record<string, string>> = {
   en: {
     "🌊": "By the sea (Calanques, Cap Canaille)",

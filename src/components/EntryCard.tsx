@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { formatDate, type Locale } from "@/lib/i18n";
 import type { EntryWithAuthor } from "@/lib/queries";
-import AutoCover, { CoverPins, CoverTag } from "@/components/AutoCover";
+import AutoCover, { CoverPins, CoverTag, CoverStars } from "@/components/AutoCover";
 
 const VISIBILITY_BADGES = {
   public: null,
@@ -43,6 +43,7 @@ export default function EntryCard({
             <img src={`/api/photos/${cover.id}`} alt="" loading="lazy" />
             {entry.show_pins && <CoverPins entry={entry} locale={locale} />}
             <CoverTag entry={entry} />
+            <CoverStars entry={entry} locale={locale} />
           </div>
         ) : (
           <AutoCover entry={entry} locale={locale} showPins={entry.show_pins} />
