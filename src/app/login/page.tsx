@@ -21,7 +21,11 @@ export default async function LoginPage({
           {t.login.password}
           <input type="password" name="password" required autoComplete="current-password" />
         </label>
-        {error && <p className="form-error">{t.login.error}</p>}
+        {error && (
+          <p className="form-error">
+            {error === "throttled" ? t.login.throttled : t.login.error}
+          </p>
+        )}
         <button type="submit" className="btn-primary">
           {t.login.submit}
         </button>

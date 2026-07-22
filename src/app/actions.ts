@@ -16,6 +16,7 @@ import {
   hashPassword,
   verifyPassword,
 } from "@/lib/auth";
+import { clientIp, isRateLimited, recordAttempt, clearAttempts } from "@/lib/rate-limit";
 
 // 2048 px keeps photos crisp in the fullscreen lightbox (incl. high-DPI
 // screens); quality 86 is visibly cleaner than 82 at a modest size cost.
@@ -194,14 +195,22 @@ export async function login(formData: FormData): Promise<void> {
   const username = String(formData.get("username") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
 
+  // Throttle brute force by IP: 10 failed tries per 15 min, then a cooldown.
+  const bucket = `login:${await clientIp()}`;
+  if (await isRateLimited(bucket, 10, 15)) {
+    redirect("/login?error=throttled");
+  }
+
   const result = await pool.query<{ id: string; password_hash: string }>(
     "select id, password_hash from users where username = $1",
     [username]
   );
   if (result.rows.length === 0 || !verifyPassword(password, result.rows[0].password_hash)) {
+    await recordAttempt(bucket);
     redirect("/login?error=1");
   }
 
+  await clearAttempts(bucket);
   await createSession(result.rows[0].id);
   redirect("/");
 }
@@ -626,6 +635,14 @@ function siteUrl(): string {
 export async function requestPasswordReset(formData: FormData): Promise<void> {
   const identifier = String(formData.get("identifier") ?? "").trim().toLowerCase();
   const locale = await getLocale();
+
+  // Throttle by IP so the endpoint can't be used to spam reset emails. Every
+  // request counts (valid or not); the response is always the neutral "sent".
+  const bucket = `reset:${await clientIp()}`;
+  if (await isRateLimited(bucket, 5, 15)) {
+    redirect("/forgot?sent=1");
+  }
+  await recordAttempt(bucket);
 
   if (identifier) {
     const result = await pool.query<{ id: string; email: string | null; username: string }>(

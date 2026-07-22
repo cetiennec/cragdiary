@@ -102,3 +102,11 @@ alter table users add column if not exists wishlist_public boolean not null defa
 alter table entries add column if not exists starred boolean not null default false;
 alter table entries add column if not exists country text;
 alter table entries add column if not exists star_level integer not null default 0;
+
+-- Sliding-window counters for throttling login / password-reset attempts by IP.
+create table if not exists rate_limit_events (
+  id uuid primary key default gen_random_uuid(),
+  bucket text not null,
+  created_at timestamptz not null default now()
+);
+create index if not exists rate_limit_events_bucket_idx on rate_limit_events(bucket, created_at);
