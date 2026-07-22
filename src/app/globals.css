@@ -830,6 +830,7 @@ a {
   color: var(--text-muted);
   font-style: italic;
   line-height: 1.35;
+  text-align: center;
 }
 
 :root[data-theme="scrapbook"] .inline-photo img {
@@ -964,6 +965,29 @@ a {
   flex-wrap: wrap;
   gap: 0.4rem;
   min-height: 1.6rem;
+}
+
+/* A photo dropped into the text, with its own left/right/full + size controls. */
+.placer-placed-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin: 0.2rem 0;
+}
+
+.placer-placed {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.3rem;
+  border-radius: 8px;
+  background: var(--bg);
+}
+
+.placer-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
 }
 
 .placer-add {

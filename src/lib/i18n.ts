@@ -108,7 +108,7 @@ const en = {
     tooManyPhotos: "One of the photos is too heavy even after compression — try a smaller image.",
     uploadingPhotos: "Uploading photos…",
     uploadFailed: "Saving the photos failed — check your connection and try again.",
-    currentPhotos: "Current photos — reorder with the arrows, tap × to remove, set how each sits in the text below:",
+    currentPhotos: "Current photos — reorder with the arrows, tap × to remove, add a caption; place them in the text with the + strip above:",
     photoPlacement: "Placement",
     photoPlacementOptions: {
       gallery: "Gallery",
@@ -454,7 +454,7 @@ const fr: Dict = {
     tooManyPhotos: "Une des photos reste trop lourde même compressée — essayez une image plus petite.",
     uploadingPhotos: "Envoi des photos…",
     uploadFailed: "L'envoi des photos a échoué — vérifiez votre connexion et réessayez.",
-    currentPhotos: "Photos actuelles — réordonnez avec les flèches, touchez × pour retirer, réglez ci-dessous leur place dans le texte :",
+    currentPhotos: "Photos actuelles — réordonnez avec les flèches, touchez × pour retirer, ajoutez une légende ; placez-les dans le texte avec la bande + au-dessus :",
     photoPlacement: "Placement",
     photoPlacementOptions: {
       gallery: "Galerie",

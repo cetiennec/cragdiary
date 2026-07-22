@@ -2,11 +2,14 @@
 
 import { useState } from "react";
 
+export type PhotoLayoutValue = { align: string; size: string; para: string; caption: string };
+
 export type PlacerPhoto = {
   key: string;
   src: string;
   para: number; // interstice it currently sits at (1..count+1)
-  inline: boolean; // true when placed in the text (align != gallery)
+  align: string; // gallery | left | right | full
+  size: string; // s | m | l
 };
 
 export type PlacerLabels = {
@@ -17,29 +20,41 @@ export type PlacerLabels = {
   end: string; // label for the final interstice (after the last paragraph)
   remove: string; // aria-label for taking a photo back out of the text
   pick: string; // aria-label for a photo in the picker
+  left: string; // "in text — left"
+  right: string; // "in text — right"
+  full: string; // "full width"
+  size: string; // "size"
 };
+
+const ALIGNS: { value: string; glyph: string; key: "left" | "right" | "full" }[] = [
+  { value: "left", glyph: "◧", key: "left" },
+  { value: "right", glyph: "◨", key: "right" },
+  { value: "full", glyph: "▬", key: "full" },
+];
 
 function snippet(text: string): string {
   const clean = text.trim().replace(/\s+/g, " ");
   return clean.length > 70 ? `${clean.slice(0, 70)}…` : clean;
 }
 
-// A live preview of the notes broken into paragraphs, with a "+" at every gap
-// (before the first paragraph, between each, and after the last). Click a "+"
-// to drop one of the day's photos into the text at exactly that spot. Photos
-// already placed show as thumbnails at their gap, each removable back to the
-// gallery.
+// A live outline of the notes broken into paragraphs, with a "+" at every gap
+// (before the first paragraph, between each, and after the last). Tap a "+" to
+// drop one of the day's photos into the text there. Each placed photo carries
+// its own left / right / full and size controls so the whole "where and how it
+// sits in the text" concept lives in one place.
 export default function PhotoTextPlacer({
   paragraphs,
   photos,
   onPlace,
   onUnplace,
+  onAdjust,
   t,
 }: {
   paragraphs: string[];
   photos: PlacerPhoto[];
   onPlace: (key: string, para: number) => void;
   onUnplace: (key: string) => void;
+  onAdjust: (key: string, patch: Partial<PhotoLayoutValue>) => void;
   t: PlacerLabels;
 }) {
   const [openAt, setOpenAt] = useState<number | null>(null);
@@ -49,32 +64,71 @@ export default function PhotoTextPlacer({
     return <p className="placer-empty">{t.empty}</p>;
   }
 
-  const available = photos.filter((p) => !p.inline);
+  const available = photos.filter((p) => p.align === "gallery");
   const atPoint = (n: number) =>
-    photos.filter((p) => p.inline && p.para === n);
+    photos.filter((p) => p.align !== "gallery" && p.para === n);
+
+  function placed(p: PlacerPhoto) {
+    return (
+      <div className="placer-placed" key={p.key}>
+        <span
+          className="placer-thumb"
+          style={{ backgroundImage: `url("${p.src}")` }}
+        >
+          <button
+            type="button"
+            className="placer-thumb-x"
+            aria-label={t.remove}
+            onClick={() => onUnplace(p.key)}
+          >
+            ×
+          </button>
+        </span>
+        <span className="placer-controls">
+          <span className="seg-group" role="group">
+            {ALIGNS.map((a) => (
+              <button
+                key={a.value}
+                type="button"
+                className="seg-btn"
+                data-active={p.align === a.value}
+                title={t[a.key]}
+                aria-label={t[a.key]}
+                aria-pressed={p.align === a.value}
+                onClick={() => onAdjust(p.key, { align: a.value })}
+              >
+                {a.glyph}
+              </button>
+            ))}
+          </span>
+          {(p.align === "left" || p.align === "right") && (
+            <span className="seg-group" role="group" aria-label={t.size}>
+              {["s", "m", "l"].map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  className="seg-btn"
+                  data-active={p.size === s}
+                  aria-pressed={p.size === s}
+                  onClick={() => onAdjust(p.key, { size: s })}
+                >
+                  {s.toUpperCase()}
+                </button>
+              ))}
+            </span>
+          )}
+        </span>
+      </div>
+    );
+  }
 
   function point(n: number, endLabel?: string) {
-    const placed = atPoint(n);
+    const here = atPoint(n);
     const open = openAt === n;
     return (
       <div className="placer-point">
+        {here.length > 0 && <div className="placer-placed-row">{here.map(placed)}</div>}
         <div className="placer-point-row">
-          {placed.map((p) => (
-            <span
-              key={p.key}
-              className="placer-thumb"
-              style={{ backgroundImage: `url("${p.src}")` }}
-            >
-              <button
-                type="button"
-                className="placer-thumb-x"
-                aria-label={t.remove}
-                onClick={() => onUnplace(p.key)}
-              >
-                ×
-              </button>
-            </span>
-          ))}
           <button
             type="button"
             className="placer-add"

@@ -10,8 +10,10 @@ import type { GeoSuggestion } from "@/app/api/geo/search/route";
 import type { UserSuggestion } from "@/app/api/users/search/route";
 import type { EntryWithAuthor } from "@/lib/queries";
 import { compressImage, readPhotoDate } from "@/lib/client-image";
-import PhotoPlacement, { type PhotoLayoutValue } from "@/components/PhotoPlacement";
-import PhotoTextPlacer, { type PlacerPhoto } from "@/components/PhotoTextPlacer";
+import PhotoTextPlacer, {
+  type PhotoLayoutValue,
+  type PlacerPhoto,
+} from "@/components/PhotoTextPlacer";
 
 const DEFAULT_LAYOUT: PhotoLayoutValue = { align: "gallery", size: "m", para: "1", caption: "" };
 
@@ -557,7 +559,8 @@ export default function EntryForm({
           key: p.id,
           src: `/api/photos/${p.id}`,
           para: clampPara(Number(l.para)),
-          inline: (l.align ?? "gallery") !== "gallery",
+          align: l.align ?? "gallery",
+          size: l.size ?? "m",
         };
       }),
     ...newFiles.map((_, i) => {
@@ -566,7 +569,8 @@ export default function EntryForm({
         key: `new-${i}`,
         src: newFileUrls[i],
         para: clampPara(Number(l.para)),
-        inline: (l.align ?? "gallery") !== "gallery",
+        align: l.align ?? "gallery",
+        size: l.size ?? "m",
       };
     }),
   ];
@@ -1093,7 +1097,14 @@ export default function EntryForm({
             photos={placerPhotos}
             onPlace={placeInText}
             onUnplace={removeFromText}
-            t={t.photoPlacer}
+            onAdjust={setLayoutFor}
+            t={{
+              ...t.photoPlacer,
+              left: t.photoPlacementOptions.left,
+              right: t.photoPlacementOptions.right,
+              full: t.photoPlacementOptions.full,
+              size: t.photoSize,
+            }}
           />
         )}
 
@@ -1178,18 +1189,20 @@ export default function EntryForm({
                           placeholder={t.photoCaption}
                           maxLength={200}
                         />
-                        <PhotoPlacement
-                          value={photoLayout[photo.id] ?? DEFAULT_LAYOUT}
-                          onChange={(patch) => setLayout(photo.id, patch)}
-                          names={{
-                            align: `photo_align_${photo.id}`,
-                            size: `photo_size_${photo.id}`,
-                            para: `photo_para_${photo.id}`,
-                          }}
-                          t={{
-                            ...t.photoPlacementOptions,
-                            size: t.photoSize,
-                          }}
+                        <input
+                          type="hidden"
+                          name={`photo_align_${photo.id}`}
+                          value={photoLayout[photo.id]?.align ?? "gallery"}
+                        />
+                        <input
+                          type="hidden"
+                          name={`photo_size_${photo.id}`}
+                          value={photoLayout[photo.id]?.size ?? "m"}
+                        />
+                        <input
+                          type="hidden"
+                          name={`photo_para_${photo.id}`}
+                          value={photoLayout[photo.id]?.para ?? "1"}
                         />
                       </>
                     )}
@@ -1243,18 +1256,20 @@ export default function EntryForm({
                   placeholder={t.photoCaption}
                   maxLength={200}
                 />
-                <PhotoPlacement
-                  value={newLayouts[i] ?? DEFAULT_LAYOUT}
-                  onChange={(patch) => setNewLayout(i, patch)}
-                  names={{
-                    align: `new_photo_align_${i}`,
-                    size: `new_photo_size_${i}`,
-                    para: `new_photo_para_${i}`,
-                  }}
-                  t={{
-                    ...t.photoPlacementOptions,
-                    size: t.photoSize,
-                  }}
+                <input
+                  type="hidden"
+                  name={`new_photo_align_${i}`}
+                  value={newLayouts[i]?.align ?? "gallery"}
+                />
+                <input
+                  type="hidden"
+                  name={`new_photo_size_${i}`}
+                  value={newLayouts[i]?.size ?? "m"}
+                />
+                <input
+                  type="hidden"
+                  name={`new_photo_para_${i}`}
+                  value={newLayouts[i]?.para ?? "1"}
                 />
               </div>
             ))}
