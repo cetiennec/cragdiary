@@ -51,16 +51,17 @@ export default function PhotoGallery({
     <>
       <div className={className}>
         {photos.map((photo, i) => (
-          // eslint-disable-next-line @next/next/no-img-element -- served from our own DB-backed route, already resized/compressed server-side
-          <img
-            key={photo.id}
-            src={`/api/photos/${photo.id}`}
-            alt={photo.caption ?? ""}
-            title={photo.caption ?? undefined}
-            loading="lazy"
-            className="gallery-zoomable"
-            onClick={() => setOpen(i)}
-          />
+          <figure key={photo.id} className="gallery-item">
+            {/* eslint-disable-next-line @next/next/no-img-element -- served from our own DB-backed route, already resized/compressed server-side */}
+            <img
+              src={`/api/photos/${photo.id}`}
+              alt={photo.caption ?? ""}
+              loading="lazy"
+              className="gallery-zoomable"
+              onClick={() => setOpen(i)}
+            />
+            {photo.caption && <figcaption>{photo.caption}</figcaption>}
+          </figure>
         ))}
       </div>
       {open !== null && (

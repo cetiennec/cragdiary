@@ -155,7 +155,10 @@ export default async function EntryPage({
       {cover ? (
         <div className="notion-cover">
           {/* eslint-disable-next-line @next/next/no-img-element -- served from our own DB-backed route, already resized/compressed server-side */}
-          <img src={`/api/photos/${cover.id}`} alt="" />
+          <img src={`/api/photos/${cover.id}`} alt={cover.caption ?? ""} />
+          {cover.caption && (
+            <figcaption className="notion-cover-caption">{cover.caption}</figcaption>
+          )}
         </div>
       ) : (
         <AutoCover entry={entry} locale={locale} className="notion-cover auto-cover" wide showPins={false} />
