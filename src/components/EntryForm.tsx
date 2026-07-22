@@ -85,6 +85,107 @@ export default function EntryForm({
   const [starLevel, setStarLevel] = useState(entry?.star_level ?? 0);
   const [monthOnly, setMonthOnly] = useState(entry?.month_only ?? false);
 
+  // Live copy of the notes so the photo-placement chips reflect the current
+  // paragraphs as you type. The textarea itself stays uncontrolled (defaultValue).
+  const [notesText, setNotesText] = useState(entry?.notes ?? "");
+  const paragraphs = notesText.trim() ? notesText.split(/\n{2,}/) : [];
+
+  // Drag a photo thumbnail onto a paragraph chip to anchor it there. Uses
+  // pointer events (so it works with a finger) with a small movement threshold
+  // so a tap still falls through to the buttons underneath.
+  const dragRef = useRef<{
+    owner: string;
+    onDrop: (para: string) => void;
+    startX: number;
+    startY: number;
+    active: boolean;
+    ghost: HTMLElement | null;
+    hover: Element | null;
+  } | null>(null);
+
+  function beginAnchorDrag(
+    e: React.PointerEvent<HTMLImageElement>,
+    owner: string,
+    onDrop: (para: string) => void
+  ) {
+    if (e.button !== 0 && e.pointerType === "mouse") return;
+    const img = e.currentTarget;
+    const pointerId = e.pointerId;
+    dragRef.current = {
+      owner,
+      onDrop,
+      startX: e.clientX,
+      startY: e.clientY,
+      active: false,
+      ghost: null,
+      hover: null,
+    };
+
+    function clearHover() {
+      const d = dragRef.current;
+      if (d?.hover) {
+        d.hover.removeAttribute("data-drop-hover");
+        d.hover = null;
+      }
+    }
+
+    function onMove(ev: PointerEvent) {
+      const d = dragRef.current;
+      if (!d) return;
+      if (!d.active) {
+        if (Math.hypot(ev.clientX - d.startX, ev.clientY - d.startY) < 8) return;
+        d.active = true;
+        try {
+          img.setPointerCapture(pointerId);
+        } catch {}
+        const ghost = document.createElement("div");
+        ghost.className = "anchor-drag-ghost";
+        ghost.style.backgroundImage = `url("${img.src}")`;
+        document.body.appendChild(ghost);
+        document.body.setAttribute("data-anchoring", "true");
+        d.ghost = ghost;
+      }
+      ev.preventDefault();
+      if (d.ghost) {
+        d.ghost.style.left = `${ev.clientX}px`;
+        d.ghost.style.top = `${ev.clientY}px`;
+      }
+      const el = document.elementFromPoint(ev.clientX, ev.clientY);
+      const chip =
+        el?.closest<HTMLElement>(
+          `[data-anchor-chip][data-anchor-owner="${d.owner}"]`
+        ) ?? null;
+      if (chip !== d.hover) {
+        clearHover();
+        if (chip) {
+          chip.setAttribute("data-drop-hover", "true");
+          d.hover = chip;
+        }
+      }
+    }
+
+    function onUp() {
+      const d = dragRef.current;
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+      if (d) {
+        if (d.active && d.hover) {
+          const v = d.hover.getAttribute("data-anchor-value");
+          if (v) d.onDrop(v);
+        }
+        clearHover();
+        d.ghost?.remove();
+      }
+      document.body.removeAttribute("data-anchoring");
+      dragRef.current = null;
+    }
+
+    window.addEventListener("pointermove", onMove, { passive: false });
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
+  }
+
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const [autosave, setAutosave] = useState<"idle" | "saving" | "saved">("idle");
@@ -1013,6 +1114,7 @@ export default function EntryForm({
           className="notion-notes-input"
           rows={8}
           defaultValue={entry?.notes ?? ""}
+          onChange={(e) => setNotesText(e.target.value)}
           placeholder={t.notesPlaceholder}
           aria-label={t.notesAria}
         />
@@ -1054,8 +1156,27 @@ export default function EntryForm({
                     {removed && (
                       <input type="hidden" name="remove_photos" value={photo.id} />
                     )}
-                    {/* eslint-disable-next-line @next/next/no-img-element -- served from our own DB-backed route, already resized/compressed server-side */}
-                    <img src={`/api/photos/${photo.id}`} alt="" />
+                    {(() => {
+                      const anchored =
+                        !removed &&
+                        (photoLayout[photo.id]?.align ?? "gallery") !== "gallery";
+                      return (
+                        /* eslint-disable-next-line @next/next/no-img-element -- served from our own DB-backed route, already resized/compressed server-side */
+                        <img
+                          src={`/api/photos/${photo.id}`}
+                          alt=""
+                          className={anchored ? "photo-draggable" : undefined}
+                          onPointerDown={
+                            anchored
+                              ? (e) =>
+                                  beginAnchorDrag(e, photo.id, (para) =>
+                                    setLayout(photo.id, { para })
+                                  )
+                              : undefined
+                          }
+                        />
+                      );
+                    })()}
                     <button
                       type="button"
                       className="photo-remove-x"
@@ -1101,6 +1222,8 @@ export default function EntryForm({
                         <PhotoPlacement
                           value={photoLayout[photo.id] ?? { align: "gallery", size: "m", para: "1", caption: "" }}
                           onChange={(patch) => setLayout(photo.id, patch)}
+                          paragraphs={paragraphs}
+                          photoKey={photo.id}
                           names={{
                             align: `photo_align_${photo.id}`,
                             size: `photo_size_${photo.id}`,
@@ -1110,6 +1233,9 @@ export default function EntryForm({
                             ...t.photoPlacementOptions,
                             size: t.photoSize,
                             para: t.photoPara,
+                            anchorHint: t.photoAnchorHint,
+                            anchorEnd: t.photoAnchorEnd,
+                            anchorEmpty: t.photoAnchorEmpty,
                           }}
                         />
                       </>
@@ -1125,8 +1251,25 @@ export default function EntryForm({
           <div className="photo-grid notion-gallery">
             {newFiles.map((file, i) => (
               <div key={`${file.name}-${i}`} className="photo-removable">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={URL.createObjectURL(file)} alt="" />
+                {(() => {
+                  const anchored = (newLayouts[i]?.align ?? "gallery") !== "gallery";
+                  return (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img
+                      src={URL.createObjectURL(file)}
+                      alt=""
+                      className={anchored ? "photo-draggable" : undefined}
+                      onPointerDown={
+                        anchored
+                          ? (e) =>
+                              beginAnchorDrag(e, `new-${i}`, (para) =>
+                                setNewLayout(i, { para })
+                              )
+                          : undefined
+                      }
+                    />
+                  );
+                })()}
                 <button
                   type="button"
                   className="photo-remove-x"
@@ -1167,6 +1310,8 @@ export default function EntryForm({
                 <PhotoPlacement
                   value={newLayouts[i] ?? { align: "gallery", size: "m", para: "1", caption: "" }}
                   onChange={(patch) => setNewLayout(i, patch)}
+                  paragraphs={paragraphs}
+                  photoKey={`new-${i}`}
                   names={{
                     align: `new_photo_align_${i}`,
                     size: `new_photo_size_${i}`,
@@ -1176,6 +1321,9 @@ export default function EntryForm({
                     ...t.photoPlacementOptions,
                     size: t.photoSize,
                     para: t.photoPara,
+                    anchorHint: t.photoAnchorHint,
+                    anchorEnd: t.photoAnchorEnd,
+                    anchorEmpty: t.photoAnchorEmpty,
                   }}
                 />
               </div>
