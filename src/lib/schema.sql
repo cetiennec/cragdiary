@@ -16,6 +16,19 @@ create table if not exists users (
   wishlist_public boolean not null default true,
   created_at timestamptz not null default now()
 );
+-- Recovery email is unique (case-insensitive); nulls allowed for accounts
+-- without one. Signup relies on this to reject duplicate emails.
+create unique index if not exists users_email_unique
+  on users (lower(email)) where email is not null;
+
+create table if not exists password_resets (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references users(id) on delete cascade,
+  token_hash text not null,
+  expires_at timestamptz not null,
+  used boolean not null default false,
+  created_at timestamptz not null default now()
+);
 
 create table if not exists entries (
   id uuid primary key default gen_random_uuid(),

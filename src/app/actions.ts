@@ -864,17 +864,21 @@ export async function addWishlistMember(formData: FormData): Promise<void> {
   if (!user) throw new Error("Unauthorized");
 
   const id = String(formData.get("id") ?? "");
-  const username = String(formData.get("username") ?? "")
+  const username = String(formData.get("invitee") ?? "")
     .trim()
     .replace(/^@/, "")
     .toLowerCase();
   if (id && username) {
-    const owns = await pool.query("select 1 from wishlists where id = $1 and owner_id = $2", [
-      id,
-      user.id,
-    ]);
+    // The default list can never be shared.
+    const owns = await pool.query(
+      "select 1 from wishlists where id = $1 and owner_id = $2 and not is_default",
+      [id, user.id]
+    );
+    // Private users can't be invited at all; public ones are searchable and
+    // unlisted ones must be typed in full — enforced by search filtering, this
+    // is the manual-entry guard.
     const target = await pool.query<{ id: string }>(
-      "select id from users where username = $1",
+      "select id from users where username = $1 and visibility <> 'private'",
       [username]
     );
     const memberId = target.rows[0]?.id;

@@ -7,6 +7,7 @@ import WishForm from "@/components/WishForm";
 import WishPartnersEditor from "@/components/WishPartnersEditor";
 import WishlistManageBar from "@/components/WishlistManageBar";
 import WishlistMembers from "@/components/WishlistMembers";
+import WishlistRename from "@/components/WishlistRename";
 
 type WishlistDict = Dict["wishlist"];
 
@@ -34,11 +35,16 @@ export default function WishlistSection({
   const canEdit = list.can_edit;
   const isMember = canEdit && !isOwner;
   const shared = list.members.length > 0;
+  // The default list can never be shared.
+  const shareable = !list.is_default;
 
   return (
     <details className="wishlist-list" open>
       <summary className="wishlist-list-summary">
         <span className="wishlist-list-name">{list.name}</span>
+        {isOwner && (
+          <WishlistRename list={list} t={{ rename: t.rename, renameSave: t.renameSave }} />
+        )}
         <span className="wishlist-list-count">{list.wishes.length}</span>
         {shared && <span className="wishlist-list-badge" title={t.invite}>🤝</span>}
         {list.visibility !== "public" && <span className="wishlist-list-badge">🔒</span>}
@@ -53,8 +59,6 @@ export default function WishlistSection({
         <WishlistManageBar
           list={list}
           t={{
-            rename: t.rename,
-            renameSave: t.renameSave,
             deleteList: t.deleteList,
             deleteConfirm: t.deleteConfirm,
             visibilityPublic: t.visibilityPublic,
@@ -65,7 +69,7 @@ export default function WishlistSection({
         />
       )}
 
-      {(isOwner || shared) && (
+      {shareable && (isOwner || shared) && (
         <WishlistMembers
           listId={list.id}
           owner={{ username: list.owner_username, display_name: list.owner_display_name }}

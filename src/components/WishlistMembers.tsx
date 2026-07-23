@@ -1,9 +1,6 @@
 import type { WishlistMember } from "@/lib/db";
-import {
-  addWishlistMember,
-  leaveWishlist,
-  removeWishlistMember,
-} from "@/app/actions";
+import { leaveWishlist, removeWishlistMember } from "@/app/actions";
+import InviteMemberForm from "@/components/InviteMemberForm";
 
 export type MembersLabels = {
   ownerLabel: string;
@@ -56,17 +53,10 @@ export default function WishlistMembers({
       ))}
 
       {isOwner && (
-        <form action={addWishlistMember} className="member-invite">
-          <input type="hidden" name="id" value={listId} />
-          <input
-            type="text"
-            name="username"
-            placeholder={t.invitePlaceholder}
-            autoComplete="off"
-            maxLength={20}
-          />
-          <button type="submit">{t.invite}</button>
-        </form>
+        <InviteMemberForm
+          listId={listId}
+          t={{ invite: t.invite, invitePlaceholder: t.invitePlaceholder }}
+        />
       )}
 
       {isMember && (
