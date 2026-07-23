@@ -1,4 +1,13 @@
-import { pool, type Entry, type Photo, type User, type Visibility, type Wish } from "@/lib/db";
+import {
+  pool,
+  type Entry,
+  type Photo,
+  type User,
+  type Visibility,
+  type Wish,
+  type Wishlist,
+  type WishlistWithWishes,
+} from "@/lib/db";
 
 export type EntryWithAuthor = Entry & {
   username: string;
@@ -177,12 +186,39 @@ export async function getPinCollection(
   return result.rows;
 }
 
-export async function getWishes(userId: string): Promise<Wish[]> {
-  const result = await pool.query<Wish>(
-    "select * from wishes where user_id = $1 order by created_at desc",
-    [userId]
+// Lists owned by `ownerId`, each with its wishes. When `includeNonPublic` is
+// false (viewing someone else's profile) private/unlisted lists are dropped.
+// The default list always sorts first, then newest lists.
+export async function getWishlists(
+  ownerId: string,
+  { includeNonPublic }: { includeNonPublic: boolean }
+): Promise<WishlistWithWishes[]> {
+  const conds = ["owner_id = $1"];
+  if (!includeNonPublic) conds.push("visibility = 'public'");
+  const lists = await pool.query<Wishlist>(
+    `select * from wishlists where ${conds.join(" and ")}
+     order by is_default desc, created_at asc`,
+    [ownerId]
   );
-  return result.rows;
+  if (lists.rows.length === 0) return [];
+
+  const wishes = await pool.query<Wish>(
+    "select * from wishes where wishlist_id = any($1) order by created_at desc",
+    [lists.rows.map((l) => l.id)]
+  );
+  return lists.rows.map((l) => ({
+    ...l,
+    wishes: wishes.rows.filter((w) => w.wishlist_id === l.id),
+  }));
+}
+
+// A single list for authorization checks (who owns it).
+export async function getWishlist(id: string): Promise<Wishlist | null> {
+  const result = await pool.query<Wishlist>(
+    "select * from wishlists where id = $1",
+    [id]
+  );
+  return result.rows[0] ?? null;
 }
 
 export async function getWish(id: string, userId: string): Promise<Wish | null> {

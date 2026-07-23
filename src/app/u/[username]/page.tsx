@@ -7,17 +7,17 @@ import {
   getPinCollection,
   getUserByUsername,
   getUserStats,
-  getWishes,
+  getWishlists,
   isFollowing,
   type EntryFilters,
 } from "@/lib/queries";
 import { coverEmojis } from "@/components/AutoCover";
 import { flagEmoji } from "@/lib/geo";
-import { deleteWish, toggleFollow, toggleWishlistVisibility } from "@/app/actions";
+import { toggleFollow } from "@/app/actions";
 import { renderMentions } from "@/lib/mentions";
 import FilterBar from "@/components/FilterBar";
-import WishForm from "@/components/WishForm";
-import WishPartnersEditor from "@/components/WishPartnersEditor";
+import WishlistSection from "@/components/WishlistSection";
+import CreateWishlistForm from "@/components/CreateWishlistForm";
 import { currentUser } from "@/lib/auth";
 import { formatMeters, getDict } from "@/lib/i18n";
 import EntryCard from "@/components/EntryCard";
@@ -83,16 +83,17 @@ export default async function ProfilePage({
   if (!profile) notFound();
 
   const isSelf = user?.id === profile.id;
-  const showWishlist = isSelf || profile.wishlist_public;
   if (profile.visibility === "private" && !isSelf) notFound();
-  const [entries, stats, years, wishes, following, pinEntries] = await Promise.all([
+  const [entries, stats, years, wishlists, following, pinEntries] = await Promise.all([
     getEntriesByUser(profile.id, { includeNonPublic: isSelf, filters }),
     getUserStats(profile.id, { includeNonPublic: isSelf }),
     getEntryYears(profile.id),
-    getWishes(profile.id),
+    getWishlists(profile.id, { includeNonPublic: isSelf }),
     user && !isSelf ? isFollowing(user.id, profile.id) : Promise.resolve(false),
     isSelf ? getPinCollection(profile.id, { includeNonPublic: true }) : Promise.resolve([]),
   ]);
+  const wishes = wishlists.flatMap((l) => l.wishes);
+  const showWishlist = isSelf || wishlists.length > 0;
 
   // Earned pins + climbed-country flags, offered in the settings as one-click
   // additions to the bio (never displayed automatically).
@@ -119,19 +120,23 @@ export default async function ProfilePage({
     const letter = { a: 0, b: 33, c: 66 }[m[2]?.toLowerCase() as "a" | "b" | "c"] ?? 0;
     return +m[1] * 100 + letter + (m[3] === "+" ? 15 : m[3] === "-" ? -15 : 0);
   };
-  let shownWishes = wishes.filter(
-    (w) =>
-      (!wloc || norm(`${w.location ?? ""} ${w.title}`).includes(norm(wloc))) &&
-      (!wpartner || norm(w.partners ?? "").includes(norm(wpartner)))
-  );
-  if (wsort) {
-    shownWishes = [...shownWishes].sort((a, b) => {
-      const ka = gradeKey(a.grade_max);
-      const kb = gradeKey(b.grade_max);
-      if (ka === null || kb === null) return (ka === null ? 1 : 0) - (kb === null ? 1 : 0);
-      return wsort === "easy" ? ka - kb : kb - ka;
-    });
-  }
+  const filterSortWishes = (arr: typeof wishes): typeof wishes => {
+    let out = arr.filter(
+      (w) =>
+        (!wloc || norm(`${w.location ?? ""} ${w.title}`).includes(norm(wloc))) &&
+        (!wpartner || norm(w.partners ?? "").includes(norm(wpartner)))
+    );
+    if (wsort) {
+      out = [...out].sort((a, b) => {
+        const ka = gradeKey(a.grade_max);
+        const kb = gradeKey(b.grade_max);
+        if (ka === null || kb === null) return (ka === null ? 1 : 0) - (kb === null ? 1 : 0);
+        return wsort === "easy" ? ka - kb : kb - ka;
+      });
+    }
+    return out;
+  };
+  const wishFiltering = Boolean(wloc || wpartner || wsort);
 
   const wishPartnerNodes = new Map(
     await Promise.all(
@@ -311,29 +316,12 @@ export default async function ProfilePage({
         </div>
       )}
 
-      {showWishlist && (wishes.length > 0 || isSelf) && (
+      {showWishlist && (
         <section className="wishlist-section" id="wishlist">
           <div className="wishlist-header">
             <h2 className="pitch-notes-title">{t.wishlist.title}</h2>
-            {isSelf && (
-              <form action={toggleWishlistVisibility}>
-                <button
-                  type="submit"
-                  className={`wishlist-visibility${profile.wishlist_public ? "" : " private"}`}
-                  title={
-                    profile.wishlist_public
-                      ? t.wishlist.visibilityPublicHint
-                      : t.wishlist.visibilityPrivateHint
-                  }
-                >
-                  {profile.wishlist_public
-                    ? t.wishlist.visibilityPublic
-                    : t.wishlist.visibilityPrivate}
-                </button>
-              </form>
-            )}
+            {isSelf && <CreateWishlistForm t={t.wishlist} />}
           </div>
-          {wishes.length === 0 && <p className="form-hint">{t.wishlist.empty}</p>}
           {wishes.length > 1 && (
             <form method="get" action={`/u/${profile.username}`} className="filter-bar wish-filter">
               {sp.q && <input type="hidden" name="q" value={sp.q} />}
@@ -357,81 +345,26 @@ export default async function ProfilePage({
                 <option value="hard">{t.wishlist.sortHard}</option>
               </select>
               <button type="submit">{t.filters.apply}</button>
-              {(wloc || wpartner || wsort) && (
+              {wishFiltering && (
                 <a href={`/u/${profile.username}#wishlist`}>{t.filters.clear}</a>
               )}
             </form>
           )}
-          <ul className="wishlist">
-            {shownWishes.map((wish) => (
-              <li key={wish.id} className="wish-row">
-                <div className="wish-main">
-                  <span className="wish-title">
-                    {wish.c2c_url ? (
-                      <a href={wish.c2c_url} target="_blank" rel="noopener noreferrer">
-                        {wish.title} ↗
-                      </a>
-                    ) : (
-                      wish.title
-                    )}
-                  </span>
-                  <span className="wish-meta">
-                    {[
-                      wish.location,
-                      wish.grade_max ?? wish.rating,
-                      wish.height_m ? `${wish.height_m} m` : null,
-                      wish.note,
-                    ]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </span>
-                </div>
-                {isSelf ? (
-                  <WishPartnersEditor
-                    wishId={wish.id}
-                    partners={wish.partners ?? ""}
-                    partnersNode={wishPartnerNodes.get(wish.id)}
-                    t={{
-                      placeholder: t.wishlist.partnersPlaceholder,
-                      save: t.wishlist.savePartners,
-                      saved: t.wishlist.partnersSaved,
-                      edit: t.wishlist.editPartners,
-                      add: t.wishlist.addPartners,
-                    }}
-                  />
-                ) : (
-                  wish.partners && (
-                    <span className="wish-partners">👥 {wishPartnerNodes.get(wish.id)}</span>
-                  )
-                )}
-                {isSelf && (
-                  <div className="wish-actions">
-                    <Link href={`/entries/new?from_wish=${wish.id}`} className="wish-done">
-                      {t.wishlist.done}
-                    </Link>
-                    <form action={deleteWish}>
-                      <input type="hidden" name="id" value={wish.id} />
-                      <button type="submit" className="delete-btn">
-                        {t.wishlist.remove}
-                      </button>
-                    </form>
-                  </div>
-                )}
-              </li>
+          {wishlists.length === 0 && <p className="form-hint">{t.wishlist.empty}</p>}
+          <div className="wishlist-lists">
+            {wishlists.map((list) => (
+              <WishlistSection
+                key={list.id}
+                list={list}
+                wishes={filterSortWishes(list.wishes)}
+                canEdit={isSelf}
+                partnerNodes={wishPartnerNodes}
+                locale={locale}
+                t={t.wishlist}
+                attribution={t.editor.suggestionsAttribution}
+              />
             ))}
-          </ul>
-          {isSelf && (
-            <WishForm
-              locale={locale}
-              t={{
-                titlePlaceholder: t.wishlist.titlePlaceholder,
-                notePlaceholder: t.wishlist.notePlaceholder,
-                partnersPlaceholder: t.wishlist.partnersPlaceholder,
-                add: t.wishlist.add,
-                attribution: t.editor.suggestionsAttribution,
-              }}
-            />
-          )}
+          </div>
         </section>
       )}
     </div>

@@ -87,6 +87,7 @@ export type Photo = {
 export type Wish = {
   id: string;
   user_id: string;
+  wishlist_id: string | null;
   title: string;
   location: string | null;
   grade_max: string | null;
@@ -100,3 +101,15 @@ export type Wish = {
   lon: number | null;
   created_at: string;
 };
+
+export type Wishlist = {
+  id: string;
+  owner_id: string;
+  name: string;
+  visibility: Visibility;
+  is_default: boolean;
+  created_at: string;
+};
+
+// A wishlist plus the wishes in it, as rendered on a profile.
+export type WishlistWithWishes = Wishlist & { wishes: Wish[] };

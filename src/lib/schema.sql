@@ -110,3 +110,19 @@ create table if not exists rate_limit_events (
   created_at timestamptz not null default now()
 );
 create index if not exists rate_limit_events_bucket_idx on rate_limit_events(bucket, created_at);
+
+-- Named wishlists. Every user has exactly one is_default list (never deletable,
+-- initially "Ma liste", renamable). Wishes belong to a list.
+create table if not exists wishlists (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references users(id) on delete cascade,
+  name text not null,
+  visibility text not null default 'public'
+    check (visibility in ('public','unlisted','private')),
+  is_default boolean not null default false,
+  created_at timestamptz not null default now()
+);
+create index if not exists wishlists_owner_idx on wishlists(owner_id);
+
+alter table wishes add column if not exists wishlist_id uuid references wishlists(id) on delete cascade;
+create index if not exists wishes_wishlist_idx on wishes(wishlist_id);

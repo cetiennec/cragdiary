@@ -187,6 +187,12 @@ export async function signup(formData: FormData): Promise<void> {
     throw e;
   }
 
+  // Every user starts with a non-deletable default wishlist.
+  await pool.query(
+    "insert into wishlists (owner_id, name, is_default) values ($1, 'Ma liste', true)",
+    [result.rows[0].id]
+  );
+
   await createSession(result.rows[0].id);
   redirect(`/u/${username}`);
 }
@@ -744,19 +750,34 @@ export async function toggleFollow(formData: FormData): Promise<void> {
   revalidatePath("/");
 }
 
+// Phase 1: only a list's owner can edit it. Phase 2 will add members here.
+async function canEditWishlist(wishlistId: string, userId: string): Promise<boolean> {
+  const r = await pool.query("select 1 from wishlists where id = $1 and owner_id = $2", [
+    wishlistId,
+    userId,
+  ]);
+  return r.rows.length > 0;
+}
+
 export async function addWish(formData: FormData): Promise<void> {
   const user = await currentUser();
   if (!user) throw new Error("Unauthorized");
 
+  const wishlistId = String(formData.get("wishlist_id") ?? "");
+  if (!wishlistId || !(await canEditWishlist(wishlistId, user.id))) {
+    throw new Error("Not found");
+  }
+
   const title = String(formData.get("title") ?? "").trim();
-  if (!title) return;
+  if (!title) redirect(`/u/${user.username}#wishlist`);
 
   const coords = parseCoords(formData);
   await pool.query(
-    `insert into wishes (user_id, title, location, grade_max, rating, pitches, height_m, c2c_url, note, partners, lat, lon)
-     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+    `insert into wishes (user_id, wishlist_id, title, location, grade_max, rating, pitches, height_m, c2c_url, note, partners, lat, lon)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
     [
       user.id,
+      wishlistId,
       title,
       optionalText(formData.get("location")),
       optionalText(formData.get("grade_max")),
@@ -772,7 +793,55 @@ export async function addWish(formData: FormData): Promise<void> {
   );
 
   revalidatePath(`/u/${user.username}`);
-  redirect(`/u/${user.username}`);
+  redirect(`/u/${user.username}#wishlist`);
+}
+
+export async function createWishlist(formData: FormData): Promise<void> {
+  const user = await currentUser();
+  if (!user) throw new Error("Unauthorized");
+
+  const name = String(formData.get("name") ?? "").trim().slice(0, 80);
+  if (name) {
+    await pool.query(
+      "insert into wishlists (owner_id, name, visibility, is_default) values ($1, $2, 'public', false)",
+      [user.id, name]
+    );
+  }
+  revalidatePath(`/u/${user.username}`);
+  redirect(`/u/${user.username}#wishlist`);
+}
+
+export async function renameWishlist(formData: FormData): Promise<void> {
+  const user = await currentUser();
+  if (!user) throw new Error("Unauthorized");
+
+  const id = String(formData.get("id") ?? "");
+  const name = String(formData.get("name") ?? "").trim().slice(0, 80);
+  if (id && name) {
+    await pool.query("update wishlists set name = $1 where id = $2 and owner_id = $3", [
+      name,
+      id,
+      user.id,
+    ]);
+  }
+  revalidatePath(`/u/${user.username}`);
+  redirect(`/u/${user.username}#wishlist`);
+}
+
+export async function deleteWishlist(formData: FormData): Promise<void> {
+  const user = await currentUser();
+  if (!user) throw new Error("Unauthorized");
+
+  const id = String(formData.get("id") ?? "");
+  if (id) {
+    // `not is_default` guarantees the default list can never be deleted.
+    await pool.query(
+      "delete from wishlists where id = $1 and owner_id = $2 and not is_default",
+      [id, user.id]
+    );
+  }
+  revalidatePath(`/u/${user.username}`);
+  redirect(`/u/${user.username}#wishlist`);
 }
 
 function escapeHtml(s: string): string {
@@ -942,23 +1011,30 @@ export async function updateWishPartners(formData: FormData): Promise<void> {
 
   const id = String(formData.get("id") ?? "");
   if (id) {
-    await pool.query("update wishes set partners = $1 where id = $2 and user_id = $3", [
-      optionalText(formData.get("partners")),
-      id,
-      user.id,
-    ]);
+    await pool.query(
+      `update wishes set partners = $1
+       where id = $2 and wishlist_id in (select id from wishlists where owner_id = $3)`,
+      [optionalText(formData.get("partners")), id, user.id]
+    );
   }
   revalidatePath(`/u/${user.username}`);
 }
 
-export async function toggleWishlistVisibility(): Promise<void> {
+export async function toggleWishlistVisibility(formData: FormData): Promise<void> {
   const user = await currentUser();
   if (!user) throw new Error("Unauthorized");
 
-  await pool.query("update users set wishlist_public = not wishlist_public where id = $1", [
-    user.id,
-  ]);
+  const id = String(formData.get("id") ?? "");
+  if (id) {
+    await pool.query(
+      `update wishlists
+       set visibility = case when visibility = 'public' then 'private' else 'public' end
+       where id = $1 and owner_id = $2`,
+      [id, user.id]
+    );
+  }
   revalidatePath(`/u/${user.username}`);
+  redirect(`/u/${user.username}#wishlist`);
 }
 
 export async function deleteWish(formData: FormData): Promise<void> {
@@ -967,7 +1043,11 @@ export async function deleteWish(formData: FormData): Promise<void> {
 
   const id = String(formData.get("id") ?? "");
   if (id) {
-    await pool.query("delete from wishes where id = $1 and user_id = $2", [id, user.id]);
+    await pool.query(
+      `delete from wishes
+       where id = $1 and wishlist_id in (select id from wishlists where owner_id = $2)`,
+      [id, user.id]
+    );
   }
   revalidatePath(`/u/${user.username}`);
 }

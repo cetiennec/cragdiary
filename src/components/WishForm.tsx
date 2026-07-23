@@ -23,7 +23,15 @@ function SubmitButton({ label }: { label: string }) {
   );
 }
 
-export default function WishForm({ t, locale }: { t: WishFormLabels; locale: Locale }) {
+export default function WishForm({
+  t,
+  locale,
+  wishlistId,
+}: {
+  t: WishFormLabels;
+  locale: Locale;
+  wishlistId: string;
+}) {
   const [title, setTitle] = useState("");
   const [fields, setFields] = useState({
     location: "",
@@ -86,6 +94,7 @@ export default function WishForm({ t, locale }: { t: WishFormLabels; locale: Loc
 
   return (
     <form action={addWish} className="wish-form">
+      <input type="hidden" name="wishlist_id" value={wishlistId} />
       {Object.entries(fields).map(([name, value]) =>
         name === "location" || name === "note" ? null : (
           <input key={name} type="hidden" name={name} value={value} />
