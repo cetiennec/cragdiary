@@ -113,3 +113,18 @@ export type Wishlist = {
 
 // A wishlist plus the wishes in it, as rendered on a profile.
 export type WishlistWithWishes = Wishlist & { wishes: Wish[] };
+
+export type WishlistMember = {
+  id: string;
+  username: string;
+  display_name: string;
+  has_avatar: boolean;
+};
+
+// A wishlist with everything needed to render + authorize it for one viewer.
+export type WishlistFull = WishlistWithWishes & {
+  owner_username: string;
+  owner_display_name: string;
+  members: WishlistMember[];
+  can_edit: boolean; // the current viewer may edit this list's routes
+};

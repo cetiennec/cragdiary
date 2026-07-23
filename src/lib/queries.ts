@@ -6,7 +6,8 @@ import {
   type Visibility,
   type Wish,
   type Wishlist,
-  type WishlistWithWishes,
+  type WishlistFull,
+  type WishlistMember,
 } from "@/lib/db";
 
 export type EntryWithAuthor = Entry & {
@@ -186,30 +187,88 @@ export async function getPinCollection(
   return result.rows;
 }
 
-// Lists owned by `ownerId`, each with its wishes. When `includeNonPublic` is
-// false (viewing someone else's profile) private/unlisted lists are dropped.
-// The default list always sorts first, then newest lists.
-export async function getWishlists(
-  ownerId: string,
-  { includeNonPublic }: { includeNonPublic: boolean }
-): Promise<WishlistWithWishes[]> {
-  const conds = ["owner_id = $1"];
-  if (!includeNonPublic) conds.push("visibility = 'public'");
-  const lists = await pool.query<Wishlist>(
-    `select * from wishlists where ${conds.join(" and ")}
-     order by is_default desc, created_at asc`,
-    [ownerId]
-  );
-  if (lists.rows.length === 0) return [];
+type WishlistRow = Wishlist & {
+  owner_username: string;
+  owner_display_name: string;
+};
 
-  const wishes = await pool.query<Wish>(
-    "select * from wishes where wishlist_id = any($1) order by created_at desc",
-    [lists.rows.map((l) => l.id)]
+// Load wishes + members for a set of lists and assemble the full view objects,
+// stamping `can_edit` for the given viewer (owner or member).
+async function assembleWishlists(
+  lists: WishlistRow[],
+  viewerId: string | null
+): Promise<WishlistFull[]> {
+  if (lists.length === 0) return [];
+  const ids = lists.map((l) => l.id);
+  const [wishes, members] = await Promise.all([
+    pool.query<Wish>(
+      "select * from wishes where wishlist_id = any($1) order by created_at desc",
+      [ids]
+    ),
+    pool.query<WishlistMember & { wishlist_id: string }>(
+      `select m.wishlist_id, u.id, u.username, u.display_name,
+              u.avatar is not null as has_avatar
+       from wishlist_members m
+       join users u on u.id = m.user_id
+       where m.wishlist_id = any($1)
+       order by m.created_at asc`,
+      [ids]
+    ),
+  ]);
+  return lists.map((l) => {
+    const mem = members.rows.filter((m) => m.wishlist_id === l.id);
+    return {
+      ...l,
+      wishes: wishes.rows.filter((w) => w.wishlist_id === l.id),
+      members: mem.map(({ id, username, display_name, has_avatar }) => ({
+        id,
+        username,
+        display_name,
+        has_avatar,
+      })),
+      can_edit:
+        viewerId != null &&
+        (l.owner_id === viewerId || mem.some((m) => m.id === viewerId)),
+    };
+  });
+}
+
+// Lists owned by `ownerId` that `viewerId` may see: public ones, plus any the
+// viewer owns or collaborates on. Default list first, then oldest to newest.
+export async function getOwnedWishlists(
+  ownerId: string,
+  viewerId: string | null
+): Promise<WishlistFull[]> {
+  const lists = await pool.query<WishlistRow>(
+    `select w.*, u.username as owner_username, u.display_name as owner_display_name
+     from wishlists w
+     join users u on u.id = w.owner_id
+     where w.owner_id = $1 and (
+       w.visibility = 'public'
+       or $2::uuid = w.owner_id
+       or exists (
+         select 1 from wishlist_members m
+         where m.wishlist_id = w.id and m.user_id = $2
+       )
+     )
+     order by w.is_default desc, w.created_at asc`,
+    [ownerId, viewerId]
   );
-  return lists.rows.map((l) => ({
-    ...l,
-    wishes: wishes.rows.filter((w) => w.wishlist_id === l.id),
-  }));
+  return assembleWishlists(lists.rows, viewerId);
+}
+
+// Lists owned by someone else that `userId` collaborates on ("shared with me").
+export async function getSharedWishlists(userId: string): Promise<WishlistFull[]> {
+  const lists = await pool.query<WishlistRow>(
+    `select w.*, u.username as owner_username, u.display_name as owner_display_name
+     from wishlists w
+     join wishlist_members m on m.wishlist_id = w.id and m.user_id = $1
+     join users u on u.id = w.owner_id
+     where w.owner_id <> $1
+     order by w.created_at asc`,
+    [userId]
+  );
+  return assembleWishlists(lists.rows, userId);
 }
 
 // A single list for authorization checks (who owns it).

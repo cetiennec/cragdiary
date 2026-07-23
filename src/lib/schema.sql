@@ -126,3 +126,13 @@ create index if not exists wishlists_owner_idx on wishlists(owner_id);
 
 alter table wishes add column if not exists wishlist_id uuid references wishlists(id) on delete cascade;
 create index if not exists wishes_wishlist_idx on wishes(wishlist_id);
+
+-- Collaborators on a shared list. A member (like the owner) can edit its
+-- routes; only the owner can rename/delete/share the list.
+create table if not exists wishlist_members (
+  wishlist_id uuid not null references wishlists(id) on delete cascade,
+  user_id uuid not null references users(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (wishlist_id, user_id)
+);
+create index if not exists wishlist_members_user_idx on wishlist_members(user_id);

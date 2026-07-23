@@ -7,7 +7,8 @@ import {
   getPinCollection,
   getUserByUsername,
   getUserStats,
-  getWishlists,
+  getOwnedWishlists,
+  getSharedWishlists,
   isFollowing,
   type EntryFilters,
 } from "@/lib/queries";
@@ -84,15 +85,17 @@ export default async function ProfilePage({
 
   const isSelf = user?.id === profile.id;
   if (profile.visibility === "private" && !isSelf) notFound();
-  const [entries, stats, years, wishlists, following, pinEntries] = await Promise.all([
-    getEntriesByUser(profile.id, { includeNonPublic: isSelf, filters }),
-    getUserStats(profile.id, { includeNonPublic: isSelf }),
-    getEntryYears(profile.id),
-    getWishlists(profile.id, { includeNonPublic: isSelf }),
-    user && !isSelf ? isFollowing(user.id, profile.id) : Promise.resolve(false),
-    isSelf ? getPinCollection(profile.id, { includeNonPublic: true }) : Promise.resolve([]),
-  ]);
-  const wishes = wishlists.flatMap((l) => l.wishes);
+  const [entries, stats, years, wishlists, sharedWishlists, following, pinEntries] =
+    await Promise.all([
+      getEntriesByUser(profile.id, { includeNonPublic: isSelf, filters }),
+      getUserStats(profile.id, { includeNonPublic: isSelf }),
+      getEntryYears(profile.id),
+      getOwnedWishlists(profile.id, user?.id ?? null),
+      isSelf ? getSharedWishlists(profile.id) : Promise.resolve([]),
+      user && !isSelf ? isFollowing(user.id, profile.id) : Promise.resolve(false),
+      isSelf ? getPinCollection(profile.id, { includeNonPublic: true }) : Promise.resolve([]),
+    ]);
+  const wishes = [...wishlists, ...sharedWishlists].flatMap((l) => l.wishes);
   const showWishlist = isSelf || wishlists.length > 0;
 
   // Earned pins + climbed-country flags, offered in the settings as one-click
@@ -350,14 +353,16 @@ export default async function ProfilePage({
               )}
             </form>
           )}
-          {wishlists.length === 0 && <p className="form-hint">{t.wishlist.empty}</p>}
+          {wishlists.length === 0 && sharedWishlists.length === 0 && (
+            <p className="form-hint">{t.wishlist.empty}</p>
+          )}
           <div className="wishlist-lists">
             {wishlists.map((list) => (
               <WishlistSection
                 key={list.id}
                 list={list}
                 wishes={filterSortWishes(list.wishes)}
-                canEdit={isSelf}
+                isOwner={list.owner_id === user?.id}
                 partnerNodes={wishPartnerNodes}
                 locale={locale}
                 t={t.wishlist}
@@ -365,6 +370,26 @@ export default async function ProfilePage({
               />
             ))}
           </div>
+
+          {sharedWishlists.length > 0 && (
+            <>
+              <h3 className="wishlist-subheading">{t.wishlist.sharedWithMe}</h3>
+              <div className="wishlist-lists">
+                {sharedWishlists.map((list) => (
+                  <WishlistSection
+                    key={list.id}
+                    list={list}
+                    wishes={filterSortWishes(list.wishes)}
+                    isOwner={false}
+                    partnerNodes={wishPartnerNodes}
+                    locale={locale}
+                    t={t.wishlist}
+                    attribution={t.editor.suggestionsAttribution}
+                  />
+                ))}
+              </div>
+            </>
+          )}
         </section>
       )}
     </div>

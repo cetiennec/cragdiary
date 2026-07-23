@@ -2231,6 +2231,94 @@ a {
   color: var(--text);
 }
 
+.wishlist-list-owner {
+  font-family: var(--body-font), sans-serif;
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.wishlist-subheading {
+  font-family: var(--heading-font), serif;
+  font-size: 1rem;
+  color: var(--text-muted);
+  margin: 1.4rem 0 0.6rem;
+}
+
+/* Collaborators row on a list */
+.wishlist-members {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.1rem 0 0.7rem;
+}
+
+.member-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.1rem 0.5rem;
+}
+
+.member-chip.owner {
+  border-color: var(--accent);
+}
+
+.member-avatar {
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 999px;
+  object-fit: cover;
+}
+
+.member-remove {
+  display: inline-flex;
+}
+
+.member-remove button {
+  font-size: 0.85rem;
+  line-height: 1;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0 0 0 0.1rem;
+}
+
+.member-invite {
+  display: inline-flex;
+  gap: 0.3rem;
+}
+
+.member-invite input {
+  font: inherit;
+  font-size: 0.78rem;
+  padding: 0.15rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--text);
+  max-width: 12rem;
+}
+
+.member-invite button {
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--accent);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.1rem 0.6rem;
+  cursor: pointer;
+}
+
 .profile-map-wrap {
   position: relative;
   display: flex;

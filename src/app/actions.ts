@@ -375,10 +375,11 @@ export async function createEntry(formData: FormData): Promise<string | void> {
 
   const fromWish = String(formData.get("from_wish") ?? "");
   if (fromWish) {
-    await pool.query("delete from wishes where id = $1 and user_id = $2", [
-      fromWish,
-      user.id,
-    ]);
+    // Any member of the wish's list (not just its creator) can tick it off.
+    await pool.query(
+      `delete from wishes where id = $1 and wishlist_id in (${EDITABLE_WISH_LISTS})`,
+      [fromWish, user.id]
+    );
   }
 
   revalidatePath("/");
@@ -750,14 +751,26 @@ export async function toggleFollow(formData: FormData): Promise<void> {
   revalidatePath("/");
 }
 
-// Phase 1: only a list's owner can edit it. Phase 2 will add members here.
+// A list's owner or any of its members may edit its routes.
 async function canEditWishlist(wishlistId: string, userId: string): Promise<boolean> {
-  const r = await pool.query("select 1 from wishlists where id = $1 and owner_id = $2", [
-    wishlistId,
-    userId,
-  ]);
+  const r = await pool.query(
+    `select 1 from wishlists w
+     where w.id = $1 and (
+       w.owner_id = $2
+       or exists (select 1 from wishlist_members m
+                  where m.wishlist_id = w.id and m.user_id = $2)
+     )`,
+    [wishlistId, userId]
+  );
   return r.rows.length > 0;
 }
+
+// SQL fragment: wishes in any list the user may edit (owner or member).
+const EDITABLE_WISH_LISTS = `
+  select w.id from wishlists w
+  where w.owner_id = $2
+     or exists (select 1 from wishlist_members m
+                where m.wishlist_id = w.id and m.user_id = $2)`;
 
 export async function addWish(formData: FormData): Promise<void> {
   const user = await currentUser();
@@ -837,6 +850,75 @@ export async function deleteWishlist(formData: FormData): Promise<void> {
     // `not is_default` guarantees the default list can never be deleted.
     await pool.query(
       "delete from wishlists where id = $1 and owner_id = $2 and not is_default",
+      [id, user.id]
+    );
+  }
+  revalidatePath(`/u/${user.username}`);
+  redirect(`/u/${user.username}#wishlist`);
+}
+
+// Owner invites a collaborator by username. Silently ignores unknown users,
+// the owner themselves, and already-members so the form never leaks who exists.
+export async function addWishlistMember(formData: FormData): Promise<void> {
+  const user = await currentUser();
+  if (!user) throw new Error("Unauthorized");
+
+  const id = String(formData.get("id") ?? "");
+  const username = String(formData.get("username") ?? "")
+    .trim()
+    .replace(/^@/, "")
+    .toLowerCase();
+  if (id && username) {
+    const owns = await pool.query("select 1 from wishlists where id = $1 and owner_id = $2", [
+      id,
+      user.id,
+    ]);
+    const target = await pool.query<{ id: string }>(
+      "select id from users where username = $1",
+      [username]
+    );
+    const memberId = target.rows[0]?.id;
+    if (owns.rows.length > 0 && memberId && memberId !== user.id) {
+      await pool.query(
+        `insert into wishlist_members (wishlist_id, user_id) values ($1, $2)
+         on conflict do nothing`,
+        [id, memberId]
+      );
+    }
+  }
+  revalidatePath(`/u/${user.username}`);
+  redirect(`/u/${user.username}#wishlist`);
+}
+
+export async function removeWishlistMember(formData: FormData): Promise<void> {
+  const user = await currentUser();
+  if (!user) throw new Error("Unauthorized");
+
+  const id = String(formData.get("id") ?? "");
+  const memberId = String(formData.get("member_id") ?? "");
+  if (id && memberId) {
+    // Owner removes anyone; a member can remove only themselves (leave).
+    await pool.query(
+      `delete from wishlist_members
+       where wishlist_id = $1 and user_id = $2
+         and ($3 = $2 or exists (
+           select 1 from wishlists w where w.id = $1 and w.owner_id = $3
+         ))`,
+      [id, memberId, user.id]
+    );
+  }
+  revalidatePath(`/u/${user.username}`);
+  redirect(`/u/${user.username}#wishlist`);
+}
+
+export async function leaveWishlist(formData: FormData): Promise<void> {
+  const user = await currentUser();
+  if (!user) throw new Error("Unauthorized");
+
+  const id = String(formData.get("id") ?? "");
+  if (id) {
+    await pool.query(
+      "delete from wishlist_members where wishlist_id = $1 and user_id = $2",
       [id, user.id]
     );
   }
@@ -1013,8 +1095,8 @@ export async function updateWishPartners(formData: FormData): Promise<void> {
   if (id) {
     await pool.query(
       `update wishes set partners = $1
-       where id = $2 and wishlist_id in (select id from wishlists where owner_id = $3)`,
-      [optionalText(formData.get("partners")), id, user.id]
+       where id = $3 and wishlist_id in (${EDITABLE_WISH_LISTS})`,
+      [optionalText(formData.get("partners")), user.id, id]
     );
   }
   revalidatePath(`/u/${user.username}`);
@@ -1044,8 +1126,7 @@ export async function deleteWish(formData: FormData): Promise<void> {
   const id = String(formData.get("id") ?? "");
   if (id) {
     await pool.query(
-      `delete from wishes
-       where id = $1 and wishlist_id in (select id from wishlists where owner_id = $2)`,
+      `delete from wishes where id = $1 and wishlist_id in (${EDITABLE_WISH_LISTS})`,
       [id, user.id]
     );
   }
