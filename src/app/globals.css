@@ -2232,6 +2232,18 @@ a {
   border-color: var(--accent);
 }
 
+.feed-section {
+  margin-bottom: 2.4rem;
+}
+
+.feed-heading {
+  font-family: var(--heading-font), serif;
+  font-size: 1.35rem;
+  margin: 0 0 1rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--border, #e0d3ba);
+}
+
 /* Filter bar */
 
 .filter-bar {

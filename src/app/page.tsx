@@ -4,6 +4,10 @@ import { currentUser } from "@/lib/auth";
 import { getDict } from "@/lib/i18n";
 import EntryCard from "@/components/EntryCard";
 import FilterBar from "@/components/FilterBar";
+import type { EntryWithAuthor } from "@/lib/queries";
+import type { Locale } from "@/lib/i18n";
+
+const PUBLIC_LIMIT = 24;
 
 function parseFilters(params: { q?: string; year?: string; loc?: string }): EntryFilters {
   const year = parseInt(params.year ?? "", 10);
@@ -14,10 +18,20 @@ function parseFilters(params: { q?: string; year?: string; loc?: string }): Entr
   };
 }
 
+function Grid({ entries, locale }: { entries: EntryWithAuthor[]; locale: Locale }) {
+  return (
+    <div className="entry-grid">
+      {entries.map((entry) => (
+        <EntryCard key={entry.id} entry={entry} locale={locale} />
+      ))}
+    </div>
+  );
+}
+
 export default async function Home({
   searchParams,
 }: {
-  searchParams: Promise<{ feed?: string; q?: string; year?: string; loc?: string }>;
+  searchParams: Promise<{ q?: string; year?: string; loc?: string }>;
 }) {
   const [params, user, { locale, t }] = await Promise.all([
     searchParams,
@@ -25,66 +39,80 @@ export default async function Home({
     getDict(),
   ]);
 
-  const cordees = params.feed === "cordees" && Boolean(user);
   const filters = parseFilters(params);
-  const [entries, years] = await Promise.all([
-    getFeed(filters, {
-      cordeesOf: cordees ? { id: user!.id, username: user!.username } : null,
-    }),
-    getEntryYears(),
-  ]);
-
   const hasFilters = Boolean(filters.q || filters.year || filters.location);
-  const baseQuery = cordees ? "?feed=cordees" : "?";
+  const years = await getEntryYears();
+
+  // Searching: one combined public result set across everyone.
+  if (hasFilters) {
+    const entries = await getFeed(filters, { cordeesOf: null });
+    return (
+      <div className="page-container">
+        <FilterBar
+          t={t.filters}
+          years={years}
+          current={{ q: params.q ?? "", year: params.year ?? "", loc: params.loc ?? "" }}
+          action="/"
+        />
+        {entries.length === 0 ? (
+          <div className="empty-state">
+            <p>{t.feed.empty}</p>
+            <p>
+              <Link href="/">{t.filters.clear}</Link>
+            </p>
+          </div>
+        ) : (
+          <Grid entries={entries} locale={locale} />
+        )}
+      </div>
+    );
+  }
+
+  // Default: rope-parties feed on top, public outings below.
+  const [cordeesEntries, publicEntries] = await Promise.all([
+    user ? getFeed({}, { cordeesOf: { id: user.id, username: user.username } }) : Promise.resolve([]),
+    getFeed({}, { cordeesOf: null }),
+  ]);
+  const cordeeIds = new Set(cordeesEntries.map((e) => e.id));
+  const publicOnly = publicEntries.filter((e) => !cordeeIds.has(e.id)).slice(0, PUBLIC_LIMIT);
 
   return (
     <div className="page-container">
-      {user && (
-        <div className="feed-tabs">
-          <Link href="/" className={cordees ? "" : "feed-tab-active"}>
-            {t.feed.tabAll}
-          </Link>
-          <Link href="/?feed=cordees" className={cordees ? "feed-tab-active" : ""}>
-            {t.feed.tabCordees}
-          </Link>
-        </div>
-      )}
-
       <FilterBar
         t={t.filters}
         years={years}
-        current={{ q: params.q ?? "", year: params.year ?? "", loc: params.loc ?? "" }}
-        hidden={cordees ? { feed: "cordees" } : {}}
+        current={{ q: "", year: "", loc: "" }}
         action="/"
       />
 
-      {entries.length === 0 ? (
-        <div className="empty-state">
-          {cordees && !hasFilters ? (
-            <p>{t.feed.emptyCordees}</p>
+      {user && (
+        <section className="feed-section">
+          <h2 className="feed-heading">{t.feed.tabCordees}</h2>
+          {cordeesEntries.length === 0 ? (
+            <p className="form-hint">{t.feed.emptyCordees}</p>
           ) : (
-            <p>{t.feed.empty}</p>
+            <Grid entries={cordeesEntries} locale={locale} />
           )}
-          {!user && !hasFilters && (
-            <p>
-              {t.feed.createPre}
-              <Link href="/signup">{t.feed.createLink}</Link>
-              {t.feed.createPost}
-            </p>
-          )}
-          {hasFilters && (
-            <p>
-              <Link href={baseQuery === "?" ? "/" : baseQuery}>{t.filters.clear}</Link>
-            </p>
-          )}
-        </div>
-      ) : (
-        <div className="entry-grid">
-          {entries.map((entry) => (
-            <EntryCard key={entry.id} entry={entry} locale={locale} />
-          ))}
-        </div>
+        </section>
       )}
+
+      <section className="feed-section">
+        {user && <h2 className="feed-heading">{t.feed.publicTitle}</h2>}
+        {publicOnly.length === 0 ? (
+          <div className="empty-state">
+            <p>{t.feed.empty}</p>
+            {!user && (
+              <p>
+                {t.feed.createPre}
+                <Link href="/signup">{t.feed.createLink}</Link>
+                {t.feed.createPost}
+              </p>
+            )}
+          </div>
+        ) : (
+          <Grid entries={publicOnly} locale={locale} />
+        )}
+      </section>
     </div>
   );
 }
