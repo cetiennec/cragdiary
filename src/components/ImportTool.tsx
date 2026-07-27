@@ -304,7 +304,7 @@ export default function ImportTool({ t }: { t: ImportLabels }) {
         />
         <div className="import-actions">
           <label className="import-file">
-            {t.fileLabel}
+            <span aria-hidden>📎</span> {t.fileLabel}
             <input
               type="file"
               accept=".json,.csv,.tsv,.txt"
