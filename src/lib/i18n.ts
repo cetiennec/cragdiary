@@ -27,7 +27,7 @@ const en = {
   themes: { scrapbook: "Scrapbook", minimal: "Minimal" },
   feed: {
     tabAll: "Everyone",
-    tabCordees: "My rope parties",
+    tabCordees: "My rope parties & follows",
     publicTitle: "Public outings",
     emptyCordees: "No entries from your rope parties yet — a rope party is someone you follow, or someone you climbed with (tagged with @ in partners, either way).",
     empty: "No entries yet.",
@@ -466,7 +466,7 @@ const fr: Dict = {
   themes: { scrapbook: "Carnet", minimal: "Minimal" },
   feed: {
     tabAll: "Tout le monde",
-    tabCordees: "Mes cordées",
+    tabCordees: "Mes cordées et mes suivis",
     publicTitle: "Sorties publiques",
     emptyCordees: "Aucune entrée de vos cordées — une cordée, c'est quelqu'un que vous suivez ou avec qui vous avez grimpé (mentionné avec @ dans les partenaires, dans un sens ou dans l'autre).",
     empty: "Aucune entrée pour l'instant.",
