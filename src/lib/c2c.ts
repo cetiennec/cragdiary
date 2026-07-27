@@ -240,7 +240,7 @@ type C2cOutingListDoc = {
 export async function listUserOutings(
   userId: number,
   lang: string,
-  max = 300
+  max = 2000
 ): Promise<C2cOutingSummary[]> {
   const out: C2cOutingSummary[] = [];
   const pageSize = 100;
