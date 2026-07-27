@@ -256,6 +256,7 @@ const en = {
     removeMember: "Remove from list",
   },
   exportLabel: "Download my journal (JSON)",
+  exportCarnetLabel: "Route logbook (PDF)",
   importLabel: "Import entries (JSON, CSV, free text)",
   importPromo: "⬆︎ Import an existing logbook",
   install: {
@@ -620,6 +621,7 @@ const fr: Dict = {
     removeMember: "Retirer de la liste",
   },
   exportLabel: "Télécharger mon carnet (JSON)",
+  exportCarnetLabel: "Carnet de course (PDF)",
   importLabel: "Importer des entrées (JSON, CSV, texte libre)",
   importPromo: "⬆︎ Importer un carnet existant",
   install: {

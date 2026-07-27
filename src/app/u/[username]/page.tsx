@@ -241,6 +241,7 @@ export default async function ProfilePage({
               dangerTitle: t.profile.dangerTitle,
               deleteLabel: t.profile.deleteLabel,
               exportLabel: t.exportLabel,
+              exportCarnetLabel: t.exportCarnetLabel,
               importLabel: t.importLabel,
               deleteConfirmPassword: t.profile.deleteConfirmPassword,
               deleteButton: t.profile.deleteButton,
