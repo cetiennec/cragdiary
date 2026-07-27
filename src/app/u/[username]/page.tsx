@@ -25,6 +25,7 @@ import EntryCard from "@/components/EntryCard";
 import ProfileMap from "@/components/ProfileMap";
 import ProfileSettingsForm from "@/components/ProfileSettingsForm";
 import ProfileCover from "@/components/ProfileCover";
+import WelcomeTour from "@/components/WelcomeTour";
 
 export async function generateMetadata({
   params,
@@ -210,6 +211,7 @@ export default async function ProfilePage({
 
   return (
     <div className="page-container profile-page">
+      {isSelf && <WelcomeTour t={t.welcome} />}
       <ProfileCover username={profile.username} hasCover={profile.has_cover} />
       {isSelf && error && (
         <p className="form-error">

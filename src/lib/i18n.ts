@@ -225,6 +225,19 @@ const en = {
     climbedWith: "Climbed together",
     empty: "No rope parties yet — follow climbers or tag partners with @ in your entries.",
   },
+  welcome: {
+    title: "Welcome to Cragdiary 👋",
+    intro: "A few things that make logging fast:",
+    close: "Let's go!",
+    items: [
+      ["🔎", "Auto search from camptocamp", "Type a route name in the title — grade, orientation, height and map point come straight from camptocamp."],
+      ["🏔️", "Import an existing outing", "Paste a camptocamp outing link (under the title, or Import → a camptocamp outing) and fields + photos are pulled in."],
+      ["📅", "Date from your photos", "Add photos and the outing date is read from them automatically."],
+      ["🎛️", "You pick what shows", "Every field can be shown or hidden on the entry — keep only what matters."],
+      ["🤝", "Rope parties", "Follow climbers or tag partners with @ — their outings show up under \"My rope parties\"."],
+      ["🔒", "Your privacy", "Each entry is public, unlisted or private. You decide, entry by entry."],
+    ] as [string, string, string][],
+  },
   filters: {
     q: "Search",
     qPlaceholder: "route, place, partner…",
@@ -632,6 +645,19 @@ const fr: Dict = {
     following: "Suivi",
     climbedWith: "Grimpé ensemble",
     empty: "Aucune cordée pour l'instant — suivez des grimpeurs ou taguez vos partenaires avec @ dans vos entrées.",
+  },
+  welcome: {
+    title: "Bienvenue sur Cragdiary 👋",
+    intro: "Quelques atouts pour saisir vite :",
+    close: "C'est parti !",
+    items: [
+      ["🔎", "Recherche auto camptocamp", "Tape un nom de voie dans le titre — cotation, orientation, hauteur et point sur la carte viennent de camptocamp."],
+      ["🏔️", "Import d'une sortie existante", "Colle le lien d'une sortie camptocamp (sous le titre, ou Importer → une sortie camptocamp) : champs + photos récupérés."],
+      ["📅", "Date depuis tes photos", "Ajoute des photos et la date de la sortie en est déduite automatiquement."],
+      ["🎛️", "Tu choisis ce qui s'affiche", "Chaque info peut être montrée ou masquée sur l'entrée — ne garde que l'essentiel."],
+      ["🤝", "Les cordées", "Suis des grimpeurs ou tague tes partenaires avec @ — leurs sorties apparaissent dans « Mes cordées »."],
+      ["🔒", "Ta confidentialité", "Chaque entrée est publique, non listée ou privée. Tu décides, entrée par entrée."],
+    ] as [string, string, string][],
   },
   filters: {
     q: "Recherche",
