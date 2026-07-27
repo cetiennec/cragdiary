@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getAllUsers, getFollowers, getFollowing } from "@/lib/queries";
+import { getAllUsers, getCordees } from "@/lib/queries";
 import { currentUser } from "@/lib/auth";
 import { getDict } from "@/lib/i18n";
 
@@ -21,26 +21,13 @@ function Avatar({ user }: { user: Row }) {
 export default async function ClimbersPage() {
   const [users, user, { t }] = await Promise.all([getAllUsers(), currentUser(), getDict()]);
 
-  const [followers, following] = user
-    ? await Promise.all([getFollowers(user.id), getFollowing(user.id)])
-    : [[], []];
+  // A cordée = someone you follow or someone you climbed with.
+  const cordeeList = user ? await getCordees(user.id, user.username) : [];
 
-  // Merge follow directions into one "rope parties" list.
-  const cordees = new Map<
-    string,
-    { user: Row; iFollow: boolean; followsMe: boolean }
-  >();
-  for (const f of following) {
-    cordees.set(f.username, { user: f, iFollow: true, followsMe: false });
-  }
-  for (const f of followers) {
-    const existing = cordees.get(f.username);
-    if (existing) existing.followsMe = true;
-    else cordees.set(f.username, { user: f, iFollow: false, followsMe: true });
-  }
-
-  const cordeeList = [...cordees.values()];
-  const hidden = new Set<string>([...cordees.keys(), ...(user ? [user.username] : [])]);
+  const hidden = new Set<string>([
+    ...cordeeList.map((c) => c.username),
+    ...(user ? [user.username] : []),
+  ]);
   const others = users.filter((u) => !hidden.has(u.username));
 
   return (
@@ -54,17 +41,14 @@ export default async function ClimbersPage() {
             <p className="form-hint">{t.climbers.empty}</p>
           ) : (
             <div className="climber-list">
-              {cordeeList.map(({ user: c, iFollow, followsMe }) => (
+              {cordeeList.map((c) => (
                 <Link key={c.username} href={`/u/${c.username}`} className="climber-row">
                   <Avatar user={c} />
                   <span className="climber-name">{c.display_name}</span>
                   <span className="climber-meta">
                     @{c.username}
-                    {iFollow && followsMe
-                      ? ` · 🤝 ${t.climbers.mutual}`
-                      : iFollow
-                        ? ` · ${t.climbers.following}`
-                        : ` · ${t.climbers.followsYou}`}
+                    {c.climbed_with && ` · 🧗 ${t.climbers.climbedWith}`}
+                    {c.i_follow && ` · 👤 ${t.climbers.following}`}
                   </span>
                 </Link>
               ))}
