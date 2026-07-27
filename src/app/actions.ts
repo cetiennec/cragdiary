@@ -394,76 +394,72 @@ export async function createEntry(formData: FormData): Promise<string | void> {
   redirect(`/entries/${entryId}`);
 }
 
-// Bulk-import selected camptocamp outings for the current user. Each becomes a
-// private entry (fields + optional photos). Import only your own outings — the
-// UI carries the ownership warning.
-const C2C_BULK_MAX_OUTINGS = 60;
-const C2C_BULK_MAX_PHOTOS = 15;
+// Import ONE camptocamp outing as a private entry (fields + optional photos).
+// Called once per outing from the client so each request stays short (the
+// account importer loops with a progress bar) — a single action importing a
+// whole account would blow the serverless time limit. Import only your own
+// outings — the UI carries the ownership warning.
+const C2C_MAX_PHOTOS = 15;
 
-export async function importC2cAccount(formData: FormData): Promise<void> {
+export async function importOneC2cOuting(
+  id: number,
+  withPhotos: boolean
+): Promise<{ ok: boolean; title?: string }> {
   const user = await currentUser();
   if (!user) throw new Error("Unauthorized");
+  if (!Number.isFinite(id)) return { ok: false };
 
   const lang = await getLocale();
-  const ids = formData
-    .getAll("outing")
-    .map((v) => Number(String(v)))
-    .filter((n) => Number.isFinite(n))
-    .slice(0, C2C_BULK_MAX_OUTINGS);
-  const withPhotos = formData.get("photos") !== "0";
+  const o = await importOuting(id, lang);
+  if (!o || !o.date || !o.title) return { ok: false };
 
   const client = await pool.connect();
   try {
-    for (const id of ids) {
-      const o = await importOuting(id, lang);
-      if (!o || !o.date || !o.title) continue;
+    const res = await client.query<{ id: string }>(
+      `insert into entries
+         (user_id, entry_date, crag, location, grade_max, rating, orientation,
+          equipment, height_m, partners, notes, c2c_url, c2c_summary, lat, lon,
+          country, visibility)
+       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,'private')
+       returning id`,
+      [
+        user.id,
+        o.date,
+        o.title,
+        o.location,
+        o.grade,
+        o.rating,
+        o.orientation,
+        o.equipment,
+        o.height_m,
+        o.partners,
+        o.notes,
+        o.c2c_url,
+        o.c2c_summary,
+        o.lat,
+        o.lon,
+        await entryCountry({ lat: o.lat, lon: o.lon }),
+      ]
+    );
+    const entryId = res.rows[0].id;
 
-      const res = await client.query<{ id: string }>(
-        `insert into entries
-           (user_id, entry_date, crag, location, grade_max, rating, orientation,
-            equipment, height_m, partners, notes, c2c_url, c2c_summary, lat, lon,
-            country, visibility)
-         values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,'private')
-         returning id`,
-        [
-          user.id,
-          o.date,
-          o.title,
-          o.location,
-          o.grade,
-          o.rating,
-          o.orientation,
-          o.equipment,
-          o.height_m,
-          o.partners,
-          o.notes,
-          o.c2c_url,
-          o.c2c_summary,
-          o.lat,
-          o.lon,
-          await entryCountry({ lat: o.lat, lon: o.lon }),
-        ]
-      );
-      const entryId = res.rows[0].id;
-
-      if (withPhotos) {
-        let position = 0;
-        for (const fn of o.images.slice(0, C2C_BULK_MAX_PHOTOS)) {
-          try {
-            const r = await fetch(c2cImageUrl(fn, "BI"), {
-              signal: AbortSignal.timeout(15000),
-            });
-            if (!r.ok) continue;
-            const processed = await processPhotoBuffer(Buffer.from(await r.arrayBuffer()));
-            await client.query(
-              `insert into photos (entry_id, content_type, data, position, size, width, height)
-               values ($1, 'image/webp', $2, $3, 'm', $4, $5)`,
-              [entryId, processed.data, position, processed.width, processed.height]
-            );
-            position += 1;
-          } catch {
-            // One bad image shouldn't abort the whole entry.
-          }
+    if (withPhotos) {
+      let position = 0;
+      for (const fn of o.images.slice(0, C2C_MAX_PHOTOS)) {
+        try {
+          const r = await fetch(c2cImageUrl(fn, "BI"), {
+            signal: AbortSignal.timeout(15000),
+          });
+          if (!r.ok) continue;
+          const processed = await processPhotoBuffer(Buffer.from(await r.arrayBuffer()));
+          await client.query(
+            `insert into photos (entry_id, content_type, data, position, size, width, height)
+             values ($1, 'image/webp', $2, $3, 'm', $4, $5)`,
+            [entryId, processed.data, position, processed.width, processed.height]
+          );
+          position += 1;
+        } catch {
+          // One bad image shouldn't abort the whole entry.
         }
       }
     }
@@ -473,7 +469,7 @@ export async function importC2cAccount(formData: FormData): Promise<void> {
 
   revalidatePath("/");
   revalidatePath(`/u/${user.username}`);
-  redirect(`/u/${user.username}`);
+  return { ok: true, title: o.title };
 }
 
 export async function updateEntry(formData: FormData): Promise<void> {

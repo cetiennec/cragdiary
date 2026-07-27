@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useFormStatus } from "react-dom";
-import { importC2cAccount } from "@/app/actions";
+import { useRouter } from "next/navigation";
+import { importOneC2cOuting } from "@/app/actions";
 import type { Locale } from "@/lib/i18n";
 
 type C2cOutingSummary = { id: number; date: string | null; title: string };
@@ -19,31 +19,32 @@ type Labels = {
   c2cAccountSelectNone: string;
   c2cAccountCount: (n: number) => string;
   c2cAccountImport: (n: number) => string;
+  c2cAccountImporting: (done: number, total: number) => string;
+  c2cAccountDone: (n: number) => string;
   c2cAccountEmpty: string;
   c2cAccountError: string;
 };
 
-function ImportButton({ label }: { label: string }) {
-  const { pending } = useFormStatus();
-  return (
-    <button type="submit" className="btn-primary" disabled={pending}>
-      {pending ? "…" : label}
-    </button>
-  );
-}
-
 export default function C2cAccountImport({
   locale,
+  username,
   t,
 }: {
   locale: Locale;
+  username: string;
   t: Labels;
 }) {
+  const router = useRouter();
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [outings, setOutings] = useState<C2cOutingSummary[] | null>(null);
   const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [withPhotos, setWithPhotos] = useState(true);
+  // Import progress: null = idle, else {done,total}. done === total when finished.
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+
+  const importing = progress !== null && progress.done < progress.total;
 
   async function load() {
     const value = url.trim();
@@ -51,6 +52,7 @@ export default function C2cAccountImport({
     setLoading(true);
     setError(null);
     setOutings(null);
+    setProgress(null);
     try {
       const res = await fetch(
         `/api/c2c/account?url=${encodeURIComponent(value)}&lang=${locale}`
@@ -73,6 +75,25 @@ export default function C2cAccountImport({
       else next.add(id);
       return next;
     });
+  }
+
+  // Import one outing at a time so each request is short (avoids the serverless
+  // time limit) and we can show progress.
+  async function runImport() {
+    const ids = [...selected];
+    if (ids.length === 0 || importing) return;
+    setError(null);
+    setProgress({ done: 0, total: ids.length });
+    for (const id of ids) {
+      try {
+        await importOneC2cOuting(id, withPhotos);
+      } catch {
+        // Keep going; a single failure shouldn't stop the batch.
+      }
+      setProgress((p) => (p ? { ...p, done: p.done + 1 } : p));
+    }
+    router.push(`/u/${username}`);
+    router.refresh();
   }
 
   return (
@@ -111,21 +132,33 @@ export default function C2cAccountImport({
       {outings && outings.length === 0 && <p className="form-hint">{t.c2cAccountEmpty}</p>}
 
       {outings && outings.length > 0 && (
-        <form action={importC2cAccount} className="c2c-account-form">
+        <div className="c2c-account-form">
           <div className="c2c-account-toolbar">
             <span>{t.c2cAccountCount(outings.length)}</span>
             <button
               type="button"
               className="link-btn"
               onClick={() => setSelected(new Set(outings.map((o) => o.id)))}
+              disabled={importing}
             >
               {t.c2cAccountSelectAll}
             </button>
-            <button type="button" className="link-btn" onClick={() => setSelected(new Set())}>
+            <button
+              type="button"
+              className="link-btn"
+              onClick={() => setSelected(new Set())}
+              disabled={importing}
+            >
               {t.c2cAccountSelectNone}
             </button>
             <label className="c2c-account-photos">
-              <input type="checkbox" name="photos" value="1" defaultChecked /> {t.c2cAccountPhotos}
+              <input
+                type="checkbox"
+                checked={withPhotos}
+                onChange={(e) => setWithPhotos(e.target.checked)}
+                disabled={importing}
+              />{" "}
+              {t.c2cAccountPhotos}
             </label>
           </div>
 
@@ -137,6 +170,7 @@ export default function C2cAccountImport({
                     type="checkbox"
                     checked={selected.has(o.id)}
                     onChange={() => toggle(o.id)}
+                    disabled={importing}
                   />
                   <span className="c2c-account-date">{o.date ?? "—"}</span>
                   <span className="c2c-account-title">{o.title}</span>
@@ -145,12 +179,21 @@ export default function C2cAccountImport({
             ))}
           </ul>
 
-          {[...selected].map((id) => (
-            <input key={id} type="hidden" name="outing" value={id} />
-          ))}
-
-          <ImportButton label={t.c2cAccountImport(selected.size)} />
-        </form>
+          {progress && progress.done >= progress.total ? (
+            <p className="c2c-import-status">{t.c2cAccountDone(progress.total)}</p>
+          ) : (
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={() => void runImport()}
+              disabled={importing || selected.size === 0}
+            >
+              {importing
+                ? t.c2cAccountImporting(progress!.done, progress!.total)
+                : t.c2cAccountImport(selected.size)}
+            </button>
+          )}
+        </div>
       )}
     </section>
   );

@@ -17,6 +17,7 @@ export default async function ImportPage() {
       <ImportTool t={t.importer} />
       <C2cAccountImport
         locale={locale}
+        username={user.username}
         t={{
           c2cAccountTitle: t.importer.c2cAccountTitle,
           c2cAccountHint: t.importer.c2cAccountHint,
@@ -29,6 +30,8 @@ export default async function ImportPage() {
           c2cAccountSelectNone: t.importer.c2cAccountSelectNone,
           c2cAccountCount: t.importer.c2cAccountCount,
           c2cAccountImport: t.importer.c2cAccountImport,
+          c2cAccountImporting: t.importer.c2cAccountImporting,
+          c2cAccountDone: t.importer.c2cAccountDone,
           c2cAccountEmpty: t.importer.c2cAccountEmpty,
           c2cAccountError: t.importer.c2cAccountError,
         }}
