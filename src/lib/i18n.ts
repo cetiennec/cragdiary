@@ -215,7 +215,15 @@ const en = {
       thisMonth: "This month",
     },
   },
-  climbers: { title: "Climbers" },
+  climbers: {
+    title: "Climbers",
+    cordeesTitle: "My rope parties",
+    allTitle: "All climbers",
+    following: "Following",
+    followsYou: "Follows you",
+    mutual: "You follow each other",
+    empty: "You don't follow anyone yet — follow climbers from their profile.",
+  },
   filters: {
     q: "Search",
     qPlaceholder: "route, place, partner…",
@@ -611,7 +619,15 @@ const fr: Dict = {
       thisMonth: "Ce mois-ci",
     },
   },
-  climbers: { title: "Grimpeurs" },
+  climbers: {
+    title: "Grimpeurs",
+    cordeesTitle: "Mes cordées",
+    allTitle: "Tous les grimpeurs",
+    following: "Je suis",
+    followsYou: "Vous suit",
+    mutual: "Vous vous suivez",
+    empty: "Vous ne suivez personne pour l'instant — suivez des grimpeurs depuis leur profil.",
+  },
   filters: {
     q: "Recherche",
     qPlaceholder: "voie, lieu, partenaire…",

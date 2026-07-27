@@ -1521,6 +1521,14 @@ a {
 
 /* Climbers list */
 
+.climber-section {
+  margin-bottom: 2.2rem;
+}
+
+.climber-section .page-subtitle {
+  margin-bottom: 0.7rem;
+}
+
 .climber-list {
   display: flex;
   flex-direction: column;
