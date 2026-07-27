@@ -91,8 +91,8 @@ export default function EntryForm({
   const [starLevel, setStarLevel] = useState(entry?.star_level ?? 0);
   const [monthOnly, setMonthOnly] = useState(entry?.month_only ?? false);
 
-  // Live copy of the notes so the "+" placement strip reflects the current
-  // paragraphs as you type. The textarea itself stays uncontrolled (defaultValue).
+  // Controlled notes: drives both the textarea and the "+" placement strip, so
+  // programmatic fills (c2c outing import) show up and get submitted.
   const [notesText, setNotesText] = useState(entry?.notes ?? "");
   const paragraphs = notesText.trim() ? notesText.split(/\n{2,}/) : [];
 
@@ -1257,7 +1257,7 @@ export default function EntryForm({
           name="notes"
           className="notion-notes-input"
           rows={8}
-          defaultValue={entry?.notes ?? ""}
+          value={notesText}
           onChange={(e) => setNotesText(e.target.value)}
           placeholder={t.notesPlaceholder}
           aria-label={t.notesAria}
