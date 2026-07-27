@@ -86,6 +86,20 @@ export default function WishlistSection({
         />
       )}
 
+      {canEdit && (
+        <WishForm
+          locale={locale}
+          wishlistId={list.id}
+          t={{
+            titlePlaceholder: t.titlePlaceholder,
+            notePlaceholder: t.notePlaceholder,
+            partnersPlaceholder: t.partnersPlaceholder,
+            add: t.add,
+            attribution,
+          }}
+        />
+      )}
+
       {wishes.length === 0 && <p className="form-hint">{t.empty}</p>}
 
       <ul className="wishlist">
@@ -146,20 +160,6 @@ export default function WishlistSection({
           </li>
         ))}
       </ul>
-
-      {canEdit && (
-        <WishForm
-          locale={locale}
-          wishlistId={list.id}
-          t={{
-            titlePlaceholder: t.titlePlaceholder,
-            notePlaceholder: t.notePlaceholder,
-            partnersPlaceholder: t.partnersPlaceholder,
-            add: t.add,
-            attribution,
-          }}
-        />
-      )}
     </details>
   );
 }
