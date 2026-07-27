@@ -318,6 +318,8 @@ export default function EntryForm({
   // (which asks for the link and opens /entries/new?c2c=…), auto-run on mount.
   const [importing, setImporting] = useState(false);
   const [importErr, setImportErr] = useState<string | null>(null);
+  const [outingUrl, setOutingUrl] = useState("");
+  const [imported, setImported] = useState(false);
 
   async function importOuting(rawUrl: string) {
     const url = rawUrl.trim();
@@ -385,6 +387,8 @@ export default function EntryForm({
         const files = fetched.filter((f): f is File => f !== null);
         if (files.length > 0) await ingestFiles(files, "append");
       }
+      setImported(true);
+      setOutingUrl("");
     } catch {
       setImportErr(t.c2cImportError);
     } finally {
@@ -841,16 +845,6 @@ export default function EntryForm({
           </div>
         </div>
 
-        {!editing && (importing || importErr || c2cOuting) && (
-          <div className="c2c-import">
-            {importing && <p className="c2c-import-status">⏳ {t.c2cImporting}</p>}
-            {importErr && <p className="form-error">{importErr}</p>}
-            {c2cOuting && !importErr && (
-              <p className="c2c-import-note">⚠️ {t.c2cImportWarning}</p>
-            )}
-          </div>
-        )}
-
         <div className="combobox">
           <input
             type="text"
@@ -907,6 +901,34 @@ export default function EntryForm({
             </ul>
           )}
         </div>
+
+        {!editing && (
+          <div className="c2c-inline">
+            <input
+              type="url"
+              inputMode="url"
+              className="c2c-inline-input"
+              placeholder={`🏔️ ${t.c2cInlinePlaceholder}`}
+              value={outingUrl}
+              disabled={importing}
+              onChange={(e) => setOutingUrl(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  void importOuting(outingUrl);
+                }
+              }}
+              onBlur={() => {
+                if (outingUrl.trim()) void importOuting(outingUrl);
+              }}
+            />
+            {importing && <span className="c2c-inline-status">⏳ {t.c2cImporting}</span>}
+            {importErr && <span className="form-error">{importErr}</span>}
+            {!importing && !importErr && (outingUrl.trim() || imported) && (
+              <span className="c2c-inline-note">⚠️ {t.c2cImportWarning}</span>
+            )}
+          </div>
+        )}
 
         <div className="notion-props">
           <div className="notion-prop">

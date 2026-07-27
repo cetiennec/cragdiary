@@ -25,7 +25,6 @@ import EntryCard from "@/components/EntryCard";
 import ProfileMap from "@/components/ProfileMap";
 import ProfileSettingsForm from "@/components/ProfileSettingsForm";
 import ProfileCover from "@/components/ProfileCover";
-import C2cOutingMenuItem from "@/components/C2cOutingMenuItem";
 
 export async function generateMetadata({
   params,
@@ -177,7 +176,9 @@ export default async function ProfilePage({
         <Link href="/import" className="action-menu-item">
           <span aria-hidden>📄</span> {t.importMenuText}
         </Link>
-        <C2cOutingMenuItem label={t.importMenuOuting} promptText={t.importMenuOutingPrompt} />
+        <Link href="/entries/new" className="action-menu-item">
+          <span aria-hidden>🏔️</span> {t.importMenuOuting}
+        </Link>
         <Link href="/import#c2c-account" className="action-menu-item">
           <span aria-hidden>👤</span> {t.importMenuAccount}
         </Link>

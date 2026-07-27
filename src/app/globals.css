@@ -412,6 +412,46 @@ a {
   color: var(--accent);
 }
 
+/* Discreet auto-import field under the title in the editor. */
+.c2c-inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 0.9rem;
+  margin: 0.1rem 0 1rem;
+}
+
+.c2c-inline-input {
+  flex: 1;
+  min-width: 260px;
+  padding: 0.3rem 0.1rem;
+  border: none;
+  border-bottom: 1px dashed color-mix(in srgb, var(--accent) 40%, transparent);
+  background: none;
+  color: var(--text);
+  font-size: 0.82rem;
+}
+
+.c2c-inline-input::placeholder {
+  color: var(--text-muted);
+}
+
+.c2c-inline-input:focus {
+  outline: none;
+  border-bottom-color: var(--accent);
+}
+
+.c2c-inline-status {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.c2c-inline-note {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
 /* Import from a whole c2c account (bulk) */
 .c2c-account {
   margin-top: 3rem;
