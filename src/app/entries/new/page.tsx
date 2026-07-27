@@ -7,16 +7,18 @@ import EntryForm, { type EntryDefaults } from "@/components/EntryForm";
 export default async function NewEntryPage({
   searchParams,
 }: {
-  searchParams: Promise<{ from_wish?: string }>;
+  searchParams: Promise<{ from_wish?: string; c2c?: string }>;
 }) {
   const user = await currentUser();
   if (!user) {
     redirect("/login");
   }
 
-  const { from_wish } = await searchParams;
+  const { from_wish, c2c } = await searchParams;
   let defaults: EntryDefaults | undefined;
-  if (from_wish) {
+  if (c2c) {
+    defaults = { c2cOuting: c2c };
+  } else if (from_wish) {
     const wish = await getWish(from_wish, user.id);
     if (wish) {
       defaults = {

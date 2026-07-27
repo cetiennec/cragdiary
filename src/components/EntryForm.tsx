@@ -55,6 +55,7 @@ export type EntryDefaults = {
   lon?: number | null;
   partners?: string;
   fromWish?: string;
+  c2cOuting?: string;
 };
 
 export default function EntryForm({
@@ -312,14 +313,14 @@ export default function EntryForm({
     setGeoOpen(false);
   }
 
-  // Paste a camptocamp outing (trip report) link → prefill the whole editor.
-  // Fields only; photos stay with their author on c2c.
-  const [outingUrl, setOutingUrl] = useState("");
+  // Import a camptocamp outing (trip report) by link → prefill the whole
+  // editor, including photos. Triggered from the "import a c2c outing" menu
+  // (which asks for the link and opens /entries/new?c2c=…), auto-run on mount.
   const [importing, setImporting] = useState(false);
   const [importErr, setImportErr] = useState<string | null>(null);
 
-  async function importOuting() {
-    const url = outingUrl.trim();
+  async function importOuting(rawUrl: string) {
+    const url = rawUrl.trim();
     if (!url || importing) return;
     setImporting(true);
     setImportErr(null);
@@ -360,7 +361,6 @@ export default function EntryForm({
       setOpen(false);
       setGeoSuggestions([]);
       setGeoOpen(false);
-      setOutingUrl("");
 
       // Pull the outing's photos in via the proxy, then run them through the
       // normal client compression + append pipeline.
@@ -391,6 +391,13 @@ export default function EntryForm({
       setImporting(false);
     }
   }
+
+  // Auto-import when the editor is opened from "import a c2c outing".
+  const c2cOuting = defaults?.c2cOuting;
+  useEffect(() => {
+    if (!editing && c2cOuting) void importOuting(c2cOuting);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function comboKeys(
     e: React.KeyboardEvent<HTMLInputElement>,
@@ -834,34 +841,13 @@ export default function EntryForm({
           </div>
         </div>
 
-        {!editing && (
+        {!editing && (importing || importErr || c2cOuting) && (
           <div className="c2c-import">
-            <div className="c2c-import-row">
-              <input
-                type="url"
-                inputMode="url"
-                className="c2c-import-input"
-                placeholder={t.c2cImportPlaceholder}
-                value={outingUrl}
-                onChange={(e) => setOutingUrl(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    void importOuting();
-                  }
-                }}
-              />
-              <button
-                type="button"
-                className="c2c-import-btn"
-                onClick={() => void importOuting()}
-                disabled={importing || !outingUrl.trim()}
-              >
-                {importing ? "…" : t.c2cImportBtn}
-              </button>
-            </div>
-            <p className="c2c-import-note">⚠️ {t.c2cImportWarning}</p>
+            {importing && <p className="c2c-import-status">⏳ {t.c2cImporting}</p>}
             {importErr && <p className="form-error">{importErr}</p>}
+            {c2cOuting && !importErr && (
+              <p className="c2c-import-note">⚠️ {t.c2cImportWarning}</p>
+            )}
           </div>
         )}
 

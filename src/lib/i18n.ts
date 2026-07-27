@@ -133,6 +133,7 @@ const en = {
     dropToImport: "Drop your photos to add them",
     c2cImportPlaceholder: "Paste a camptocamp outing link…",
     c2cImportBtn: "Import",
+    c2cImporting: "Importing from camptocamp (fields + photos)…",
     c2cImportWarning:
       "Only import your own outings — the report and photos belong to their author on camptocamp.",
     c2cImportError: "Couldn't import this link — check it's a camptocamp outing.",
@@ -282,6 +283,7 @@ const en = {
   exportShort: "Export",
   importMenuText: "Text / file (JSON, CSV)",
   importMenuOuting: "A camptocamp outing",
+  importMenuOutingPrompt: "Paste the camptocamp outing link:",
   importMenuAccount: "A camptocamp account",
   importC2cAccountLabel: "Import a camptocamp account",
   importLabel: "Import entries (JSON, CSV, free text)",
@@ -537,6 +539,7 @@ const fr: Dict = {
     dropToImport: "Déposez vos photos pour les ajouter",
     c2cImportPlaceholder: "Collez le lien d'une sortie camptocamp…",
     c2cImportBtn: "Importer",
+    c2cImporting: "Import depuis camptocamp (champs + photos)…",
     c2cImportWarning:
       "N'importez que vos propres sorties — le récit et les photos appartiennent à leur auteur sur camptocamp.",
     c2cImportError: "Import impossible — vérifiez que c'est bien une sortie camptocamp.",
@@ -688,6 +691,7 @@ const fr: Dict = {
   exportShort: "Exporter",
   importMenuText: "Texte / fichier (JSON, CSV)",
   importMenuOuting: "Une sortie camptocamp",
+  importMenuOutingPrompt: "Collez le lien de la sortie camptocamp :",
   importMenuAccount: "Un compte camptocamp",
   importC2cAccountLabel: "Importer un compte camptocamp",
   importLabel: "Importer des entrées (JSON, CSV, texte libre)",

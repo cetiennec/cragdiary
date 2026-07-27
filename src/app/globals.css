@@ -406,6 +406,12 @@ a {
   color: var(--text-muted);
 }
 
+.c2c-import-status {
+  margin: 0;
+  font-weight: 600;
+  color: var(--accent);
+}
+
 /* Import from a whole c2c account (bulk) */
 .c2c-account {
   margin-top: 3rem;
@@ -2306,12 +2312,18 @@ a {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  width: 100%;
   padding: 0.55rem 0.7rem;
+  border: none;
+  background: none;
   border-radius: 8px;
+  font: inherit;
   font-size: 0.85rem;
   font-weight: 600;
+  text-align: left;
   color: var(--text);
   text-decoration: none;
+  cursor: pointer;
 }
 
 .action-menu-item:hover {
