@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { addEntryPhoto, autosaveEntry, createEntry, updateEntry } from "@/app/actions";
 import type { Dict, Locale } from "@/lib/i18n";
 import type { C2cSuggestion } from "@/app/api/c2c/search/route";
+import type { C2cOutingImport } from "@/lib/c2c";
 import type { GeoSuggestion } from "@/app/api/geo/search/route";
 import type { UserSuggestion } from "@/app/api/users/search/route";
 import type { EntryWithAuthor } from "@/lib/queries";
@@ -309,6 +310,62 @@ export default function EntryForm({
     setLon(String(s.lon));
     setGeoSuggestions([]);
     setGeoOpen(false);
+  }
+
+  // Paste a camptocamp outing (trip report) link → prefill the whole editor.
+  // Fields only; photos stay with their author on c2c.
+  const [outingUrl, setOutingUrl] = useState("");
+  const [importing, setImporting] = useState(false);
+  const [importErr, setImportErr] = useState<string | null>(null);
+
+  async function importOuting() {
+    const url = outingUrl.trim();
+    if (!url || importing) return;
+    setImporting(true);
+    setImportErr(null);
+    try {
+      const res = await fetch(
+        `/api/c2c/outing?url=${encodeURIComponent(url)}&lang=${locale}`
+      );
+      if (!res.ok) throw new Error("import");
+      const { outing } = (await res.json()) as { outing: C2cOutingImport };
+      searchArmed.current = false;
+      geoArmed.current = false;
+      setTitle(outing.title);
+      if (outing.location) setLocation(outing.location);
+      if (outing.date) {
+        dateTouched.current = true;
+        setMonthOnly(false);
+        setDateValue(outing.date);
+        setUsePhotoDate(false);
+      }
+      if (outing.grade) setGrade(outing.grade);
+      if (outing.rating) setRating(outing.rating);
+      if (outing.orientation) setOrientation(outing.orientation);
+      if (outing.equipment) setEquipment(outing.equipment);
+      if (outing.height_m) setHeightM(String(outing.height_m));
+      if (outing.lat != null && outing.lon != null) {
+        setLat(String(outing.lat));
+        setLon(String(outing.lon));
+      }
+      if (outing.c2c_url) setC2cUrl(outing.c2c_url);
+      if (outing.c2c_summary) {
+        setC2cSummary(outing.c2c_summary);
+        setIncludeSummary(true);
+      }
+      if (outing.notes) setNotesText(outing.notes);
+      if (outing.partners) setPartners(outing.partners);
+      setExcludedFields(new Set());
+      setSuggestions([]);
+      setOpen(false);
+      setGeoSuggestions([]);
+      setGeoOpen(false);
+      setOutingUrl("");
+    } catch {
+      setImportErr(t.c2cImportError);
+    } finally {
+      setImporting(false);
+    }
   }
 
   function comboKeys(
@@ -752,6 +809,37 @@ export default function EntryForm({
             </span>
           </div>
         </div>
+
+        {!editing && (
+          <div className="c2c-import">
+            <div className="c2c-import-row">
+              <input
+                type="url"
+                inputMode="url"
+                className="c2c-import-input"
+                placeholder={t.c2cImportPlaceholder}
+                value={outingUrl}
+                onChange={(e) => setOutingUrl(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    void importOuting();
+                  }
+                }}
+              />
+              <button
+                type="button"
+                className="c2c-import-btn"
+                onClick={() => void importOuting()}
+                disabled={importing || !outingUrl.trim()}
+              >
+                {importing ? "…" : t.c2cImportBtn}
+              </button>
+            </div>
+            <p className="c2c-import-note">⚠️ {t.c2cImportWarning}</p>
+            {importErr && <p className="form-error">{importErr}</p>}
+          </div>
+        )}
 
         <div className="combobox">
           <input

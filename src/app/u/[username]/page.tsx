@@ -311,6 +311,11 @@ export default async function ProfilePage({
                 <span className="onboard-card-title">{t.profile.onboardImportTitle}</span>
                 <span className="onboard-card-hint">{t.profile.onboardImportHint}</span>
               </Link>
+              <Link href="/entries/new" className="onboard-card">
+                <span className="onboard-card-icon" aria-hidden>🏔️</span>
+                <span className="onboard-card-title">{t.profile.onboardC2cTitle}</span>
+                <span className="onboard-card-hint">{t.profile.onboardC2cHint}</span>
+              </Link>
             </div>
           </div>
         ) : (

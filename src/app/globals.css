@@ -358,6 +358,54 @@ a {
   padding-bottom: 3rem;
 }
 
+/* Paste-a-camptocamp-outing importer at the top of the editor */
+.c2c-import {
+  margin-bottom: 1.2rem;
+  padding: 0.9rem 1rem;
+  border: 1.5px dashed color-mix(in srgb, var(--accent) 40%, transparent);
+  border-radius: var(--radius-card, 12px);
+  background: color-mix(in srgb, var(--accent) 5%, var(--bg-elevated));
+}
+
+.c2c-import-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.c2c-import-input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--border, #ccc);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+
+.c2c-import-btn {
+  flex-shrink: 0;
+  padding: 0.5rem 1.1rem;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.c2c-import-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.c2c-import-note {
+  margin: 0.55rem 0 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
 /* Drag-a-file-onto-the-editor import overlay */
 .notion-editor {
   position: relative;

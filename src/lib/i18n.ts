@@ -131,6 +131,11 @@ const en = {
     dateFromPhotoNote: "date taken from the photos",
     photoCaption: "Caption (optional)",
     dropToImport: "Drop your photos to add them",
+    c2cImportPlaceholder: "Paste a camptocamp outing link…",
+    c2cImportBtn: "Import",
+    c2cImportWarning:
+      "Only import your own outings — the report and photos belong to their author on camptocamp.",
+    c2cImportError: "Couldn't import this link — check it's a camptocamp outing.",
     removePhoto: "Remove",
     undoRemovePhoto: "Keep photo",
     movePhotoEarlier: "Move photo earlier",
@@ -504,6 +509,11 @@ const fr: Dict = {
     dateFromPhotoNote: "date déduite des photographies",
     photoCaption: "Légende (facultatif)",
     dropToImport: "Déposez vos photos pour les ajouter",
+    c2cImportPlaceholder: "Collez le lien d'une sortie camptocamp…",
+    c2cImportBtn: "Importer",
+    c2cImportWarning:
+      "N'importez que vos propres sorties — le récit et les photos appartiennent à leur auteur sur camptocamp.",
+    c2cImportError: "Import impossible — vérifiez que c'est bien une sortie camptocamp.",
     removePhoto: "Retirer",
     undoRemovePhoto: "Conserver la photo",
     movePhotoEarlier: "Déplacer la photo plus tôt",
