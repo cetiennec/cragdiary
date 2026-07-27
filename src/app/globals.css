@@ -526,9 +526,9 @@ a {
 
 /* Import from a whole c2c account (bulk) */
 .c2c-account {
-  margin-top: 3rem;
-  border-top: 1px solid var(--border, #ddd);
-  padding-top: 2rem;
+  margin: 0 0 2.5rem;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid var(--border, #ddd);
 }
 
 .page-subtitle {

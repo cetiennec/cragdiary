@@ -210,8 +210,9 @@ export default async function ProfilePage({
   ];
 
   return (
-    <div className="page-container profile-page">
+    <>
       {isSelf && <WelcomeTour t={t.welcome} />}
+      <div className="page-container profile-page">
       <ProfileCover username={profile.username} hasCover={profile.has_cover} />
       {isSelf && error && (
         <p className="form-error">
@@ -438,6 +439,7 @@ export default async function ProfilePage({
           )}
         </section>
       )}
-    </div>
+      </div>
+    </>
   );
 }

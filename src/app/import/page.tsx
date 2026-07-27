@@ -18,7 +18,6 @@ export default async function ImportPage() {
   return (
     <div className="page-container">
       <h1 className="page-title">{t.importer.title}</h1>
-      <ImportTool t={t.importer} />
       <C2cAccountImport
         locale={locale}
         username={user.username}
@@ -40,6 +39,7 @@ export default async function ImportPage() {
           c2cAccountError: t.importer.c2cAccountError,
         }}
       />
+      <ImportTool t={t.importer} />
     </div>
   );
 }
