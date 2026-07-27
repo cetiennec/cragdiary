@@ -84,13 +84,21 @@ export default function C2cAccountImport({
     if (ids.length === 0 || importing) return;
     setError(null);
     setProgress({ done: 0, total: ids.length });
+    let ok = 0;
     for (const id of ids) {
       try {
-        await importOneC2cOuting(id, withPhotos);
+        const r = await importOneC2cOuting(id, withPhotos);
+        if (r?.ok) ok += 1;
       } catch {
         // Keep going; a single failure shouldn't stop the batch.
       }
       setProgress((p) => (p ? { ...p, done: p.done + 1 } : p));
+    }
+    if (ok === 0) {
+      // Nothing imported — surface it instead of navigating to an unchanged page.
+      setError(t.c2cAccountError);
+      setProgress(null);
+      return;
     }
     router.push(`/u/${username}`);
     router.refresh();
