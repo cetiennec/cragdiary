@@ -1,21 +1,27 @@
 import Link from "next/link";
 import { getEntryYears, getFeed, type EntryFilters } from "@/lib/queries";
 import { currentUser } from "@/lib/auth";
-import { getDict } from "@/lib/i18n";
+import { getDict, type Locale, type Dict } from "@/lib/i18n";
 import EntryCard from "@/components/EntryCard";
 import FilterBar from "@/components/FilterBar";
 import type { EntryWithAuthor } from "@/lib/queries";
-import type { Locale } from "@/lib/i18n";
 
-const PUBLIC_LIMIT = 24;
+const PAGE_SIZE = 24;
 
-function parseFilters(params: { q?: string; year?: string; loc?: string }): EntryFilters {
+type SP = { q?: string; year?: string; loc?: string; show?: string };
+
+function parseFilters(params: SP): EntryFilters {
   const year = parseInt(params.year ?? "", 10);
   return {
     q: params.q?.trim() || undefined,
     year: Number.isFinite(year) ? year : null,
     location: params.loc?.trim() || undefined,
   };
+}
+
+function parseShow(params: SP): number {
+  const n = parseInt(params.show ?? "", 10);
+  return Number.isFinite(n) ? Math.min(300, Math.max(PAGE_SIZE, n)) : PAGE_SIZE;
 }
 
 function Grid({ entries, locale }: { entries: EntryWithAuthor[]; locale: Locale }) {
@@ -28,11 +34,37 @@ function Grid({ entries, locale }: { entries: EntryWithAuthor[]; locale: Locale 
   );
 }
 
-export default async function Home({
-  searchParams,
+// "Show more" control shown when a section has more entries than are displayed.
+function ShowMore({
+  params,
+  show,
+  total,
+  t,
 }: {
-  searchParams: Promise<{ q?: string; year?: string; loc?: string }>;
+  params: SP;
+  show: number;
+  total: number;
+  t: Dict["feed"];
 }) {
+  if (total <= show) return null;
+  const sp = new URLSearchParams();
+  if (params.q) sp.set("q", params.q);
+  if (params.year) sp.set("year", params.year);
+  if (params.loc) sp.set("loc", params.loc);
+  sp.set("show", String(show + PAGE_SIZE));
+  return (
+    <div className="feed-more" id="more">
+      <span className="form-hint">
+        {Math.min(show, total)} / {total} {t.showCount}
+      </span>
+      <Link href={`/?${sp.toString()}#more`} className="feed-more-btn">
+        {t.showMore}
+      </Link>
+    </div>
+  );
+}
+
+export default async function Home({ searchParams }: { searchParams: Promise<SP> }) {
   const [params, user, { locale, t }] = await Promise.all([
     searchParams,
     currentUser(),
@@ -41,20 +73,25 @@ export default async function Home({
 
   const filters = parseFilters(params);
   const hasFilters = Boolean(filters.q || filters.year || filters.location);
+  const show = parseShow(params);
   const years = await getEntryYears();
+
+  const filterBar = (
+    <FilterBar
+      t={t.filters}
+      years={years}
+      current={{ q: params.q ?? "", year: params.year ?? "", loc: params.loc ?? "" }}
+      action="/"
+    />
+  );
 
   // Searching: one combined public result set across everyone.
   if (hasFilters) {
-    const entries = await getFeed(filters, { cordeesOf: null });
+    const all = await getFeed(filters, { cordeesOf: null });
     return (
       <div className="page-container">
-        <FilterBar
-          t={t.filters}
-          years={years}
-          current={{ q: params.q ?? "", year: params.year ?? "", loc: params.loc ?? "" }}
-          action="/"
-        />
-        {entries.length === 0 ? (
+        {filterBar}
+        {all.length === 0 ? (
           <div className="empty-state">
             <p>{t.feed.empty}</p>
             <p>
@@ -62,7 +99,10 @@ export default async function Home({
             </p>
           </div>
         ) : (
-          <Grid entries={entries} locale={locale} />
+          <>
+            <Grid entries={all.slice(0, show)} locale={locale} />
+            <ShowMore params={params} show={show} total={all.length} t={t.feed} />
+          </>
         )}
       </div>
     );
@@ -74,16 +114,11 @@ export default async function Home({
     getFeed({}, { cordeesOf: null }),
   ]);
   const cordeeIds = new Set(cordeesEntries.map((e) => e.id));
-  const publicOnly = publicEntries.filter((e) => !cordeeIds.has(e.id)).slice(0, PUBLIC_LIMIT);
+  const publicAll = publicEntries.filter((e) => !cordeeIds.has(e.id));
 
   return (
     <div className="page-container">
-      <FilterBar
-        t={t.filters}
-        years={years}
-        current={{ q: "", year: "", loc: "" }}
-        action="/"
-      />
+      {filterBar}
 
       {user && (
         <section className="feed-section">
@@ -98,7 +133,7 @@ export default async function Home({
 
       <section className="feed-section">
         {user && <h2 className="feed-heading">{t.feed.publicTitle}</h2>}
-        {publicOnly.length === 0 ? (
+        {publicAll.length === 0 ? (
           <div className="empty-state">
             <p>{t.feed.empty}</p>
             {!user && (
@@ -110,7 +145,10 @@ export default async function Home({
             )}
           </div>
         ) : (
-          <Grid entries={publicOnly} locale={locale} />
+          <>
+            <Grid entries={publicAll.slice(0, show)} locale={locale} />
+            <ShowMore params={params} show={show} total={publicAll.length} t={t.feed} />
+          </>
         )}
       </section>
     </div>

@@ -6,6 +6,7 @@ export const LOCALE_COOKIE = "cragdiary-locale";
 
 const en = {
   nav: {
+    feed: "Feed",
     climbers: "Climbers",
     newEntry: "New entry",
     myJournal: "My journal",
@@ -29,6 +30,8 @@ const en = {
     tabAll: "Everyone",
     tabCordees: "My rope parties & follows",
     publicTitle: "Public outings",
+    showMore: "Show more",
+    showCount: "shown",
     emptyCordees: "No entries from your rope parties yet — a rope party is someone you follow, or someone you climbed with (tagged with @ in partners, either way).",
     empty: "No entries yet.",
     logFirst: "Log your first day out",
@@ -445,6 +448,7 @@ export type Dict = typeof en;
 
 const fr: Dict = {
   nav: {
+    feed: "Feed",
     climbers: "Grimpeurs",
     newEntry: "Nouvelle entrée",
     myJournal: "Mon carnet",
@@ -468,6 +472,8 @@ const fr: Dict = {
     tabAll: "Tout le monde",
     tabCordees: "Mes cordées et mes suivis",
     publicTitle: "Sorties publiques",
+    showMore: "Voir plus",
+    showCount: "affichées",
     emptyCordees: "Aucune entrée de vos cordées — une cordée, c'est quelqu'un que vous suivez ou avec qui vous avez grimpé (mentionné avec @ dans les partenaires, dans un sens ou dans l'autre).",
     empty: "Aucune entrée pour l'instant.",
     logFirst: "Racontez votre première sortie",

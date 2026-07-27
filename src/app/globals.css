@@ -2236,6 +2236,33 @@ a {
   margin-bottom: 2.4rem;
 }
 
+.feed-more {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 1.6rem 0 0;
+}
+
+.feed-more-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1.4rem;
+  border: 1.5px solid var(--accent);
+  border-radius: 999px;
+  color: var(--accent);
+  background: var(--bg-elevated);
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-decoration: none;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.feed-more-btn:hover {
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+
 .feed-heading {
   font-family: var(--heading-font), serif;
   font-size: 1.35rem;

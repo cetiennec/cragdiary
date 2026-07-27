@@ -67,6 +67,7 @@ export default async function RootLayout({
               Cragdiary
             </Link>
             <nav className="site-nav">
+              <Link href="/">{t.nav.feed}</Link>
               <Link href="/climbers">{t.nav.climbers}</Link>
               {user ? (
                 <>
