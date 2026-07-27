@@ -78,7 +78,7 @@ export default async function RootLayout({
                   </form>
                   <Link
                     href="/notifications"
-                    className="notif-bell"
+                    className="round-btn notif-bell"
                     title={t.nav.notifications}
                     aria-label={t.nav.notifications}
                   >

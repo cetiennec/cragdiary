@@ -209,23 +209,33 @@ a {
 }
 
 /* Notifications: header bell + list */
+/* Same round outlined style as the import/export buttons, sized for the nav. */
 .notif-bell {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.2rem;
-  font-size: 0.95rem;
+  position: relative;
+  width: 36px;
+  height: 36px;
+  font-size: 1.05rem;
 }
 
 .notif-badge {
+  position: absolute;
+  top: -0.35rem;
+  right: -0.35rem;
   min-width: 1.05rem;
-  padding: 0 0.3rem;
+  height: 1.05rem;
+  padding: 0 0.25rem;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--accent) 18%, transparent);
-  color: var(--accent);
-  font-size: 0.7rem;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-size: 0.68rem;
   font-weight: 700;
-  line-height: 1.1rem;
+  line-height: 1.05rem;
   text-align: center;
+}
+
+.notif-bell:hover .notif-badge {
+  background: var(--accent-contrast);
+  color: var(--accent);
 }
 
 .notif-list {
