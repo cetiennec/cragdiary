@@ -174,6 +174,36 @@ export async function isFollowing(followerId: string, followeeId: string): Promi
   return result.rows.length > 0;
 }
 
+export type FollowUser = {
+  username: string;
+  display_name: string;
+  has_avatar: boolean;
+};
+
+// People who follow this user.
+export async function getFollowers(userId: string): Promise<FollowUser[]> {
+  const result = await pool.query<FollowUser>(
+    `select u.username, u.display_name, u.avatar is not null as has_avatar
+     from follows f join users u on u.id = f.follower_id
+     where f.followee_id = $1
+     order by f.created_at desc`,
+    [userId]
+  );
+  return result.rows;
+}
+
+// People this user follows.
+export async function getFollowing(userId: string): Promise<FollowUser[]> {
+  const result = await pool.query<FollowUser>(
+    `select u.username, u.display_name, u.avatar is not null as has_avatar
+     from follows f join users u on u.id = f.followee_id
+     where f.follower_id = $1
+     order by f.created_at desc`,
+    [userId]
+  );
+  return result.rows;
+}
+
 // All of a user's entries without their photos — enough to compute the pin
 // collection and climbed countries on the profile, cheaply.
 export async function getPinCollection(

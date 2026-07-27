@@ -1848,6 +1848,13 @@ a {
   z-index: 1;
 }
 
+/* Lift the action row above the entry grid (same z-index otherwise, and the
+   grid comes later in the DOM) so the import/export dropdowns aren't covered.
+   Needs to out-specify the rule above, hence this selector. */
+.profile-page > .filter-row {
+  z-index: 20;
+}
+
 .profile-backdrop {
   position: absolute;
   top: 0;
@@ -2005,10 +2012,6 @@ a {
   gap: 0.8rem;
   flex-wrap: wrap;
   margin-bottom: 1.6rem;
-  /* Own stacking context above the entry grid, so the import dropdown isn't
-     covered by the (transformed) entry cards below. */
-  position: relative;
-  z-index: 5;
 }
 
 .filter-row .filter-bar {
@@ -2262,21 +2265,21 @@ a {
 }
 
 /* Import dropdown (file / camptocamp) built on native <details>. */
-.import-menu {
+.action-menu {
   position: relative;
   flex-shrink: 0;
 }
 
-.import-menu > summary {
+.action-menu > summary {
   cursor: pointer;
   list-style: none;
 }
 
-.import-menu > summary::-webkit-details-marker {
+.action-menu > summary::-webkit-details-marker {
   display: none;
 }
 
-.import-menu-list {
+.action-menu-list {
   position: absolute;
   right: 0;
   top: calc(100% + 0.4rem);
@@ -2291,7 +2294,7 @@ a {
   box-shadow: 0 8px 24px -10px rgba(58, 44, 34, 0.45);
 }
 
-.import-menu-item {
+.action-menu-item {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -2303,7 +2306,7 @@ a {
   text-decoration: none;
 }
 
-.import-menu-item:hover {
+.action-menu-item:hover {
   background: color-mix(in srgb, var(--accent) 12%, transparent);
   color: var(--accent);
 }

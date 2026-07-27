@@ -168,32 +168,37 @@ export default async function ProfilePage({
       href: w.c2c_url ?? undefined,
     }));
   const importPill = isSelf ? (
-    <details className="import-menu">
+    <details className="action-menu">
       <summary className="round-btn" title={t.importShort} aria-label={t.importShort}>
         <span aria-hidden>⬆︎</span>
       </summary>
-      <div className="import-menu-list">
-        <Link href="/import" className="import-menu-item">
+      <div className="action-menu-list">
+        <Link href="/import" className="action-menu-item">
           <span aria-hidden>📄</span> {t.importMenuText}
         </Link>
-        <Link href="/entries/new" className="import-menu-item">
+        <Link href="/entries/new" className="action-menu-item">
           <span aria-hidden>🏔️</span> {t.importMenuOuting}
         </Link>
-        <Link href="/import#c2c-account" className="import-menu-item">
+        <Link href="/import#c2c-account" className="action-menu-item">
           <span aria-hidden>👤</span> {t.importMenuAccount}
         </Link>
       </div>
     </details>
   ) : undefined;
   const carnetPill = isSelf ? (
-    <a
-      href="/api/carnet"
-      className="round-btn"
-      title={t.exportCarnetLabel}
-      aria-label={t.exportShort}
-    >
-      <span aria-hidden>⬇︎</span>
-    </a>
+    <details className="action-menu">
+      <summary className="round-btn" title={t.exportShort} aria-label={t.exportShort}>
+        <span aria-hidden>⬇︎</span>
+      </summary>
+      <div className="action-menu-list">
+        <a href="/api/export" className="action-menu-item">
+          <span aria-hidden>📦</span> {t.exportLabel}
+        </a>
+        <a href="/api/carnet" className="action-menu-item">
+          <span aria-hidden>📕</span> {t.exportCarnetLabel}
+        </a>
+      </div>
+    </details>
   ) : undefined;
 
   const tiles = [
