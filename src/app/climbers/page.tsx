@@ -47,7 +47,7 @@ export default async function ClimbersPage() {
                   <span className="climber-name">{c.display_name}</span>
                   <span className="climber-meta">
                     @{c.username}
-                    {c.climbed_with && ` · 🧗 ${t.climbers.climbedWith}`}
+                    {c.climbed_count > 0 && ` · 🧗 ${t.climbers.climbedTimes(c.climbed_count)}`}
                     {c.i_follow && ` · 👤 ${t.climbers.following}`}
                   </span>
                 </Link>

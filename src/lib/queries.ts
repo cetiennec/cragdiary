@@ -204,23 +204,27 @@ export async function getFollowing(userId: string): Promise<FollowUser[]> {
   return result.rows;
 }
 
-export type Cordee = FollowUser & { i_follow: boolean; climbed_with: boolean };
+export type Cordee = FollowUser & { i_follow: boolean; climbed_count: number };
 
 // A rope party ("cordée"): someone you follow, or someone you climbed with —
 // i.e. you tagged them as a partner, or they tagged you. Same definition as
-// the "My rope parties" feed. Private profiles are excluded (their pages
-// aren't viewable anyway).
+// the "My rope parties" feed. `climbed_count` is how many times you climbed
+// together (your entries tagging them + their entries tagging you); results
+// are ordered by that count, most-climbed-with first. Private profiles are
+// excluded (their pages aren't viewable anyway).
 export async function getCordees(userId: string, username: string): Promise<Cordee[]> {
   const result = await pool.query<Cordee>(
     `select u.username, u.display_name, u.avatar is not null as has_avatar,
             exists (select 1 from follows f
                     where f.follower_id = $1 and f.followee_id = u.id) as i_follow,
-            (exists (select 1 from entries me
-                     where me.user_id = $1
-                       and me.partners ~* ('@' || u.username || '([^a-z0-9-]|$)'))
-             or exists (select 1 from entries th
-                        where th.user_id = u.id
-                          and th.partners ~* ('@' || $2 || '([^a-z0-9-]|$)'))) as climbed_with
+            (
+              (select count(*) from entries me
+               where me.user_id = $1
+                 and me.partners ~* ('@' || u.username || '([^a-z0-9-]|$)'))
+              + (select count(*) from entries th
+                 where th.user_id = u.id
+                   and th.partners ~* ('@' || $2 || '([^a-z0-9-]|$)'))
+            )::int as climbed_count
      from users u
      where u.visibility != 'private' and u.id <> $1
        and (
@@ -232,7 +236,7 @@ export async function getCordees(userId: string, username: string): Promise<Cord
                     where th.user_id = u.id
                       and th.partners ~* ('@' || $2 || '([^a-z0-9-]|$)'))
        )
-     order by u.display_name asc`,
+     order by climbed_count desc, u.display_name asc`,
     [userId, username]
   );
   return result.rows;
