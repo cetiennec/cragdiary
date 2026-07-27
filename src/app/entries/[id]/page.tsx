@@ -196,6 +196,12 @@ export default async function EntryPage({
               {"⭐".repeat(entry.star_level)}
             </span>
           )}
+          {entry.star_level < 0 && (
+            <span className="entry-star" title={t.editor.notRecommended}>
+              {" "}
+              👎
+            </span>
+          )}
         </h1>
 
         {badge && <p className="visibility-badge">{badge}</p>}

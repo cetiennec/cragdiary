@@ -83,7 +83,7 @@ export function coverEmojis(entry: PinSource): string[] {
   if (height >= 400) out.push("🐐");
   else if (height >= 150) out.push("🦅");
   if (entry.star_level > 0 || /à refaire|recommand|magnifique/.test(notes)) out.push("⭐");
-  if (/à éviter|déconseill|décevant|sans intérêt/.test(notes)) out.push("👎");
+  if (entry.star_level < 0 || /à éviter|déconseill|décevant|sans intérêt/.test(notes)) out.push("👎");
   if (entry.notes && entry.notes.length > 200) out.push("✍️");
   if (out.length === 0) out.push("🧗");
   return out.slice(0, 4);
@@ -120,6 +120,14 @@ export function CoverTag({ entry }: { entry: EntryWithAuthor }) {
 
 // Star rating overlaid on a cover, with its meaning as a tooltip.
 export function CoverStars({ entry, locale }: { entry: EntryWithAuthor; locale: Locale }) {
+  if (entry.star_level < 0) {
+    const label = PIN_LABELS[locale]["👎"];
+    return (
+      <span className="cover-stars" title={label} aria-label={label}>
+        👎
+      </span>
+    );
+  }
   if (!entry.star_level || entry.star_level < 1) return null;
   const label = STAR_LABELS[locale][entry.star_level - 1];
   return (

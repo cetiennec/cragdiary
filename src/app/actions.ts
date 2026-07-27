@@ -137,7 +137,8 @@ function parsePhotoLayout(
 
 function parseStarLevel(value: FormDataEntryValue | null): number {
   const n = parseInt(String(value ?? ""), 10);
-  return Number.isFinite(n) ? Math.min(3, Math.max(0, n)) : 0;
+  // -1 = not recommended (👎); 0 = unrated; 1–3 = stars.
+  return Number.isFinite(n) ? Math.min(3, Math.max(-1, n)) : 0;
 }
 
 // Country for an entry's coordinates, reusing the stored value when the

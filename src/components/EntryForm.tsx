@@ -824,6 +824,9 @@ export default function EntryForm({
             {starLevel > 0 && (
               <span className="star-level-label">{t.starLevels[starLevel - 1]}</span>
             )}
+            {starLevel < 0 && (
+              <span className="star-level-label">{t.notRecommended}</span>
+            )}
             <input type="hidden" name="star_level" value={String(starLevel)} />
             <span className="star-rack" title={t.starHint}>
               {[1, 2, 3].map((n) => (
@@ -841,6 +844,19 @@ export default function EntryForm({
                   {starLevel >= n ? "⭐" : "☆"}
                 </button>
               ))}
+              <button
+                type="button"
+                className={`star-toggle dislike-toggle${starLevel < 0 ? " on" : ""}`}
+                aria-pressed={starLevel < 0}
+                aria-label={t.notRecommended}
+                title={t.notRecommended}
+                onClick={() => {
+                  setStarLevel(starLevel < 0 ? 0 : -1);
+                  queueAutosave();
+                }}
+              >
+                👎
+              </button>
             </span>
           </div>
         </div>

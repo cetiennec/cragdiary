@@ -2329,6 +2329,13 @@ a {
   transform: scale(1.2) rotate(-8deg);
 }
 
+/* 👎 not-recommended toggle sits after the stars, with a small divider. */
+.dislike-toggle {
+  margin-left: 0.35rem;
+  padding-left: 0.5rem;
+  border-left: 1px solid var(--border, #d8c7ad);
+}
+
 .new-entry-bubble {
   width: 42px;
   height: 42px;
