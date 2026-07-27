@@ -182,6 +182,9 @@ export default async function ProfilePage({
         <a href="/api/export" className="action-menu-item">
           <span aria-hidden>📦</span> {t.exportLabel}
         </a>
+        <a href="/api/export/csv" className="action-menu-item">
+          <span aria-hidden>📊</span> {t.exportCsvLabel}
+        </a>
         <a href="/api/carnet" className="action-menu-item">
           <span aria-hidden>📕</span> {t.exportCarnetLabel}
         </a>

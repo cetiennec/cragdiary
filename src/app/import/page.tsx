@@ -38,6 +38,8 @@ export default async function ImportPage() {
           c2cAccountDoneLabel: t.importer.c2cAccountDoneLabel,
           c2cAccountEmpty: t.importer.c2cAccountEmpty,
           c2cAccountError: t.importer.c2cAccountError,
+          c2cAccountVisibility: t.importer.c2cAccountVisibility,
+          visibilityOptions: t.editor.visibilityOptions,
         }}
       />
       <ImportTool t={t.importer} />

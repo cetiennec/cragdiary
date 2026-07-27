@@ -23,6 +23,8 @@ type Labels = {
   c2cAccountDoneLabel: string;
   c2cAccountEmpty: string;
   c2cAccountError: string;
+  c2cAccountVisibility: string;
+  visibilityOptions: { public: string; unlisted: string; private: string };
 };
 
 export default function C2cAccountImport({
@@ -41,6 +43,7 @@ export default function C2cAccountImport({
   const [outings, setOutings] = useState<C2cOutingSummary[] | null>(null);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [withPhotos, setWithPhotos] = useState(true);
+  const [visibility, setVisibility] = useState<"public" | "unlisted" | "private">("private");
   // Import progress: null = idle, else {done,total}. done === total when finished.
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
 
@@ -87,7 +90,7 @@ export default function C2cAccountImport({
     let ok = 0;
     for (const id of ids) {
       try {
-        const r = await importOneC2cOuting(id, withPhotos);
+        const r = await importOneC2cOuting(id, withPhotos, visibility);
         if (r?.ok) ok += 1;
       } catch {
         // Keep going; a single failure shouldn't stop the batch.
@@ -169,6 +172,20 @@ export default function C2cAccountImport({
                 disabled={importing}
               />{" "}
               {t.c2cAccountPhotos}
+            </label>
+            <label className="c2c-account-visibility">
+              {t.c2cAccountVisibility}{" "}
+              <select
+                value={visibility}
+                onChange={(e) =>
+                  setVisibility(e.target.value as "public" | "unlisted" | "private")
+                }
+                disabled={importing}
+              >
+                <option value="public">{t.visibilityOptions.public}</option>
+                <option value="unlisted">{t.visibilityOptions.unlisted}</option>
+                <option value="private">{t.visibilityOptions.private}</option>
+              </select>
             </label>
           </div>
 

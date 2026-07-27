@@ -404,12 +404,14 @@ const C2C_MAX_PHOTOS = 15;
 
 export async function importOneC2cOuting(
   id: number,
-  withPhotos: boolean
+  withPhotos: boolean,
+  visibility: string = "private"
 ): Promise<{ ok: boolean; title?: string }> {
   const user = await currentUser();
   if (!user) throw new Error("Unauthorized");
   if (!Number.isFinite(id)) return { ok: false };
 
+  const vis = parseVisibility(visibility);
   const lang = await getLocale();
   const o = await importOuting(id, lang);
   if (!o || !o.date || !o.title) return { ok: false };
@@ -421,7 +423,7 @@ export async function importOneC2cOuting(
          (user_id, entry_date, crag, location, grade_max, rating, orientation,
           equipment, height_m, partners, notes, c2c_url, c2c_summary, lat, lon,
           country, visibility)
-       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,'private')
+       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
        returning id`,
       [
         user.id,
@@ -440,6 +442,7 @@ export async function importOneC2cOuting(
         o.lat,
         o.lon,
         await entryCountry({ lat: o.lat, lon: o.lon }),
+        vis,
       ]
     );
     const entryId = res.rows[0].id;

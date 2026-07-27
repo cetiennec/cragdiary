@@ -546,6 +546,14 @@ a {
 
 .import-method textarea {
   margin-top: 0.3rem;
+  width: 100%;
+  box-sizing: border-box;
+  display: block;
+  resize: vertical;
+}
+
+.c2c-account-visibility select {
+  font: inherit;
 }
 
 .page-subtitle {
