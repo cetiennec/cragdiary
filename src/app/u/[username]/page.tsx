@@ -169,22 +169,30 @@ export default async function ProfilePage({
     }));
   const importPill = isSelf ? (
     <details className="import-menu">
-      <summary className="action-pill">
-        <span aria-hidden>⬆︎</span> {t.importShort}
+      <summary className="round-btn" title={t.importShort} aria-label={t.importShort}>
+        <span aria-hidden>⬆︎</span>
       </summary>
       <div className="import-menu-list">
         <Link href="/import" className="import-menu-item">
-          <span aria-hidden>📄</span> {t.importLabel}
+          <span aria-hidden>📄</span> {t.importMenuText}
         </Link>
         <Link href="/entries/new" className="import-menu-item">
-          <span aria-hidden>🏔️</span> {t.profile.onboardC2cTitle}
+          <span aria-hidden>🏔️</span> {t.importMenuOuting}
+        </Link>
+        <Link href="/import#c2c-account" className="import-menu-item">
+          <span aria-hidden>👤</span> {t.importMenuAccount}
         </Link>
       </div>
     </details>
   ) : undefined;
   const carnetPill = isSelf ? (
-    <a href="/api/carnet" className="action-pill" title={t.exportCarnetLabel}>
-      <span aria-hidden>⬇︎</span> {t.exportShort}
+    <a
+      href="/api/carnet"
+      className="round-btn"
+      title={t.exportCarnetLabel}
+      aria-label={t.exportShort}
+    >
+      <span aria-hidden>⬇︎</span>
     </a>
   ) : undefined;
 
@@ -258,6 +266,7 @@ export default async function ProfilePage({
               exportLabel: t.exportLabel,
               exportCarnetLabel: t.exportCarnetLabel,
               importLabel: t.importLabel,
+              importC2cAccountLabel: t.importC2cAccountLabel,
               deleteConfirmPassword: t.profile.deleteConfirmPassword,
               deleteButton: t.profile.deleteButton,
             }}
@@ -291,17 +300,19 @@ export default async function ProfilePage({
           current={{ q: sp.q ?? "", year: sp.year ?? "", loc: sp.loc ?? "" }}
           action={`/u/${profile.username}`}
         />
-        {importPill}
-        {carnetPill}
         {isSelf && (
-          <Link
-            href="/entries/new"
-            className="new-entry-bubble"
-            title={t.nav.newEntry}
-            aria-label={t.nav.newEntry}
-          >
-            ＋
-          </Link>
+          <div className="action-cluster">
+            <Link
+              href="/entries/new"
+              className="new-entry-bubble"
+              title={t.nav.newEntry}
+              aria-label={t.nav.newEntry}
+            >
+              ＋
+            </Link>
+            {importPill}
+            {carnetPill}
+          </div>
         )}
       </div>
 
@@ -321,7 +332,7 @@ export default async function ProfilePage({
                 <span className="onboard-card-title">{t.profile.onboardImportTitle}</span>
                 <span className="onboard-card-hint">{t.profile.onboardImportHint}</span>
               </Link>
-              <Link href="/entries/new" className="onboard-card">
+              <Link href="/import#c2c-account" className="onboard-card">
                 <span className="onboard-card-icon" aria-hidden>🏔️</span>
                 <span className="onboard-card-title">{t.profile.onboardC2cTitle}</span>
                 <span className="onboard-card-hint">{t.profile.onboardC2cHint}</span>

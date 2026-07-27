@@ -2223,28 +2223,40 @@ a {
   box-shadow: 0 3px 12px color-mix(in srgb, var(--accent) 60%, transparent);
 }
 
-/* Secondary action pills (import, export) — compact labelled buttons, outlined
-   so the primary ＋ stays dominant. */
-.action-pill {
+/* Trio of same-size round action buttons: ＋ (new entry, filled) plus import
+   and export (outlined). */
+.action-cluster {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
+  gap: 0.5rem;
   flex-shrink: 0;
-  white-space: nowrap;
-  font-size: 0.8rem;
-  font-weight: 600;
+}
+
+.round-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 1.25rem;
   line-height: 1;
   color: var(--accent);
   background: var(--bg-elevated);
   border: 1.5px solid color-mix(in srgb, var(--accent) 45%, transparent);
-  border-radius: 999px;
-  padding: 0.42rem 0.8rem;
+  cursor: pointer;
   text-decoration: none;
+  list-style: none;
   transition: transform 0.15s ease, background-color 0.15s ease, color 0.15s ease;
 }
 
-.action-pill:hover {
-  transform: scale(1.05);
+.round-btn::-webkit-details-marker {
+  display: none;
+}
+
+.round-btn:hover {
+  transform: scale(1.08);
   background: var(--accent);
   color: var(--accent-contrast);
 }
@@ -2268,7 +2280,7 @@ a {
   position: absolute;
   right: 0;
   top: calc(100% + 0.4rem);
-  z-index: 50;
+  z-index: 200;
   min-width: 230px;
   display: flex;
   flex-direction: column;

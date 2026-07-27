@@ -22,6 +22,7 @@ type SettingsLabels = {
   exportLabel: string;
   exportCarnetLabel: string;
   importLabel: string;
+  importC2cAccountLabel: string;
   dangerTitle: string;
   deleteLabel: string;
   deleteConfirmPassword: string;
@@ -146,7 +147,8 @@ export default function ProfileSettingsForm({
         <a href="/api/export">⬇︎ {t.exportLabel}</a> ·{" "}
         <a href="/api/carnet">⬇︎ {t.exportCarnetLabel}</a>{" "}
         ·{" "}
-        <a href="/import">⬆︎ {t.importLabel}</a>
+        <a href="/import">⬆︎ {t.importLabel}</a> ·{" "}
+        <a href="/import#c2c-account">🏔️ {t.importC2cAccountLabel}</a>
       </p>
 
       <div className="danger-zone">
