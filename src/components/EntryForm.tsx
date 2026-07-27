@@ -706,7 +706,10 @@ export default function EntryForm({
     >
       {dropActive && (
         <div className="editor-dropzone" aria-hidden>
-          <span>🖼️ {t.dropToImport}</span>
+          <span>
+            <span className="editor-dropzone-plus">+</span>
+            {t.dropToImport}
+          </span>
         </div>
       )}
       <div className="notion-body">
