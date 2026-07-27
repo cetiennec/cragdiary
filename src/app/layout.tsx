@@ -71,9 +71,9 @@ export default async function RootLayout({
               <Link href="/climbers">{t.nav.climbers}</Link>
               {user ? (
                 <>
-                  <Link href="/entries/new">{t.nav.newEntry}</Link>
                   <Link href={`/u/${user.username}`}>{t.nav.myJournal}</Link>
                   <Link href={`/u/${user.username}#wishlist`}>{t.nav.myWishlist}</Link>
+                  <Link href="/entries/new">{t.nav.newEntry}</Link>
                   <form action={logout}>
                     <button type="submit">{t.nav.logout}</button>
                   </form>
