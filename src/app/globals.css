@@ -524,11 +524,28 @@ a {
   color: var(--text-muted);
 }
 
-/* Import from a whole c2c account (bulk) */
-.c2c-account {
-  margin: 0 0 2.5rem;
-  padding-bottom: 2rem;
-  border-bottom: 1px solid var(--border, #ddd);
+/* Import page: three option cards (c2c account, free text, file) */
+.import-intro {
+  color: var(--text-muted);
+  margin: 0 0 1.4rem;
+}
+
+.c2c-account,
+.import-method {
+  margin: 0 0 1.3rem;
+  padding: 1.3rem 1.4rem;
+  border: 1px solid var(--border, #d8c7ad);
+  border-radius: var(--radius-card, 12px);
+  background: var(--bg-elevated);
+}
+
+.import-method .page-subtitle,
+.c2c-account .page-subtitle {
+  margin-top: 0;
+}
+
+.import-method textarea {
+  margin-top: 0.3rem;
 }
 
 .page-subtitle {

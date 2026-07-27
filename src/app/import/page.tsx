@@ -18,6 +18,7 @@ export default async function ImportPage() {
   return (
     <div className="page-container">
       <h1 className="page-title">{t.importer.title}</h1>
+      <p className="import-intro">{t.importer.intro}</p>
       <C2cAccountImport
         locale={locale}
         username={user.username}

@@ -6,6 +6,9 @@ import { importEntries } from "@/app/actions";
 
 export type ImportLabels = {
   title: string;
+  textTitle: string;
+  fileTitle: string;
+  fileHint: string;
   hint: string;
   placeholder: string;
   fileLabel: string;
@@ -295,14 +298,24 @@ export default function ImportTool({ t }: { t: ImportLabels }) {
   if (rows === null) {
     return (
       <div className="import-tool">
-        <p className="form-hint">{t.hint}</p>
-        <textarea
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder={t.placeholder}
-          rows={12}
-        />
-        <div className="import-actions">
+        <div className="import-method">
+          <h2 className="page-subtitle">
+            <span aria-hidden>✍️</span> {t.textTitle}
+          </h2>
+          <p className="form-hint">{t.hint}</p>
+          <textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder={t.placeholder}
+            rows={10}
+          />
+        </div>
+
+        <div className="import-method">
+          <h2 className="page-subtitle">
+            <span aria-hidden>📎</span> {t.fileTitle}
+          </h2>
+          <p className="form-hint">{t.fileHint}</p>
           <label className="import-file">
             <span aria-hidden>📎</span> {t.fileLabel}
             <input
@@ -314,6 +327,9 @@ export default function ImportTool({ t }: { t: ImportLabels }) {
               }}
             />
           </label>
+        </div>
+
+        <div className="import-actions">
           <button type="button" className="btn-primary" onClick={analyze} disabled={!text.trim()}>
             {t.analyze}
           </button>
