@@ -1924,6 +1924,10 @@ a {
   gap: 0.8rem;
   flex-wrap: wrap;
   margin-bottom: 1.6rem;
+  /* Own stacking context above the entry grid, so the import dropdown isn't
+     covered by the (transformed) entry cards below. */
+  position: relative;
+  z-index: 5;
 }
 
 .filter-row .filter-bar {
@@ -2183,7 +2187,7 @@ a {
   position: absolute;
   right: 0;
   top: calc(100% + 0.4rem);
-  z-index: 30;
+  z-index: 50;
   min-width: 230px;
   display: flex;
   flex-direction: column;
