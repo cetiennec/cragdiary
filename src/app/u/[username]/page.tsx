@@ -296,22 +296,28 @@ export default async function ProfilePage({
       </div>
 
       {entries.length === 0 ? (
-        <div className="empty-state">
-          {isSelf ? (
-            <>
-              <p>
-                {t.profile.emptySelfPre}
-                <Link href="/entries/new">{t.profile.emptySelfLink}</Link>
-                {t.profile.emptySelfPost}
-              </p>
-              <p>
-                <Link href="/import">{t.importPromo}</Link>
-              </p>
-            </>
-          ) : (
+        isSelf ? (
+          <div className="onboard">
+            <h2 className="onboard-title">{t.profile.onboardTitle}</h2>
+            <p className="onboard-intro">{t.profile.onboardIntro}</p>
+            <div className="onboard-cards">
+              <Link href="/entries/new" className="onboard-card">
+                <span className="onboard-card-icon" aria-hidden>✍️</span>
+                <span className="onboard-card-title">{t.profile.onboardManualTitle}</span>
+                <span className="onboard-card-hint">{t.profile.onboardManualHint}</span>
+              </Link>
+              <Link href="/import" className="onboard-card">
+                <span className="onboard-card-icon" aria-hidden>⬆︎</span>
+                <span className="onboard-card-title">{t.profile.onboardImportTitle}</span>
+                <span className="onboard-card-hint">{t.profile.onboardImportHint}</span>
+              </Link>
+            </div>
+          </div>
+        ) : (
+          <div className="empty-state">
             <p>{t.profile.emptyOther}</p>
-          )}
-        </div>
+          </div>
+        )
       ) : (
         <div className="entry-grid">
           {entries.map((entry) => (
