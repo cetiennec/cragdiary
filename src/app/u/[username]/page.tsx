@@ -172,6 +172,11 @@ export default async function ProfilePage({
       {t.importPromo}
     </Link>
   ) : undefined;
+  const carnetPill = isSelf ? (
+    <a href="/api/carnet" className="import-pill" title={t.exportCarnetLabel}>
+      ⬇︎ {t.exportCarnetLabel}
+    </a>
+  ) : undefined;
 
   const tiles = [
     { label: t.profile.stats.entries, value: String(stats.total) },
@@ -277,6 +282,7 @@ export default async function ProfilePage({
           action={`/u/${profile.username}`}
         />
         {importPill}
+        {carnetPill}
         {isSelf && (
           <Link
             href="/entries/new"

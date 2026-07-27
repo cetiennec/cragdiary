@@ -144,9 +144,7 @@ export default function ProfileSettingsForm({
 
       <p className="export-link">
         <a href="/api/export">⬇︎ {t.exportLabel}</a> ·{" "}
-        <a href="/api/carnet" target="_blank" rel="noopener">
-          🖨︎ {t.exportCarnetLabel}
-        </a>{" "}
+        <a href="/api/carnet">⬇︎ {t.exportCarnetLabel}</a>{" "}
         ·{" "}
         <a href="/import">⬆︎ {t.importLabel}</a>
       </p>
