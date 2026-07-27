@@ -2164,6 +2164,53 @@ a {
   color: var(--accent-contrast);
 }
 
+/* Import dropdown (file / camptocamp) built on native <details>. */
+.import-menu {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.import-menu > summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.import-menu > summary::-webkit-details-marker {
+  display: none;
+}
+
+.import-menu-list {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.4rem);
+  z-index: 30;
+  min-width: 230px;
+  display: flex;
+  flex-direction: column;
+  padding: 0.35rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  border-radius: 12px;
+  background: var(--bg-elevated);
+  box-shadow: 0 8px 24px -10px rgba(58, 44, 34, 0.45);
+}
+
+.import-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.import-menu-item:hover {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+}
+
 .filter-bar input,
 .filter-bar select {
   font: inherit;
