@@ -856,9 +856,14 @@ export default function EntryForm({
                 onChange={(e) => {
                   geoArmed.current = true;
                   setLocation(e.target.value);
-                  // Manually edited text no longer matches the picked point.
-                  setLat("");
-                  setLon("");
+                  // Typing a different place name no longer matches the picked
+                  // point, so drop the pin. But clearing the name to blank
+                  // keeps the pin — you can drop the label without moving the
+                  // map (e.g. after a c2c import).
+                  if (e.target.value.trim() !== "") {
+                    setLat("");
+                    setLon("");
+                  }
                 }}
                 onKeyDown={(e) =>
                   comboKeys(
