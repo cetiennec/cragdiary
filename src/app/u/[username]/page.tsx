@@ -168,18 +168,13 @@ export default async function ProfilePage({
       href: w.c2c_url ?? undefined,
     }));
   const importPill = isSelf ? (
-    <Link href="/import" className="action-bubble" title={t.importLabel} aria-label={t.importLabel}>
-      ⬆︎
+    <Link href="/import" className="action-pill" title={t.importLabel}>
+      <span aria-hidden>⬆︎</span> {t.importShort}
     </Link>
   ) : undefined;
   const carnetPill = isSelf ? (
-    <a
-      href="/api/carnet"
-      className="action-bubble"
-      title={t.exportCarnetLabel}
-      aria-label={t.exportCarnetLabel}
-    >
-      ⬇︎
+    <a href="/api/carnet" className="action-pill" title={t.exportCarnetLabel}>
+      <span aria-hidden>⬇︎</span> {t.exportShort}
     </a>
   ) : undefined;
 

@@ -257,6 +257,8 @@ const en = {
   },
   exportLabel: "Download my journal (JSON)",
   exportCarnetLabel: "Route logbook (PDF)",
+  importShort: "Import",
+  exportShort: "Export",
   importLabel: "Import entries (JSON, CSV, free text)",
   importPromo: "⬆︎ Import an existing logbook",
   install: {
@@ -622,6 +624,8 @@ const fr: Dict = {
   },
   exportLabel: "Télécharger mon carnet (JSON)",
   exportCarnetLabel: "Carnet de course (PDF)",
+  importShort: "Importer",
+  exportShort: "Exporter",
   importLabel: "Importer des entrées (JSON, CSV, texte libre)",
   importPromo: "⬆︎ Importer un carnet existant",
   install: {
