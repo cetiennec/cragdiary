@@ -4,6 +4,25 @@
 
 export const C2C_API = "https://api.camptocamp.org";
 export const C2C_SITE = "https://www.camptocamp.org";
+// Public image store. Sizes: "" original (~1.5MB), BI big (~0.7MB),
+// MI medium (~60KB), SI small (~20KB). Filenames come from an image
+// document's `filename` (e.g. "1778440712_1553695391.jpg").
+export const C2C_MEDIA = "https://media.camptocamp.org/c2corg-active";
+
+export type C2cImageSize = "" | "BI" | "MI" | "SI";
+
+export function c2cImageUrl(filename: string, size: C2cImageSize = "BI"): string {
+  const dot = filename.lastIndexOf(".");
+  const base = dot === -1 ? filename : filename.slice(0, dot);
+  const ext = dot === -1 ? "jpg" : filename.slice(dot + 1);
+  return `${C2C_MEDIA}/${base}${size}.${ext}`;
+}
+
+// c2c image filenames are "<digits>_<digits>.<ext>" — validate before
+// building any URL from user-provided input (guards the image proxy).
+export function isC2cFilename(filename: string): boolean {
+  return /^[0-9]+_[0-9]+\.[a-zA-Z0-9]+$/.test(filename);
+}
 
 export type C2cLocale = {
   lang: string;
@@ -109,9 +128,11 @@ export type C2cOutingImport = {
   notes: string | null;
   partners: string | null;
   outing_url: string;
+  images: string[]; // image filenames, oldest c2c order
 };
 
-type C2cUserAssoc = { name?: string; username?: string };
+type C2cUserAssoc = { document_id?: number; name?: string; username?: string };
+type C2cImageAssoc = { filename?: string };
 type C2cOutingDoc = {
   document_id: number;
   date_start?: string | null;
@@ -122,6 +143,7 @@ type C2cOutingDoc = {
   associations?: {
     routes?: { document_id: number }[];
     users?: C2cUserAssoc[];
+    images?: C2cImageAssoc[];
   };
 };
 
@@ -170,7 +192,12 @@ export async function importOuting(id: number, lang: string): Promise<C2cOutingI
 
   const outingCoords = mercatorToWgs84(outing.geometry?.geom);
 
+  const images = (outing.associations?.images ?? [])
+    .map((im) => im.filename)
+    .filter((f): f is string => Boolean(f) && isC2cFilename(f!));
+
   return {
+    images,
     title: route?.title || locale?.title || `Outing ${id}`,
     date: outing.date_start ?? null,
     location: route?.area ?? null,
@@ -187,4 +214,51 @@ export async function importOuting(id: number, lang: string): Promise<C2cOutingI
     partners,
     outing_url: `${C2C_SITE}/outings/${id}`,
   };
+}
+
+// ---- Account import (list all of a user's outings) -------------------------
+
+// Extract a c2c user document id from a profile URL or bare id.
+export function parseProfileId(input: string): number | null {
+  const trimmed = input.trim();
+  if (/^\d+$/.test(trimmed)) return Number(trimmed);
+  const m = trimmed.match(/(?:profiles|users)\/(\d+)/);
+  return m ? Number(m[1]) : null;
+}
+
+export type C2cOutingSummary = { id: number; date: string | null; title: string };
+
+type C2cOutingListDoc = {
+  document_id: number;
+  date_start?: string | null;
+  locales?: C2cLocale[];
+};
+
+// List every outing where the user is a participant (public data). Paginates
+// through the whole set; capped to stay reasonable.
+export async function listUserOutings(
+  userId: number,
+  lang: string,
+  max = 300
+): Promise<C2cOutingSummary[]> {
+  const out: C2cOutingSummary[] = [];
+  const pageSize = 100;
+  for (let offset = 0; offset < max; offset += pageSize) {
+    const page = await fetchJson<{ total?: number; documents?: C2cOutingListDoc[] }>(
+      `${C2C_API}/outings?u=${userId}&limit=${pageSize}&offset=${offset}`
+    );
+    const docs = page?.documents ?? [];
+    for (const d of docs) {
+      const loc = pickLocale(d.locales ?? [], lang);
+      out.push({
+        id: d.document_id,
+        date: d.date_start ?? null,
+        title: loc?.title || `Outing ${d.document_id}`,
+      });
+    }
+    if (docs.length < pageSize || out.length >= (page?.total ?? 0)) break;
+  }
+  // API returns newest first; sort oldest→newest so imports read chronological.
+  out.sort((a, b) => (a.date ?? "").localeCompare(b.date ?? ""));
+  return out;
 }

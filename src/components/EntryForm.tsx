@@ -361,6 +361,30 @@ export default function EntryForm({
       setGeoSuggestions([]);
       setGeoOpen(false);
       setOutingUrl("");
+
+      // Pull the outing's photos in via the proxy, then run them through the
+      // normal client compression + append pipeline.
+      const filenames = outing.images.slice(0, 20);
+      if (filenames.length > 0) {
+        const fetched = await Promise.all(
+          filenames.map(async (fn, i) => {
+            try {
+              const r = await fetch(
+                `/api/c2c/image?f=${encodeURIComponent(fn)}&size=BI`
+              );
+              if (!r.ok) return null;
+              const blob = await r.blob();
+              return new File([blob], `c2c-${i + 1}.jpg`, {
+                type: blob.type || "image/jpeg",
+              });
+            } catch {
+              return null;
+            }
+          })
+        );
+        const files = fetched.filter((f): f is File => f !== null);
+        if (files.length > 0) await ingestFiles(files, "append");
+      }
     } catch {
       setImportErr(t.c2cImportError);
     } finally {
