@@ -73,6 +73,9 @@ export default async function RootLayout({
                   <Link href="/entries/new">{t.nav.newEntry}</Link>
                   <Link href={`/u/${user.username}`}>{t.nav.myJournal}</Link>
                   <Link href={`/u/${user.username}#wishlist`}>{t.nav.myWishlist}</Link>
+                  <form action={logout}>
+                    <button type="submit">{t.nav.logout}</button>
+                  </form>
                   <Link
                     href="/notifications"
                     className="notif-bell"
@@ -80,13 +83,8 @@ export default async function RootLayout({
                     aria-label={t.nav.notifications}
                   >
                     🔔
-                    {notifCount > 0 && (
-                      <span className="notif-badge">{notifCount > 9 ? "9+" : notifCount}</span>
-                    )}
+                    {notifCount > 0 && <span className="notif-badge">{notifCount}</span>}
                   </Link>
-                  <form action={logout}>
-                    <button type="submit">{t.nav.logout}</button>
-                  </form>
                 </>
               ) : (
                 <>

@@ -5,7 +5,12 @@ import { useRouter } from "next/navigation";
 import { importOneC2cOuting } from "@/app/actions";
 import type { Locale } from "@/lib/i18n";
 
-type C2cOutingSummary = { id: number; date: string | null; title: string };
+type C2cOutingSummary = {
+  id: number;
+  date: string | null;
+  title: string;
+  imported?: boolean;
+};
 
 type Labels = {
   c2cAccountTitle: string;
@@ -23,6 +28,7 @@ type Labels = {
   c2cAccountDoneLabel: string;
   c2cAccountEmpty: string;
   c2cAccountError: string;
+  c2cAccountImported: string;
   c2cAccountVisibility: string;
   visibilityOptions: { public: string; unlisted: string; private: string };
 };
@@ -63,7 +69,8 @@ export default function C2cAccountImport({
       if (!res.ok) throw new Error("load");
       const { outings: list } = (await res.json()) as { outings: C2cOutingSummary[] };
       setOutings(list);
-      setSelected(new Set(list.map((o) => o.id)));
+      // Pre-select everything except outings already imported (duplicates).
+      setSelected(new Set(list.filter((o) => !o.imported).map((o) => o.id)));
     } catch {
       setError(t.c2cAccountError);
     } finally {
@@ -201,6 +208,9 @@ export default function C2cAccountImport({
                   />
                   <span className="c2c-account-date">{o.date ?? "—"}</span>
                   <span className="c2c-account-title">{o.title}</span>
+                  {o.imported && (
+                    <span className="c2c-account-imported">{t.c2cAccountImported}</span>
+                  )}
                 </label>
               </li>
             ))}
