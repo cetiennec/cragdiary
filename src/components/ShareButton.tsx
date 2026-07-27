@@ -25,7 +25,13 @@ export default function ShareButton({
         const url = window.location.href;
         if (navigator.share) {
           try {
-            await navigator.share({ url, title: document.title, text });
+            // Embed the URL in the text rather than passing a separate `url`
+            // field: apps like WhatsApp and Signal handle a split text/url
+            // differently (some drop one, some duplicate the link), so a single
+            // combined string is the only way to get identical output across
+            // every target.
+            const shareText = text ? `${text}\n${url}` : url;
+            await navigator.share({ title: document.title, text: shareText });
           } catch {
             // User closed the share sheet — nothing to do.
           }
