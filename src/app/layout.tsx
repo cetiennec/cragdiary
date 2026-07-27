@@ -4,6 +4,7 @@ import Link from "next/link";
 import "./globals.css";
 import { currentUser } from "@/lib/auth";
 import { getDict } from "@/lib/i18n";
+import { unreadCount } from "@/lib/notifications";
 import { logout, setLocale } from "./actions";
 
 const geistSans = Geist({
@@ -48,6 +49,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const [user, { locale, t }] = await Promise.all([currentUser(), getDict()]);
+  const notifCount = user ? await unreadCount(user.id) : 0;
 
   return (
     <html
@@ -71,6 +73,17 @@ export default async function RootLayout({
                   <Link href="/entries/new">{t.nav.newEntry}</Link>
                   <Link href={`/u/${user.username}`}>{t.nav.myJournal}</Link>
                   <Link href={`/u/${user.username}#wishlist`}>{t.nav.myWishlist}</Link>
+                  <Link
+                    href="/notifications"
+                    className="notif-bell"
+                    title={t.nav.notifications}
+                    aria-label={t.nav.notifications}
+                  >
+                    🔔
+                    {notifCount > 0 && (
+                      <span className="notif-badge">{notifCount > 9 ? "9+" : notifCount}</span>
+                    )}
+                  </Link>
                   <form action={logout}>
                     <button type="submit">{t.nav.logout}</button>
                   </form>

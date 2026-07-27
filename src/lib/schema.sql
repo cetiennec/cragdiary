@@ -93,6 +93,19 @@ create table if not exists follows (
   primary key (follower_id, followee_id)
 );
 
+-- In-app notifications: someone followed you, tagged you on an outing,
+-- invited you to a wishlist, or added to a shared wishlist.
+create table if not exists notifications (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references users(id) on delete cascade,   -- recipient
+  actor_id uuid references users(id) on delete cascade,           -- who triggered it
+  type text not null,                                             -- follow | tagged | wishlist_invite | wishlist_add
+  data jsonb,                                                     -- {entry_id, wishlist_id, list_name, wish_title}
+  read boolean not null default false,
+  created_at timestamptz not null default now()
+);
+create index if not exists notifications_user_idx on notifications(user_id, created_at desc);
+
 create table if not exists wishes (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references users(id) on delete cascade,

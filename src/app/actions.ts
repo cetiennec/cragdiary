@@ -18,6 +18,7 @@ import {
 } from "@/lib/auth";
 import { clientIp, isRateLimited, recordAttempt, clearAttempts } from "@/lib/rate-limit";
 import { c2cImageUrl, importOuting } from "@/lib/c2c";
+import { notify, extractMentions, userIdsByUsernames, markAllRead } from "@/lib/notifications";
 
 // 2048 px keeps photos crisp in the fullscreen lightbox (incl. high-DPI
 // screens); quality 86 is visibly cleaner than 82 at a modest size cost.
@@ -96,6 +97,23 @@ export async function setLocale(formData: FormData): Promise<void> {
     maxAge: 365 * 24 * 60 * 60,
     sameSite: "lax",
   });
+}
+
+// Notify climbers newly @-tagged as partners on an entry. `previousPartners`
+// lets updates skip people who were already tagged.
+async function notifyTaggedPartners(
+  actorId: string,
+  partners: string | null,
+  entryId: string,
+  previousPartners: string | null = null
+): Promise<void> {
+  const before = new Set(extractMentions(previousPartners));
+  const added = extractMentions(partners).filter((u) => !before.has(u));
+  if (added.length === 0) return;
+  const users = await userIdsByUsernames(added);
+  await Promise.all(
+    users.map((u) => notify({ userId: u.id, actorId, type: "tagged", data: { entry_id: entryId } }))
+  );
 }
 
 async function processPhotoBuffer(
@@ -389,6 +407,8 @@ export async function createEntry(formData: FormData): Promise<string | void> {
     );
   }
 
+  await notifyTaggedPartners(user.id, optionalText(formData.get("partners")), entryId);
+
   revalidatePath("/");
   revalidatePath(`/u/${user.username}`);
   if (formData.get("no_redirect")) return entryId;
@@ -497,6 +517,13 @@ export async function updateEntry(formData: FormData): Promise<void> {
   const pitches = optionalInt(formData.get("pitches"));
   const coords = parseCoords(formData);
 
+  // Old partners, so we only notify climbers newly tagged by this edit.
+  const prevPartners = await pool.query<{ partners: string | null }>(
+    "select partners from entries where id = $1 and user_id = $2",
+    [id, user.id]
+  );
+  const previousPartners = prevPartners.rows[0]?.partners ?? null;
+
   const client = await pool.connect();
   try {
     const updated = await client.query(
@@ -591,6 +618,13 @@ export async function updateEntry(formData: FormData): Promise<void> {
   } finally {
     client.release();
   }
+
+  await notifyTaggedPartners(
+    user.id,
+    optionalText(formData.get("partners")),
+    id,
+    previousPartners
+  );
 
   revalidatePath("/");
   revalidatePath(`/u/${user.username}`);
@@ -812,6 +846,13 @@ export async function deleteAccount(formData: FormData): Promise<void> {
   redirect("/");
 }
 
+export async function markNotificationsRead(): Promise<void> {
+  const user = await currentUser();
+  if (!user) return;
+  await markAllRead(user.id);
+  revalidatePath("/", "layout");
+}
+
 export async function toggleFollow(formData: FormData): Promise<void> {
   const user = await currentUser();
   if (!user) redirect("/login");
@@ -829,10 +870,13 @@ export async function toggleFollow(formData: FormData): Promise<void> {
     [user.id, followee.id]
   );
   if (deleted.rowCount === 0) {
-    await pool.query(
+    const inserted = await pool.query(
       "insert into follows (follower_id, followee_id) values ($1, $2) on conflict do nothing",
       [user.id, followee.id]
     );
+    if (inserted.rowCount && inserted.rowCount > 0) {
+      await notify({ userId: followee.id, actorId: user.id, type: "follow" });
+    }
   }
 
   revalidatePath(`/u/${username}`);
@@ -891,6 +935,29 @@ export async function addWish(formData: FormData): Promise<void> {
       coords.lat,
       coords.lon,
     ]
+  );
+
+  // Notify everyone else on the list (owner + members) that a route was added.
+  const recipients = await pool.query<{ id: string; name: string }>(
+    `select u.id, w.name
+     from wishlists w
+     join users u on u.id = w.owner_id or u.id in (
+       select user_id from wishlist_members where wishlist_id = w.id
+     )
+     where w.id = $1`,
+    [wishlistId]
+  );
+  await Promise.all(
+    recipients.rows
+      .filter((r) => r.id !== user.id)
+      .map((r) =>
+        notify({
+          userId: r.id,
+          actorId: user.id,
+          type: "wishlist_add",
+          data: { wishlist_id: wishlistId, list_name: r.name, wish_title: title },
+        })
+      )
   );
 
   revalidatePath(`/u/${user.username}`);
@@ -971,11 +1038,23 @@ export async function addWishlistMember(formData: FormData): Promise<void> {
     );
     const memberId = target.rows[0]?.id;
     if (owns.rows.length > 0 && memberId && memberId !== user.id) {
-      await pool.query(
+      const added = await pool.query(
         `insert into wishlist_members (wishlist_id, user_id) values ($1, $2)
          on conflict do nothing`,
         [id, memberId]
       );
+      if (added.rowCount && added.rowCount > 0) {
+        const list = await pool.query<{ name: string }>(
+          "select name from wishlists where id = $1",
+          [id]
+        );
+        await notify({
+          userId: memberId,
+          actorId: user.id,
+          type: "wishlist_invite",
+          data: { wishlist_id: id, list_name: list.rows[0]?.name },
+        });
+      }
     }
   }
   revalidatePath(`/u/${user.username}`);
