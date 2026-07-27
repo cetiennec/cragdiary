@@ -208,7 +208,8 @@ export async function importOuting(id: number, lang: string): Promise<C2cOutingI
     height_m: route?.height_m ?? null,
     lat: route?.lat ?? outingCoords?.lat ?? null,
     lon: route?.lon ?? outingCoords?.lon ?? null,
-    c2c_url: route?.url ?? `${C2C_SITE}/outings/${id}`,
+    // Remember the outing (récit) link the user imported, not the route topo.
+    c2c_url: `${C2C_SITE}/outings/${id}`,
     c2c_summary: route?.summary ?? null,
     notes: locale?.description?.trim() || null,
     partners,
