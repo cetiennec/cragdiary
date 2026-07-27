@@ -2031,6 +2031,31 @@ a {
   box-shadow: 0 3px 12px color-mix(in srgb, var(--accent) 60%, transparent);
 }
 
+/* Secondary round icon buttons (import, export) — compact, outlined so the
+   primary ＋ stays dominant. Labels live in title/aria-label. */
+.action-bubble {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 1.05rem;
+  line-height: 1;
+  color: var(--accent);
+  background: var(--bg-elevated);
+  border: 1.5px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  text-decoration: none;
+  transition: transform 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+
+.action-bubble:hover {
+  transform: scale(1.08);
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+
 .filter-bar input,
 .filter-bar select {
   font: inherit;
@@ -2595,26 +2620,6 @@ a {
   align-items: center;
   gap: 0.7rem;
   flex-shrink: 0;
-}
-
-.import-pill {
-  white-space: nowrap;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--accent);
-  background: var(--bg-elevated);
-  border: 1.5px dashed var(--accent);
-  border-radius: 999px;
-  padding: 0.35rem 0.95rem;
-  text-decoration: none;
-  box-shadow: 0 3px 10px -4px rgba(58, 44, 34, 0.3);
-  transition: transform 0.15s ease, background-color 0.15s ease, color 0.15s ease;
-}
-
-.import-pill:hover {
-  transform: rotate(1.5deg) scale(1.04);
-  background: var(--accent);
-  color: var(--accent-contrast);
 }
 
 .feedback-fab {
