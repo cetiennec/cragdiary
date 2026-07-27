@@ -17,10 +17,10 @@ type Labels = {
   c2cAccountPhotos: string;
   c2cAccountSelectAll: string;
   c2cAccountSelectNone: string;
-  c2cAccountCount: (n: number) => string;
-  c2cAccountImport: (n: number) => string;
-  c2cAccountImporting: (done: number, total: number) => string;
-  c2cAccountDone: (n: number) => string;
+  c2cAccountFound: string;
+  c2cAccountImportBtn: string;
+  c2cAccountImportingLabel: string;
+  c2cAccountDoneLabel: string;
   c2cAccountEmpty: string;
   c2cAccountError: string;
 };
@@ -142,7 +142,9 @@ export default function C2cAccountImport({
       {outings && outings.length > 0 && (
         <div className="c2c-account-form">
           <div className="c2c-account-toolbar">
-            <span>{t.c2cAccountCount(outings.length)}</span>
+            <span>
+              {outings.length} {t.c2cAccountFound}
+            </span>
             <button
               type="button"
               className="link-btn"
@@ -188,7 +190,9 @@ export default function C2cAccountImport({
           </ul>
 
           {progress && progress.done >= progress.total ? (
-            <p className="c2c-import-status">{t.c2cAccountDone(progress.total)}</p>
+            <p className="c2c-import-status">
+              {progress.total} {t.c2cAccountDoneLabel}
+            </p>
           ) : (
             <button
               type="button"
@@ -197,8 +201,8 @@ export default function C2cAccountImport({
               disabled={importing || selected.size === 0}
             >
               {importing
-                ? t.c2cAccountImporting(progress!.done, progress!.total)
-                : t.c2cAccountImport(selected.size)}
+                ? `${t.c2cAccountImportingLabel} ${progress!.done}/${progress!.total}…`
+                : `${t.c2cAccountImportBtn} (${selected.size})`}
             </button>
           )}
         </div>
