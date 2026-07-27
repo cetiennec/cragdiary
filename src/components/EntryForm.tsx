@@ -417,12 +417,16 @@ export default function EntryForm({
     await Promise.all(workers);
   }
 
-  async function handleFiles(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files ?? []);
+  // Shared by the file picker (replace) and drag-and-drop import (append):
+  // derive the entry date from EXIF, compress, then set/extend the pending
+  // photos and their layouts.
+  async function ingestFiles(files: File[], mode: "replace" | "append") {
     if (files.length === 0) {
-      setNewFiles([]);
-      setNewLayouts([]);
-      setPhotoError(false);
+      if (mode === "replace") {
+        setNewFiles([]);
+        setNewLayouts([]);
+        setPhotoError(false);
+      }
       return;
     }
     // Derive the entry date from the photos' capture date (oldest first) when
@@ -449,11 +453,78 @@ export default function EntryForm({
         return out;
       })
     );
-    setPhotoError(compressed.some((f) => f.size > PER_PHOTO_BUDGET));
-    syncFileInput(compressed);
-    setNewFiles(compressed);
-    setNewLayouts(compressed.map(() => ({ align: "gallery", size: "m", para: "1", caption: "" })));
+    setNewFiles((prev) => {
+      const next = mode === "append" ? [...prev, ...compressed] : compressed;
+      syncFileInput(next);
+      setPhotoError(next.some((f) => f.size > PER_PHOTO_BUDGET));
+      return next;
+    });
+    setNewLayouts((prev) => {
+      const added = compressed.map(() => ({
+        align: "gallery",
+        size: "m",
+        para: "1",
+        caption: "",
+      }));
+      return mode === "append" ? [...prev, ...added] : added;
+    });
   }
+
+  async function handleFiles(e: React.ChangeEvent<HTMLInputElement>) {
+    await ingestFiles(Array.from(e.target.files ?? []), "replace");
+  }
+
+  // Drag an image file from the desktop anywhere on the page to import it.
+  // Window-level listeners so the whole page is a dropzone (and the browser
+  // doesn't just open the dropped file). ingestFiles is kept fresh via a ref.
+  const [dropActive, setDropActive] = useState(false);
+  const ingestRef = useRef(ingestFiles);
+  useEffect(() => {
+    ingestRef.current = ingestFiles;
+  });
+
+  useEffect(() => {
+    let depth = 0;
+    const hasFiles = (e: DragEvent) =>
+      Array.from(e.dataTransfer?.types ?? []).includes("Files");
+    const onEnter = (e: DragEvent) => {
+      if (!hasFiles(e)) return;
+      e.preventDefault();
+      depth += 1;
+      setDropActive(true);
+    };
+    const onOver = (e: DragEvent) => {
+      if (hasFiles(e)) e.preventDefault();
+    };
+    const onLeave = (e: DragEvent) => {
+      if (!hasFiles(e)) return;
+      depth -= 1;
+      if (depth <= 0) {
+        depth = 0;
+        setDropActive(false);
+      }
+    };
+    const onDrop = (e: DragEvent) => {
+      if (!hasFiles(e)) return;
+      e.preventDefault();
+      depth = 0;
+      setDropActive(false);
+      const images = Array.from(e.dataTransfer?.files ?? []).filter((f) =>
+        f.type.startsWith("image/")
+      );
+      if (images.length > 0) void ingestRef.current(images, "append");
+    };
+    window.addEventListener("dragenter", onEnter);
+    window.addEventListener("dragover", onOver);
+    window.addEventListener("dragleave", onLeave);
+    window.addEventListener("drop", onDrop);
+    return () => {
+      window.removeEventListener("dragenter", onEnter);
+      window.removeEventListener("dragover", onOver);
+      window.removeEventListener("dragleave", onLeave);
+      window.removeEventListener("drop", onDrop);
+    };
+  }, []);
 
   function moveNewPhoto(index: number, delta: number) {
     const target = index + delta;
@@ -633,6 +704,11 @@ export default function EntryForm({
       }}
       className="notion-page notion-editor"
     >
+      {dropActive && (
+        <div className="editor-dropzone" aria-hidden>
+          <span>🖼️ {t.dropToImport}</span>
+        </div>
+      )}
       <div className="notion-body">
         {editing && <input type="hidden" name="id" value={entry!.id} />}
         {defaults?.fromWish && <input type="hidden" name="from_wish" value={defaults.fromWish} />}

@@ -299,6 +299,35 @@ a {
   padding-bottom: 3rem;
 }
 
+/* Drag-a-file-onto-the-editor import overlay */
+.notion-editor {
+  position: relative;
+}
+
+.editor-dropzone {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  backdrop-filter: blur(2px);
+  pointer-events: none;
+}
+
+.editor-dropzone span {
+  font-family: var(--heading-font), serif;
+  font-size: 1.3rem;
+  color: var(--accent);
+  border: 2px dashed var(--accent);
+  border-radius: var(--radius-card, 12px);
+  padding: 2rem 3rem;
+  background: var(--bg-elevated);
+  text-align: center;
+}
+
 .notion-cover {
   width: 100%;
   height: clamp(180px, 30vh, 320px);
