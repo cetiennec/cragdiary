@@ -758,7 +758,7 @@ export async function deleteEntry(formData: FormData): Promise<void> {
 }
 
 function siteUrl(): string {
-  return process.env.APP_URL ?? "https://cragdiary.nanocorp.app";
+  return process.env.APP_URL ?? "https://cragdiary.com";
 }
 
 export async function requestPasswordReset(formData: FormData): Promise<void> {

@@ -1,31 +1,29 @@
-const TOOL_API = "https://api.nanocorp.so/internal/tools/send_email/execute";
+const RESEND_API = "https://api.resend.com/emails";
 
 export async function sendEmail(
   to: string,
   subject: string,
   html: string
 ): Promise<boolean> {
-  const token = process.env.NANOCORP_TOKEN;
-  const company = process.env.NANOCORP_COMPANY;
-  if (!token || !company) {
-    console.error("email: NANOCORP_TOKEN / NANOCORP_COMPANY not configured");
+  const key = process.env.RESEND_API_KEY;
+  const from = process.env.EMAIL_FROM ?? "Cragdiary <noreply@cragdiary.com>";
+  if (!key) {
+    console.error("email: RESEND_API_KEY not configured");
     return false;
   }
 
   try {
-    const res = await fetch(TOOL_API, {
+    const res = await fetch(RESEND_API, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-        "Nanocorp-Company": company,
+        Authorization: `Bearer ${key}`,
       },
-      body: JSON.stringify({ arguments: { to, subject, body: html } }),
+      body: JSON.stringify({ from, to, subject, html }),
       signal: AbortSignal.timeout(10000),
     });
-    const data = (await res.json()) as { success: boolean; error?: string };
-    if (!data.success) {
-      console.error("email: send failed:", data.error);
+    if (!res.ok) {
+      console.error("email: send failed:", res.status, await res.text());
       return false;
     }
     return true;

@@ -18,7 +18,7 @@ const fraunces = Fraunces({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.APP_URL ?? "https://cragdiary.nanocorp.app"),
+  metadataBase: new URL(process.env.APP_URL ?? "https://cragdiary.com"),
   title: "Cragdiary",
   description: "A free, Notion-style journal for climbing days.",
   openGraph: {

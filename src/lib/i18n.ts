@@ -769,13 +769,13 @@ const fr: Dict = {
       "Cragdiary est une webapp installable : ajoutée à l'écran d'accueil, elle s'ouvre en plein écran avec sa propre icône, comme une app — pas de store, toujours à jour.",
     iosTitle: "iPhone / iPad (Safari)",
     iosSteps: [
-      "Ouvrez cragdiary.nanocorp.app dans Safari.",
+      "Ouvrez cragdiary.com dans Safari.",
       "Touchez le bouton Partager (le carré avec une flèche).",
       "Choisissez « Sur l'écran d'accueil », puis « Ajouter ».",
     ],
     androidTitle: "Android (Chrome)",
     androidSteps: [
-      "Ouvrez cragdiary.nanocorp.app dans Chrome.",
+      "Ouvrez cragdiary.com dans Chrome.",
       "Touchez le menu ⋮ (ou la bannière « Installer l'application » si elle apparaît).",
       "Choisissez « Ajouter à l'écran d'accueil » / « Installer », puis confirmez.",
     ],
