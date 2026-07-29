@@ -451,7 +451,10 @@ a {
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-.entry-card-link:hover .entry-card {
+/* Hover is tracked on the shell, not the link, so the card and the visibility
+   pill floating above it lift together — including when the pointer is on the
+   pill itself. */
+.entry-card-shell:hover .entry-card {
   transform: translateY(-3px);
 }
 
@@ -463,7 +466,7 @@ a {
   transform: rotate(0.5deg);
 }
 
-:root[data-theme="scrapbook"] .entry-card-link:hover .entry-card {
+:root[data-theme="scrapbook"] .entry-card-shell:hover .entry-card {
   transform: translateY(-3px) rotate(0deg);
 }
 
@@ -526,6 +529,11 @@ a {
   right: 0.7rem;
   bottom: 0.7rem;
   z-index: 2;
+  transition: transform 0.15s ease;
+}
+
+.entry-card-shell:hover .entry-visibility {
+  transform: translateY(-3px);
 }
 
 .visibility-select {
@@ -2737,6 +2745,22 @@ a {
 .filter-bar a {
   font-size: 0.85rem;
   color: var(--text-muted);
+}
+
+/* The filters apply themselves now, so this is the only control left in the bar
+   — give it a button's footprint rather than leaving a bare link floating. */
+.filter-clear {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.34rem 0.9rem;
+  text-decoration: none;
+  line-height: 1.4;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.filter-clear:hover {
+  color: var(--accent);
+  border-color: var(--accent);
 }
 
 /* Follow button */

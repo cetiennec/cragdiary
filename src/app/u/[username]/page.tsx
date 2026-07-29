@@ -18,6 +18,7 @@ import { setProfileVisibility, toggleFollow } from "@/app/actions";
 import VisibilityPicker from "@/components/VisibilityPicker";
 import { renderMentions } from "@/lib/mentions";
 import FilterBar from "@/components/FilterBar";
+import AutoFilterForm from "@/components/AutoFilterForm";
 import WishlistSection from "@/components/WishlistSection";
 import CreateWishlistForm from "@/components/CreateWishlistForm";
 import { currentUser } from "@/lib/auth";
@@ -379,7 +380,7 @@ export default async function ProfilePage({
             {isSelf && <CreateWishlistForm t={t.wishlist} />}
           </div>
           {wishes.length > 1 && (
-            <form method="get" action={`/u/${profile.username}`} className="filter-bar wish-filter">
+            <AutoFilterForm action={`/u/${profile.username}`} className="filter-bar wish-filter">
               {sp.q && <input type="hidden" name="q" value={sp.q} />}
               {sp.year && <input type="hidden" name="year" value={sp.year} />}
               {sp.loc && <input type="hidden" name="loc" value={sp.loc} />}
@@ -400,11 +401,12 @@ export default async function ProfilePage({
                 <option value="easy">{t.wishlist.sortEasy}</option>
                 <option value="hard">{t.wishlist.sortHard}</option>
               </select>
-              <button type="submit">{t.filters.apply}</button>
               {wishFiltering && (
-                <a href={`/u/${profile.username}#wishlist`}>{t.filters.clear}</a>
+                <a href={`/u/${profile.username}#wishlist`} className="filter-clear">
+                  {t.filters.clear}
+                </a>
               )}
-            </form>
+            </AutoFilterForm>
           )}
           {wishlists.length === 0 && sharedWishlists.length === 0 && (
             <p className="form-hint">{t.wishlist.empty}</p>

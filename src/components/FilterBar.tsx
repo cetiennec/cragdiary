@@ -1,10 +1,11 @@
+import AutoFilterForm from "@/components/AutoFilterForm";
+
 export type FilterLabels = {
   q: string;
   qPlaceholder: string;
   year: string;
   allYears: string;
   location: string;
-  apply: string;
   clear: string;
 };
 
@@ -27,7 +28,7 @@ export default function FilterBar({
     : action;
 
   return (
-    <form method="get" action={action} className="filter-bar">
+    <AutoFilterForm action={action} className="filter-bar">
       {Object.entries(hidden).map(([k, v]) => (
         <input key={k} type="hidden" name={k} value={v} />
       ))}
@@ -54,8 +55,11 @@ export default function FilterBar({
         aria-label={t.location}
         className="filter-loc"
       />
-      <button type="submit">{t.apply}</button>
-      {active && <a href={clearHref}>{t.clear}</a>}
-    </form>
+      {active && (
+        <a href={clearHref} className="filter-clear">
+          {t.clear}
+        </a>
+      )}
+    </AutoFilterForm>
   );
 }
