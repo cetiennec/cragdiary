@@ -4,7 +4,7 @@ A free, Notion-style journal for logging climbing days and multi-pitch routes. N
 performance/grade-tracking — an aesthetic, personal-diary experience: log a day, add
 notes, photos, and the vibe of it.
 
-Live at https://cragdiary.nanocorp.app
+Live at https://cragdiary.com
 
 ## Stack
 
@@ -35,7 +35,10 @@ Postgres client.
 
 ## Deploy
 
-Push to `main`; Vercel auto-deploys (managed via NanoCorp — see `.nanocorp/project.json`).
+Push to `main` on `origin` (`github.com/cetiennec/cragdiary`); Vercel auto-deploys
+to https://cragdiary.com. The `nanocorp` remote is the retired platform mirror — pushing
+there deploys nothing you own and triggers "deployment blocked" mail. See
+`docs/self-hosting.md`.
 
 ## Visual theme
 

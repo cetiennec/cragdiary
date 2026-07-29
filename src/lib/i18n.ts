@@ -330,13 +330,13 @@ const en = {
       "Cragdiary is an installable web app: added to your home screen, it opens full screen with its own icon, just like an app — no app store, always up to date.",
     iosTitle: "iPhone / iPad (Safari)",
     iosSteps: [
-      "Open cragdiary.nanocorp.app in Safari.",
+      "Open cragdiary.com in Safari.",
       "Tap the Share button (the square with an arrow).",
       "Choose “Add to Home Screen”, then “Add”.",
     ],
     androidTitle: "Android (Chrome)",
     androidSteps: [
-      "Open cragdiary.nanocorp.app in Chrome.",
+      "Open cragdiary.com in Chrome.",
       "Tap the ⋮ menu (or the “Install app” banner if it appears).",
       "Choose “Add to Home screen” / “Install app”, then confirm.",
     ],
