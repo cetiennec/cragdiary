@@ -10,10 +10,6 @@ type SettingsLabels = {
   bioPinsHint: string;
   avatarLabel: string;
   avatarRemove: string;
-  visibilityLabel: string;
-  visibilityOptions: { public: string; unlisted: string; private: string };
-  privateHint: string;
-  unlistedHint: string;
   settingsSave: string;
   emailLabel: string;
   emailHint: string;
@@ -51,10 +47,11 @@ async function shrinkOnChange(
   input.files = dt.files;
 }
 
+// Visibility is deliberately not here — it lives in the profile header, where
+// you can see and change it without unfolding settings.
 export default function ProfileSettingsForm({
   bio,
   email,
-  visibility,
   hasAvatar,
   hasCover,
   pinSuggestions = [],
@@ -62,7 +59,6 @@ export default function ProfileSettingsForm({
 }: {
   bio: string;
   email: string;
-  visibility: "public" | "unlisted" | "private";
   hasAvatar: boolean;
   hasCover: boolean;
   pinSuggestions?: string[];
@@ -130,16 +126,6 @@ export default function ProfileSettingsForm({
             <input type="checkbox" name="remove_cover" value="1" /> {t.coverRemove}
           </label>
         )}
-        <label>
-          {t.visibilityLabel}
-          <select name="profile_visibility" defaultValue={visibility}>
-            <option value="public">{t.visibilityOptions.public}</option>
-            <option value="unlisted">{t.visibilityOptions.unlisted}</option>
-            <option value="private">{t.visibilityOptions.private}</option>
-          </select>
-        </label>
-        {visibility === "private" && <p className="form-hint">{t.privateHint}</p>}
-        {visibility === "unlisted" && <p className="form-hint">{t.unlistedHint}</p>}
         <SubmitButton label={t.settingsSave} />
       </form>
 

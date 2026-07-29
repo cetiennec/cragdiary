@@ -2,9 +2,8 @@ import Link from "next/link";
 import { formatDate, type Locale } from "@/lib/i18n";
 import type { EntryWithAuthor } from "@/lib/queries";
 import AutoCover, { CoverPins, CoverTag, CoverStars } from "@/components/AutoCover";
-import EntryVisibilityPicker, {
-  type VisibilityLabels,
-} from "@/components/EntryVisibilityPicker";
+import VisibilityPicker, { type VisibilityLabels } from "@/components/VisibilityPicker";
+import { setEntryVisibility } from "@/app/actions";
 
 export default function EntryCard({
   entry,
@@ -54,9 +53,11 @@ export default function EntryCard({
         </article>
       </Link>
       {visibilityLabels && (
-        <EntryVisibilityPicker
+        <VisibilityPicker
+          action={setEntryVisibility}
           entryId={entry.id}
           visibility={entry.visibility}
+          className="entry-visibility"
           t={visibilityLabels}
         />
       )}

@@ -256,13 +256,18 @@ export async function updateProfile(formData: FormData): Promise<void> {
   if (!user) throw new Error("Unauthorized");
 
   const bio = String(formData.get("bio") ?? "").trim() || null;
-  const profileVisibility = parseVisibility(formData.get("profile_visibility"));
   const rawEmail = String(formData.get("email") ?? "").trim().toLowerCase();
   const email = rawEmail && rawEmail.includes("@") ? rawEmail : null;
+  // Visibility lives in the profile header now (setProfileVisibility), so it is
+  // normally absent here — coalesce rather than let parseVisibility's "public"
+  // default silently un-hide a private profile on every settings save.
+  const profileVisibility = formData.has("profile_visibility")
+    ? parseVisibility(formData.get("profile_visibility"))
+    : null;
 
   try {
     await pool.query(
-      "update users set bio = $1, visibility = $2, email = $3 where id = $4",
+      "update users set bio = $1, visibility = coalesce($2, visibility), email = $3 where id = $4",
       [bio, profileVisibility, email, user.id]
     );
   } catch (e) {
@@ -755,6 +760,23 @@ export async function deleteEntry(formData: FormData): Promise<void> {
   revalidatePath("/");
   revalidatePath(`/u/${user.username}`);
   redirect("/");
+}
+
+// Profile visibility from the header pill — same idea as setEntryVisibility, one
+// level up. Kept separate from updateProfile so it doesn't drag the whole
+// settings form (avatar, cover, email) through a round-trip.
+export async function setProfileVisibility(formData: FormData): Promise<void> {
+  const user = await currentUser();
+  if (!user) throw new Error("Unauthorized");
+
+  await pool.query("update users set visibility = $1 where id = $2", [
+    parseVisibility(formData.get("visibility")),
+    user.id,
+  ]);
+
+  revalidatePath("/");
+  revalidatePath("/climbers");
+  revalidatePath(`/u/${user.username}`);
 }
 
 // One-click visibility change from an entry card, so you don't have to open the

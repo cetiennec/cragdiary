@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { setEntryVisibility } from "@/app/actions";
 import type { Visibility } from "@/lib/db";
 
 const ORDER: Visibility[] = ["public", "unlisted", "private"];
@@ -11,16 +10,22 @@ export type VisibilityLabels = {
   short: Record<Visibility, string>;
 };
 
-// Small pill in the corner of an entry card: pick who can see that day without
-// opening the edit form. The <select> submits its own form on change, so it must
-// live outside the card's <Link> (an anchor can't contain form controls).
-export default function EntryVisibilityPicker({
+// Small pill that changes one thing's visibility in place — an entry card's
+// corner, or the profile header. The <select> submits its own form on change, so
+// on a card it must sit outside the <Link> (an anchor can't contain a form
+// control).
+export default function VisibilityPicker({
+  action,
   entryId,
   visibility,
+  className = "",
   t,
 }: {
-  entryId: string;
+  action: (formData: FormData) => Promise<void>;
+  /** Omitted for the profile picker — the action derives the user from the session. */
+  entryId?: string;
   visibility: Visibility;
+  className?: string;
   t: VisibilityLabels;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
@@ -28,14 +33,14 @@ export default function EntryVisibilityPicker({
   const [value, setValue] = useState<Visibility>(visibility);
 
   return (
-    <form ref={formRef} action={setEntryVisibility} className="entry-visibility">
-      <input type="hidden" name="id" value={entryId} />
+    <form ref={formRef} action={action} className={`visibility-picker ${className}`}>
+      {entryId && <input type="hidden" name="id" value={entryId} />}
       <select
         name="visibility"
         value={value}
         aria-label={t.picker}
         title={t.picker}
-        className={`entry-visibility-select ${value}`}
+        className={`visibility-select ${value}`}
         onChange={(e) => {
           setValue(e.target.value as Visibility);
           formRef.current?.requestSubmit();

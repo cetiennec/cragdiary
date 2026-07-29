@@ -14,7 +14,8 @@ import {
 } from "@/lib/queries";
 import { coverEmojis } from "@/components/AutoCover";
 import { flagEmoji } from "@/lib/geo";
-import { toggleFollow } from "@/app/actions";
+import { setProfileVisibility, toggleFollow } from "@/app/actions";
+import VisibilityPicker from "@/components/VisibilityPicker";
 import { renderMentions } from "@/lib/mentions";
 import FilterBar from "@/components/FilterBar";
 import WishlistSection from "@/components/WishlistSection";
@@ -223,6 +224,22 @@ export default async function ProfilePage({
           <p className="profile-sub">
             @{profile.username} · {t.profile.entryCount(entries.length)}
           </p>
+          {isSelf && (
+            <div className="profile-visibility">
+              <span className="profile-visibility-label">{t.profile.visibilityLabel}</span>
+              <VisibilityPicker
+                action={setProfileVisibility}
+                visibility={profile.visibility}
+                t={{ picker: t.profile.visibilityLabel, short: t.entry.visibilityShort }}
+              />
+            </div>
+          )}
+          {isSelf && profile.visibility === "private" && (
+            <p className="form-hint profile-visibility-hint">{t.profile.privateHint}</p>
+          )}
+          {isSelf && profile.visibility === "unlisted" && (
+            <p className="form-hint profile-visibility-hint">{t.profile.unlistedHint}</p>
+          )}
           {profile.bio && <p className="profile-bio">{profile.bio}</p>}
         </div>
         {user && !isSelf && (
@@ -241,7 +258,6 @@ export default async function ProfilePage({
           <ProfileSettingsForm
             bio={profile.bio ?? ""}
             email={profile.email ?? ""}
-            visibility={profile.visibility}
             hasAvatar={profile.has_avatar}
             hasCover={profile.has_cover}
             pinSuggestions={pinSuggestions}
@@ -250,10 +266,6 @@ export default async function ProfilePage({
               bioLabel: t.profile.bioLabel,
               avatarLabel: t.profile.avatarLabel,
               avatarRemove: t.profile.avatarRemove,
-              visibilityLabel: t.profile.visibilityLabel,
-              visibilityOptions: t.editor.visibilityOptions,
-              privateHint: t.profile.privateHint,
-              unlistedHint: t.profile.unlistedHint,
               settingsSave: t.profile.settingsSave,
               emailLabel: t.profile.emailLabel,
               emailHint: t.profile.emailHint,

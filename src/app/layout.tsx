@@ -25,8 +25,17 @@ export const metadata: Metadata = {
     siteName: "Cragdiary",
     type: "website",
   },
+  // Declaring `icons` at all disables Next's icon file convention, so every rel
+  // has to be listed here — with only `apple` set, no <link rel="icon"> was
+  // emitted and Safari fell back to probing /favicon.ico.
   icons: {
-    apple: "/icon-192.png",
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/icon-32.png", type: "image/png", sizes: "32x32" },
+      { url: "/icon.svg", type: "image/svg+xml" },
+    ],
+    shortcut: "/favicon.ico",
+    apple: "/apple-touch-icon.png",
   },
   appleWebApp: {
     capable: true,
