@@ -265,6 +265,7 @@ const en = {
     year: "Year",
     allYears: "All years",
     location: "Place",
+    label: "🔎 Filter",
     clear: "Clear",
   },
   follow: {
@@ -713,6 +714,7 @@ const fr: Dict = {
     year: "Année",
     allYears: "Toutes les années",
     location: "Lieu",
+    label: "🔎 Filtrer",
     clear: "Effacer",
   },
   follow: {

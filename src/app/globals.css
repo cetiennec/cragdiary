@@ -427,10 +427,18 @@ a {
 }
 
 /* Wraps the card link so owner-only controls (visibility) can sit on top of it
-   — an <a> cannot contain a form control. */
+   — an <a> cannot contain a form control. The hover transform lives here rather
+   than on .entry-card so the card and the pill are literally the same moving
+   element; animating them separately made the pill drift on the rotated themes,
+   because it turned about its own centre instead of following the card's corner. */
 .entry-card-shell {
   position: relative;
   height: 100%;
+  transition: transform 0.15s ease;
+}
+
+.entry-card-shell:hover {
+  transform: translateY(-3px);
 }
 
 .entry-card-link {
@@ -448,25 +456,18 @@ a {
   height: 100%;
   display: flex;
   flex-direction: column;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition: box-shadow 0.15s ease;
 }
 
-/* Hover is tracked on the shell, not the link, so the card and the visibility
-   pill floating above it lift together — including when the pointer is on the
-   pill itself. */
-.entry-card-shell:hover .entry-card {
-  transform: translateY(-3px);
-}
-
-:root[data-theme="scrapbook"] .entry-card-shell:nth-child(3n + 1) .entry-card {
+:root[data-theme="scrapbook"] .entry-card-shell:nth-child(3n + 1) {
   transform: rotate(-0.6deg);
 }
 
-:root[data-theme="scrapbook"] .entry-card-shell:nth-child(3n) .entry-card {
+:root[data-theme="scrapbook"] .entry-card-shell:nth-child(3n) {
   transform: rotate(0.5deg);
 }
 
-:root[data-theme="scrapbook"] .entry-card-shell:hover .entry-card {
+:root[data-theme="scrapbook"] .entry-card-shell:hover {
   transform: translateY(-3px) rotate(0deg);
 }
 
@@ -529,11 +530,6 @@ a {
   right: 0.7rem;
   bottom: 0.7rem;
   z-index: 2;
-  transition: transform 0.15s ease;
-}
-
-.entry-card-shell:hover .entry-visibility {
-  transform: translateY(-3px);
 }
 
 .visibility-select {
@@ -2745,6 +2741,14 @@ a {
 .filter-bar a {
   font-size: 0.85rem;
   color: var(--text-muted);
+}
+
+/* Without the old "Filter" button the row of inputs had nothing naming it. */
+.filter-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
 }
 
 /* The filters apply themselves now, so this is the only control left in the bar

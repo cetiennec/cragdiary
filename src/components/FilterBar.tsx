@@ -6,6 +6,7 @@ export type FilterLabels = {
   year: string;
   allYears: string;
   location: string;
+  label: string;
   clear: string;
 };
 
@@ -32,6 +33,7 @@ export default function FilterBar({
       {Object.entries(hidden).map(([k, v]) => (
         <input key={k} type="hidden" name={k} value={v} />
       ))}
+      <span className="filter-label">{t.label}</span>
       <input
         type="search"
         name="q"

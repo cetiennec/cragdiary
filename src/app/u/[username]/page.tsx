@@ -384,6 +384,7 @@ export default async function ProfilePage({
               {sp.q && <input type="hidden" name="q" value={sp.q} />}
               {sp.year && <input type="hidden" name="year" value={sp.year} />}
               {sp.loc && <input type="hidden" name="loc" value={sp.loc} />}
+              <span className="filter-label">{t.filters.label}</span>
               <input
                 type="search"
                 name="wloc"
