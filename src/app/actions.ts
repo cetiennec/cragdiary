@@ -757,6 +757,25 @@ export async function deleteEntry(formData: FormData): Promise<void> {
   redirect("/");
 }
 
+// One-click visibility change from an entry card, so you don't have to open the
+// full edit form just to hide (or share) a day.
+export async function setEntryVisibility(formData: FormData): Promise<void> {
+  const user = await currentUser();
+  if (!user) throw new Error("Unauthorized");
+
+  const id = String(formData.get("id") ?? "");
+  if (!id) return;
+
+  await pool.query(
+    "update entries set visibility = $1 where id = $2 and user_id = $3",
+    [parseVisibility(formData.get("visibility")), id, user.id]
+  );
+
+  revalidatePath("/");
+  revalidatePath(`/u/${user.username}`);
+  revalidatePath(`/entries/${id}`);
+}
+
 function siteUrl(): string {
   return process.env.APP_URL ?? "https://cragdiary.com";
 }

@@ -350,7 +350,11 @@ export default async function ProfilePage({
               entry={entry}
               locale={locale}
               showAuthor={false}
-              showVisibility={isSelf}
+              visibilityLabels={
+                isSelf
+                  ? { picker: t.entry.visibilityPicker, short: t.entry.visibilityShort }
+                  : undefined
+              }
             />
           ))}
         </div>

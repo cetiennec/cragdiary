@@ -190,6 +190,12 @@ const en = {
     deleting: "Deleting…",
     confirmDelete: "Delete this entry? This cannot be undone.",
     badges: { unlisted: "🔗 Link only", private: "🔒 Private" },
+    visibilityPicker: "Who can see this day",
+    visibilityShort: {
+      public: "🌍 Public",
+      unlisted: "🔗 Link only",
+      private: "🔒 Private",
+    },
   },
   profile: {
     entryCount: (n: number) => (n === 1 ? "1 entry" : `${n} entries`),
@@ -633,6 +639,12 @@ const fr: Dict = {
     deleting: "Suppression…",
     confirmDelete: "Supprimer cette entrée ? C'est irréversible.",
     badges: { unlisted: "🔗 Par lien", private: "🔒 Privé" },
+    visibilityPicker: "Qui peut voir cette journée",
+    visibilityShort: {
+      public: "🌍 Public",
+      unlisted: "🔗 Par lien",
+      private: "🔒 Privé",
+    },
   },
   profile: {
     entryCount: (n: number) => (n === 1 ? "1 entrée" : `${n} entrées`),

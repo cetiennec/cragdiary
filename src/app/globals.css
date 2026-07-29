@@ -422,9 +422,17 @@ a {
   gap: 1.4rem;
 }
 
+/* Wraps the card link so owner-only controls (visibility) can sit on top of it
+   — an <a> cannot contain a form control. */
+.entry-card-shell {
+  position: relative;
+  height: 100%;
+}
+
 .entry-card-link {
   text-decoration: none;
   display: block;
+  height: 100%;
 }
 
 .entry-card {
@@ -443,11 +451,11 @@ a {
   transform: translateY(-3px);
 }
 
-:root[data-theme="scrapbook"] .entry-card-link:nth-child(3n + 1) .entry-card {
+:root[data-theme="scrapbook"] .entry-card-shell:nth-child(3n + 1) .entry-card {
   transform: rotate(-0.6deg);
 }
 
-:root[data-theme="scrapbook"] .entry-card-link:nth-child(3n) .entry-card {
+:root[data-theme="scrapbook"] .entry-card-shell:nth-child(3n) .entry-card {
   transform: rotate(0.5deg);
 }
 
@@ -497,6 +505,50 @@ a {
   font-size: 0.9rem;
   line-height: 1.45;
   margin: 0;
+}
+
+/* Leaves room for the visibility pill in the bottom-right corner. */
+.entry-card-body.has-visibility {
+  padding-bottom: 2.5rem;
+}
+
+.entry-visibility {
+  position: absolute;
+  right: 0.7rem;
+  bottom: 0.7rem;
+  z-index: 2;
+  line-height: 1;
+}
+
+.entry-visibility-select {
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+  cursor: pointer;
+  appearance: none;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.entry-visibility-select:hover,
+.entry-visibility-select:focus-visible {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.entry-visibility-select.private,
+.entry-visibility-select.unlisted {
+  border-style: dashed;
+}
+
+/* The dropdown list itself is OS-rendered — keep its text readable in dark mode. */
+.entry-visibility-select option {
+  color: var(--text);
+  background: var(--bg-elevated);
 }
 
 /* Notion-style entry page */
