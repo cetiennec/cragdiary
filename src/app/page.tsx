@@ -93,9 +93,11 @@ export default async function Home({ searchParams }: { searchParams: Promise<SP>
         {filterBar}
         {all.length === 0 ? (
           <div className="empty-state">
-            <p>{t.feed.empty}</p>
+            <p>{t.filters.noResults}</p>
             <p>
-              <Link href="/">{t.filters.clear}</Link>
+              <Link href="/" className="filter-clear">
+                {t.filters.clear}
+              </Link>
             </p>
           </div>
         ) : (

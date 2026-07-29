@@ -23,6 +23,7 @@ export default function WishlistSection({
   locale,
   t,
   attribution,
+  emptyLabel,
 }: {
   list: WishlistFull;
   wishes: Wish[];
@@ -31,6 +32,8 @@ export default function WishlistSection({
   locale: Locale;
   t: WishlistDict;
   attribution: string;
+  /** Overrides "nothing here yet" when the list is empty only because of a filter. */
+  emptyLabel?: string;
 }) {
   const canEdit = list.can_edit;
   const isMember = canEdit && !isOwner;
@@ -100,7 +103,7 @@ export default function WishlistSection({
         />
       )}
 
-      {wishes.length === 0 && <p className="form-hint">{t.empty}</p>}
+      {wishes.length === 0 && <p className="form-hint">{emptyLabel ?? t.empty}</p>}
 
       <ul className="wishlist">
         {wishes.map((wish) => (

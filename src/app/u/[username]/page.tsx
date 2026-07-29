@@ -78,6 +78,7 @@ export default async function ProfilePage({
     year: Number.isFinite(yearNum) ? yearNum : null,
     location: sp.loc?.trim() || undefined,
   };
+  const entryFiltering = Boolean(filters.q || filters.year || filters.location);
 
   const [profile, user, { locale, t }] = await Promise.all([
     getUserByUsername(username),
@@ -327,7 +328,17 @@ export default async function ProfilePage({
         )}
       </div>
 
-      {entries.length === 0 ? (
+      {entries.length === 0 && entryFiltering ? (
+        // Filtering to nothing isn't an empty journal — don't show onboarding.
+        <div className="empty-state">
+          <p>{t.filters.noResults}</p>
+          <p>
+            <Link href={`/u/${profile.username}`} className="filter-clear">
+              {t.filters.clear}
+            </Link>
+          </p>
+        </div>
+      ) : entries.length === 0 ? (
         isSelf ? (
           <div className="onboard">
             <h2 className="onboard-title">{t.profile.onboardTitle}</h2>
@@ -423,6 +434,7 @@ export default async function ProfilePage({
                 locale={locale}
                 t={t.wishlist}
                 attribution={t.editor.suggestionsAttribution}
+                emptyLabel={wishFiltering ? t.filters.noResults : undefined}
               />
             ))}
           </div>
@@ -441,6 +453,7 @@ export default async function ProfilePage({
                     locale={locale}
                     t={t.wishlist}
                     attribution={t.editor.suggestionsAttribution}
+                    emptyLabel={wishFiltering ? t.filters.noResults : undefined}
                   />
                 ))}
               </div>
