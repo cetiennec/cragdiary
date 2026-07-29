@@ -3,8 +3,29 @@
 A step-by-step runbook to move the live site off the NanoCorp-managed stack and onto
 accounts you own, served from `cragdiary.com`.
 
-Read the whole thing once before starting. Nothing here is destructive until **Step 7**
-— the old site keeps running the entire time.
+---
+
+## 0. Status — done as of 2026-07-29
+
+**The migration is complete.** Steps 1–7 below are kept as the record of how it was done and
+as the rollback procedure; they are no longer instructions to follow.
+
+| # | Was | Now | Verified by |
+|---|-----|-----|-------------|
+| 1 | Vercel under NanoCorp | Your own Vercel project, building `github.com/cetiennec/cragdiary` | GitHub Deployments on that repo track what's live |
+| 2 | Neon `withered-fire-49669067`, `us-east-2` | Your own Neon, `ep-proud-shape-a2pf82sk`, **eu-central-1** | 3 users / 42 entries / 146 photos, matching the site |
+| 3 | `api.nanocorp.so/…/send_email` | Resend (`src/lib/email.ts`) | commit e1aac92 |
+| 4 | `origin` = nanocorp-hq | `origin` = cetiennec, `nanocorp` = retired mirror | `git remote -v` |
+| 5 | Their edge proxy | `cragdiary.com` straight to Vercel | `server: Vercel` on the response |
+
+**The trap this left behind:** for a day, `.env.local` still pointed at the *old* database
+while the site ran on the new one. Comparing row counts against the live site is the only
+reliable way to tell them apart — the env file is not evidence. If the two ever disagree
+again, the site wins, and **do not restore an old dump over the live database.**
+
+Still open: rotate `SESSION_SECRET` (NanoCorp held the old value and could otherwise mint
+valid session cookies), and confirm `RESEND_API_KEY` is set in Vercel — nothing surfaces a
+missing key until someone needs a password reset.
 
 ---
 
@@ -323,6 +344,11 @@ Then, in order:
    **rotate `ADMIN_PASSWORD` and any credential that ever lived in their env**, which you
    already did in Step 4.
 4. Remove `.nanocorp/project.json` from the repo, and delete the `nanocorp` remote.
+   (`project.json` is gone as of 2026-07-29; the remote is kept for now as a bare mirror.)
+
+> Done 2026-07-29, with one deviation: step 2's "final dump of the old DB" was taken
+> (`~/cragdiary-backup-2026-07-29.dump`) but **not** restored — by then the new database was
+> already live and ahead of it. The dumps are archives, not something to replay.
 
 ---
 
