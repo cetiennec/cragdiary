@@ -6,9 +6,13 @@ import EntryCard from "@/components/EntryCard";
 import FilterBar from "@/components/FilterBar";
 import type { EntryWithAuthor } from "@/lib/queries";
 
-const PAGE_SIZE = 24;
+const PAGE_SIZE = 12;
 
-type SP = { q?: string; year?: string; loc?: string; show?: string };
+// Each feed section paginates on its own query param so expanding one
+// doesn't drag the other along with it.
+type ShowKey = "show" | "showc";
+
+type SP = { q?: string; year?: string; loc?: string; show?: string; showc?: string };
 
 function parseFilters(params: SP): EntryFilters {
   const year = parseInt(params.year ?? "", 10);
@@ -19,8 +23,8 @@ function parseFilters(params: SP): EntryFilters {
   };
 }
 
-function parseShow(params: SP): number {
-  const n = parseInt(params.show ?? "", 10);
+function parseShow(params: SP, key: ShowKey): number {
+  const n = parseInt(params[key] ?? "", 10);
   return Number.isFinite(n) ? Math.min(300, Math.max(PAGE_SIZE, n)) : PAGE_SIZE;
 }
 
@@ -37,27 +41,33 @@ function Grid({ entries, locale }: { entries: EntryWithAuthor[]; locale: Locale 
 // "Show more" control shown when a section has more entries than are displayed.
 function ShowMore({
   params,
+  param,
   show,
   total,
   t,
 }: {
   params: SP;
+  param: ShowKey;
   show: number;
   total: number;
   t: Dict["feed"];
 }) {
   if (total <= show) return null;
+  const anchor = param === "showc" ? "more-cordees" : "more";
   const sp = new URLSearchParams();
   if (params.q) sp.set("q", params.q);
   if (params.year) sp.set("year", params.year);
   if (params.loc) sp.set("loc", params.loc);
-  sp.set("show", String(show + PAGE_SIZE));
+  // Keep the other section where the reader left it.
+  const other: ShowKey = param === "showc" ? "show" : "showc";
+  if (params[other]) sp.set(other, params[other]);
+  sp.set(param, String(show + PAGE_SIZE));
   return (
-    <div className="feed-more" id="more">
+    <div className="feed-more" id={anchor}>
       <span className="form-hint">
         {Math.min(show, total)} / {total} {t.showCount}
       </span>
-      <Link href={`/?${sp.toString()}#more`} className="feed-more-btn">
+      <Link href={`/?${sp.toString()}#${anchor}`} className="feed-more-btn">
         {t.showMore}
       </Link>
     </div>
@@ -73,7 +83,8 @@ export default async function Home({ searchParams }: { searchParams: Promise<SP>
 
   const filters = parseFilters(params);
   const hasFilters = Boolean(filters.q || filters.year || filters.location);
-  const show = parseShow(params);
+  const show = parseShow(params, "show");
+  const showCordees = parseShow(params, "showc");
   const years = await getEntryYears();
 
   const filterBar = (
@@ -103,7 +114,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<SP>
         ) : (
           <>
             <Grid entries={all.slice(0, show)} locale={locale} />
-            <ShowMore params={params} show={show} total={all.length} t={t.feed} />
+            <ShowMore params={params} param="show" show={show} total={all.length} t={t.feed} />
           </>
         )}
       </div>
@@ -128,7 +139,16 @@ export default async function Home({ searchParams }: { searchParams: Promise<SP>
           {cordeesEntries.length === 0 ? (
             <p className="form-hint">{t.feed.emptyCordees}</p>
           ) : (
-            <Grid entries={cordeesEntries} locale={locale} />
+            <>
+              <Grid entries={cordeesEntries.slice(0, showCordees)} locale={locale} />
+              <ShowMore
+                params={params}
+                param="showc"
+                show={showCordees}
+                total={cordeesEntries.length}
+                t={t.feed}
+              />
+            </>
           )}
         </section>
       )}
@@ -149,7 +169,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<SP>
         ) : (
           <>
             <Grid entries={publicAll.slice(0, show)} locale={locale} />
-            <ShowMore params={params} show={show} total={publicAll.length} t={t.feed} />
+            <ShowMore params={params} param="show" show={show} total={publicAll.length} t={t.feed} />
           </>
         )}
       </section>
