@@ -4599,14 +4599,30 @@ a {
 }
 
 /* It lives with the other "my journal" actions, at the bottom right of the
-   profile's controls; its panel drops underneath them rather than stretching
-   the row. */
+   profile's controls. Only the button takes up room in the row — whatever it
+   has to say hangs underneath, so the buttons beside it never move. */
 .action-cluster > .c2c-sync {
+  position: relative;
   margin-top: 0;
+}
+
+.c2c-sync-pop {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  z-index: 20;
+  display: flex;
   flex-direction: column;
   align-items: flex-end;
-  max-width: 24rem;
+  gap: 0.5rem;
+  width: max-content;
+  max-width: min(24rem, 80vw);
   text-align: right;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-card);
 }
 
 /* Built to match the round action buttons it sits with: same height, same
@@ -4653,13 +4669,10 @@ a {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 0.5rem 0.8rem;
   width: 100%;
   font-size: 0.85rem;
-  padding: 0.6rem 0.8rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-card);
-  background: var(--bg-elevated);
 }
 
 /* "How should these days be visible?" — asked before a batch import. */

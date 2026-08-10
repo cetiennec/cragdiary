@@ -134,31 +134,37 @@ export default function C2cSync({
         <span aria-hidden>⟳</span> {checking ? "…" : t.syncShort}
       </button>
 
-      {error && <span className="form-error c2c-sync-note">{t.syncError}</span>}
-      {imported != null && imported > 0 && (
-        <span className="c2c-sync-note">{fill(t.syncDone, imported)}</span>
-      )}
-      {missing?.length === 0 && existing.length === 0 && (
-        <span className="c2c-sync-note">{t.syncNothing}</span>
-      )}
+      {/* Everything it has to say floats under the button: written into the
+          row, it shoved the buttons next to it around. */}
+      {(error || imported != null || missing !== null) && (
+        <div className="c2c-sync-pop">
+          {error && <span className="form-error c2c-sync-note">{t.syncError}</span>}
+          {imported != null && imported > 0 && (
+            <span className="c2c-sync-note">{fill(t.syncDone, imported)}</span>
+          )}
+          {missing?.length === 0 && existing.length === 0 && (
+            <span className="c2c-sync-note">{t.syncNothing}</span>
+          )}
 
-      {missing && (missing.length > 0 || existing.length > 0) && (
-        <div className="c2c-sync-panel">
-          <span className="c2c-sync-note">
-            {missing.length > 0 ? fill(t.syncFound, missing.length) : t.syncNothing}
-          </span>
-          <button
-            type="button"
-            className="btn-primary"
-            onClick={() => setAsking(true)}
-            disabled={importing}
-          >
-            {importing
-              ? `${t.syncImporting} ${progress!.done}/${progress!.total}…`
-              : missing.length > 0
-                ? `${t.syncImport} (${missing.length})`
-                : t.syncComplete}
-          </button>
+          {missing && (missing.length > 0 || existing.length > 0) && (
+            <div className="c2c-sync-panel">
+              <span className="c2c-sync-note">
+                {missing.length > 0 ? fill(t.syncFound, missing.length) : t.syncNothing}
+              </span>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => setAsking(true)}
+                disabled={importing}
+              >
+                {importing
+                  ? `${t.syncImporting} ${progress!.done}/${progress!.total}…`
+                  : missing.length > 0
+                    ? `${t.syncImport} (${missing.length})`
+                    : t.syncComplete}
+              </button>
+            </div>
+          )}
         </div>
       )}
 
