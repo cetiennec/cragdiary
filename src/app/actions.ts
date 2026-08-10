@@ -185,9 +185,12 @@ async function processPhotoBuffer(
         .resize({ width: THUMB_WIDTH, withoutEnlargement: true })
         .avif({ quality: AVIF_QUALITY, effort: AVIF_EFFORT })
         .toBuffer();
-    } catch {
+    } catch (e) {
       // A missing thumbnail costs bandwidth, not correctness — the photo route
-      // falls back to the full image.
+      // falls back to the full image. Logged all the same: a silent catch
+      // around a write is exactly how the c2c photo import stayed broken for
+      // months.
+      console.error("thumbnail failed", e);
     }
   }
 
@@ -293,6 +296,12 @@ export async function signup(formData: FormData): Promise<void> {
   redirect(`/u/${username}`);
 }
 
+// A real scrypt hash of a password nobody has, in the shape verifyPassword
+// expects, so a login for an unknown account does the same work as a real one.
+const DECOY_HASH =
+  "0000000000000000000000000000000000000000000000000000000000000000:" +
+  "0".repeat(128);
+
 export async function login(formData: FormData): Promise<void> {
   const username = String(formData.get("username") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
@@ -307,7 +316,12 @@ export async function login(formData: FormData): Promise<void> {
     "select id, password_hash from users where username = $1",
     [username]
   );
-  if (result.rows.length === 0 || !verifyPassword(password, result.rows[0].password_hash)) {
+  // An unknown username used to answer before scrypt had run, so the reply time
+  // said whether an account existed. Hashing against a decoy costs the same as
+  // hashing for real, and the answer is identical either way.
+  const hash = result.rows[0]?.password_hash ?? DECOY_HASH;
+  const ok = verifyPassword(password, hash) && result.rows.length > 0;
+  if (!ok) {
     await recordAttempt(bucket);
     redirect("/login?error=1");
   }
@@ -544,8 +558,9 @@ async function addC2cPhotos(
         cover: target.startPosition === 0 && index === 0,
       });
       fetched[index] = { filename, processed };
-    } catch {
-      // One bad image shouldn't abort the whole entry.
+    } catch (e) {
+      // One bad image shouldn't abort the whole entry — but it should say so.
+      console.error("c2c photo failed", target.entryId, e);
     }
   });
 

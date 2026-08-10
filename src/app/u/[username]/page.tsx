@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import {
   getEntriesByUser,
   getEntryYears,
+  getCoverPhotoIds,
   getPinCollection,
   getUserByUsername,
   getUserStats,
@@ -66,6 +67,7 @@ export default async function ProfilePage({
   params: Promise<{ username: string }>;
   searchParams: Promise<{
     error?: string;
+    show?: string;
     q?: string;
     year?: string;
     loc?: string;
@@ -83,6 +85,11 @@ export default async function ProfilePage({
     location: sp.loc?.trim() || undefined,
   };
   const entryFiltering = Boolean(filters.q || filters.year || filters.location);
+  // A screenful at a time, like the feed: a long journal is thousands of photo
+  // rows to read for a page that shows two dozen cards.
+  const PAGE_SIZE = 24;
+  const showNum = parseInt(sp.show ?? "", 10);
+  const show = Number.isFinite(showNum) ? Math.min(600, Math.max(PAGE_SIZE, showNum)) : PAGE_SIZE;
 
   const [profile, user, { locale, t }] = await Promise.all([
     getUserByUsername(username),
@@ -94,7 +101,7 @@ export default async function ProfilePage({
   const isSelf = user?.id === profile.id;
   if (profile.visibility === "private" && !isSelf) notFound();
   const [
-    entries,
+    page,
     stats,
     years,
     wishlists,
@@ -104,16 +111,19 @@ export default async function ProfilePage({
     followers,
     followRequests,
   ] = await Promise.all([
-    getEntriesByUser(profile.id, { includeNonPublic: isSelf, filters }),
+    getEntriesByUser(profile.id, { includeNonPublic: isSelf, filters, limit: show }),
     getUserStats(profile.id, { includeNonPublic: isSelf }),
     getEntryYears(profile.id),
     getOwnedWishlists(profile.id, user?.id ?? null),
     isSelf ? getSharedWishlists(profile.id) : Promise.resolve([]),
     user && !isSelf ? followState(user.id, profile.id) : Promise.resolve("none" as const),
-    isSelf ? getPinCollection(profile.id, { includeNonPublic: true }) : Promise.resolve([]),
+    // Every day that has coordinates, for the map — the rows are small and
+    // carry no photos, so this stays cheap however long the journal is.
+    getPinCollection(profile.id, { includeNonPublic: isSelf }),
     isSelf ? getFollowers(profile.id) : Promise.resolve([]),
     isSelf ? getFollowRequests(profile.id) : Promise.resolve([]),
   ]);
+  const entries = page.entries;
   const wishes = [...wishlists, ...sharedWishlists].flatMap((l) => l.wishes);
   const showWishlist = isSelf || wishlists.length > 0;
 
@@ -168,7 +178,12 @@ export default async function ProfilePage({
     )
   );
 
-  const mapPoints = entries
+  // One small query for the covers the map cards point at, rather than the
+  // photos of every day in the journal.
+  const photoByEntry = await getCoverPhotoIds(
+    pinEntries.filter((e) => e.lat != null && e.lon != null).map((e) => e.id)
+  );
+  const mapPoints = pinEntries
     .filter((e) => e.lat != null && e.lon != null)
     .map((e) => ({
       id: e.id,
@@ -177,7 +192,7 @@ export default async function ProfilePage({
       lon: e.lon!,
       href: `/entries/${e.id}`,
       // The cover, for the card that opens on hover. Photos come back ordered.
-      photoId: e.photos[0]?.id,
+      photoId: photoByEntry.get(e.id),
       c2cUrl: e.c2c_url ?? undefined,
       date: formatDate(e.entry_date, locale, e.month_only),
     }));
@@ -243,7 +258,7 @@ export default async function ProfilePage({
         <div>
           <h1 className="profile-name">{profile.display_name}</h1>
           <p className="profile-sub">
-            @{profile.username} · {t.profile.entryCount(entries.length)}
+            @{profile.username} · {t.profile.entryCount(page.total)}
           </p>
           {isSelf && (
             <div className="profile-visibility">
@@ -442,6 +457,26 @@ export default async function ProfilePage({
               }
             />
           ))}
+        </div>
+      )}
+
+      {/* One screenful at a time; the rest is a click away. */}
+      {page.total > entries.length && (
+        <div className="feed-more" id="more">
+          <span className="form-hint">
+            {entries.length} / {page.total} {t.feed.showCount}
+          </span>
+          <Link
+            href={`/u/${profile.username}?${new URLSearchParams({
+              ...(sp.q ? { q: sp.q } : {}),
+              ...(sp.year ? { year: sp.year } : {}),
+              ...(sp.loc ? { loc: sp.loc } : {}),
+              show: String(show + 24),
+            })}#more`}
+            className="feed-more-btn"
+          >
+            {t.feed.showMore}
+          </Link>
         </div>
       )}
 

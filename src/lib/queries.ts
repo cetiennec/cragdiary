@@ -158,21 +158,44 @@ export async function getUserByUsername(username: string): Promise<User | null> 
 
 export async function getEntriesByUser(
   userId: string,
-  { includeNonPublic = false, filters = {} }: { includeNonPublic?: boolean; filters?: EntryFilters } = {}
-): Promise<EntryWithAuthor[]> {
+  {
+    includeNonPublic = false,
+    filters = {},
+    limit = null,
+  }: { includeNonPublic?: boolean; filters?: EntryFilters; limit?: number | null } = {}
+): Promise<{ entries: EntryWithAuthor[]; total: number }> {
   const params: unknown[] = [userId, includeNonPublic];
   const conds = ["e.user_id = $1", "($2 or e.visibility = 'public')"];
   filterConditions(filters, params, conds);
 
-  const result = await pool.query<Entry & { username: string; display_name: string; author_visibility: Visibility }>(
-    `select e.*, u.username, u.display_name, u.visibility as author_visibility
+  // A journal grows without bound; the page shows a screenful. The window
+  // count still reports the real number, for "24 / 340".
+  let limitClause = "";
+  if (limit != null) {
+    params.push(limit);
+    limitClause = ` limit $${params.length}`;
+  }
+
+  const result = await pool.query<
+    Entry & {
+      username: string;
+      display_name: string;
+      author_visibility: Visibility;
+      feed_total: string;
+    }
+  >(
+    `select e.*, u.username, u.display_name, u.visibility as author_visibility,
+            count(*) over() as feed_total
      from entries e
      join users u on u.id = e.user_id
      where ${conds.join(" and ")}
-     order by e.entry_date desc, e.created_at desc`,
+     order by e.entry_date desc, e.created_at desc${limitClause}`,
     params
   );
-  return attachPhotos(result.rows);
+  return {
+    entries: await attachPhotos(result.rows),
+    total: Number(result.rows[0]?.feed_total ?? 0),
+  };
 }
 
 export async function getEntryYears(userId?: string): Promise<number[]> {
@@ -289,6 +312,20 @@ export async function getCordees(userId: string, username: string): Promise<Cord
 
 // All of a user's entries without their photos — enough to compute the pin
 // collection and climbed countries on the profile, cheaply.
+// Cover photo id per entry, without the photos themselves: the map's hover
+// cards need a thumbnail to point at, for days that aren't on the current page.
+export async function getCoverPhotoIds(entryIds: string[]): Promise<Map<string, string>> {
+  if (entryIds.length === 0) return new Map();
+  const result = await pool.query<{ entry_id: string; id: string }>(
+    `select distinct on (entry_id) entry_id, id
+     from photos
+     where entry_id = any($1) and align is null
+     order by entry_id, position asc`,
+    [entryIds]
+  );
+  return new Map(result.rows.map((r) => [r.entry_id, r.id]));
+}
+
 export async function getPinCollection(
   userId: string,
   { includeNonPublic = false } = {}
