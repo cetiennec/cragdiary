@@ -78,6 +78,7 @@ export default async function RootLayout({
             <nav className="site-nav">
               <Link href="/">{t.nav.feed}</Link>
               <Link href="/climbers">{t.nav.climbers}</Link>
+              <Link href="/cragseeker">{t.seeker.navLabel}</Link>
               {user ? (
                 <>
                   <Link href={`/u/${user.username}`}>{t.nav.myJournal}</Link>

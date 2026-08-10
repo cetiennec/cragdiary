@@ -339,6 +339,25 @@ export async function getSharedWishlists(userId: string): Promise<WishlistFull[]
   return assembleWishlists(lists.rows, userId);
 }
 
+// Every list the user may add a route to: the ones they own plus the ones they
+// were invited to collaborate on. Default list first, as elsewhere.
+export async function getEditableWishlists(
+  userId: string
+): Promise<{ id: string; name: string }[]> {
+  const result = await pool.query<{ id: string; name: string }>(
+    `select w.id, w.name
+     from wishlists w
+     where w.owner_id = $1
+        or exists (
+          select 1 from wishlist_members m
+          where m.wishlist_id = w.id and m.user_id = $1
+        )
+     order by w.is_default desc, w.created_at asc`,
+    [userId]
+  );
+  return result.rows;
+}
+
 // A single list for authorization checks (who owns it).
 export async function getWishlist(id: string): Promise<Wishlist | null> {
   const result = await pool.query<Wishlist>(

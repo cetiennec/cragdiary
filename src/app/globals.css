@@ -3701,3 +3701,376 @@ a {
     width: auto;
   }
 }
+
+/* ---- Cragseeker: route search over the camptocamp database --------------- */
+
+.seeker-head {
+  margin-bottom: 1.4rem;
+}
+
+.seeker .page-title {
+  margin-bottom: 0.5rem;
+}
+
+.seeker-beta {
+  font-family: var(--font-geist-sans), sans-serif;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  padding: 0.15rem 0.55rem;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.seeker-tagline {
+  color: var(--text-muted);
+  max-width: 60ch;
+  line-height: 1.55;
+}
+
+.seeker-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card, 12px);
+  background: var(--bg-elevated);
+  padding: 1.1rem 1.2rem;
+  margin-bottom: 1.4rem;
+}
+
+.seeker-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem 1rem;
+}
+
+.seeker-row-end {
+  justify-content: space-between;
+  align-items: center;
+}
+
+.seeker-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+  min-width: 0;
+}
+
+.seeker-field-grow {
+  flex: 1 1 220px;
+}
+
+.seeker-field-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.01em;
+}
+
+.seeker-field-hint {
+  font-weight: 400;
+  font-style: normal;
+  opacity: 0.75;
+}
+
+.seeker-controls input,
+.seeker-controls select,
+.seeker-result select {
+  font: inherit;
+  font-size: 0.88rem;
+  line-height: 1.4;
+  color: var(--text);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.4rem 0.9rem;
+  min-width: 0;
+}
+
+.seeker-controls select,
+.seeker-result select {
+  appearance: none;
+  padding-right: 1.9rem;
+  background-image: var(--select-caret);
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 0.65rem;
+  cursor: pointer;
+}
+
+.seeker-controls input:focus-visible,
+.seeker-controls select:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.seeker-range {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--text-muted);
+}
+
+.seeker-range select {
+  min-width: 5.4rem;
+}
+
+.seeker-range input[type="number"] {
+  width: 5.4rem;
+}
+
+.seeker-locate {
+  font: inherit;
+  font-size: 0.85rem;
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.4rem 0.9rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.seeker-locate:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.seeker-locate:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.seeker-facing {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
+.seeker-facing legend {
+  float: left;
+  margin-right: 0.6rem;
+  padding: 0;
+  line-height: 1.9;
+}
+
+/* The checkbox itself is hidden; the label is the toggle. */
+.seeker-chip input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.seeker-chip span {
+  display: inline-block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.22rem 0.6rem;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.seeker-chip input:checked + span {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-contrast);
+}
+
+.seeker-chip input:focus-visible + span {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.seeker-clear {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  background: none;
+  cursor: pointer;
+}
+
+.seeker-map-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 1.2rem;
+}
+
+.seeker-map {
+  height: 380px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  z-index: 0;
+  cursor: crosshair;
+}
+
+.seeker-map-hint,
+.seeker-note {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.seeker-status {
+  display: flex;
+  align-items: baseline;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 0.9rem;
+}
+
+.seeker-status .seeker-note {
+  font-weight: 400;
+}
+
+.seeker-results {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 0.9rem;
+}
+
+.seeker-result {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card, 12px);
+  background: var(--bg-elevated);
+  padding: 0.9rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.seeker-result.active {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-card);
+}
+
+.seeker-result-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.seeker-result-head a {
+  font-weight: 600;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.seeker-result-head a:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.seeker-distance {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.seeker-area {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.seeker-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin: 0;
+}
+
+.seeker-tag {
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.1rem 0.5rem;
+  color: var(--text-muted);
+}
+
+.seeker-summary {
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.seeker-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: auto;
+  padding-top: 0.4rem;
+  font-size: 0.82rem;
+}
+
+.seeker-actions > a {
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+.seeker-actions > a:hover {
+  color: var(--accent);
+}
+
+.seeker-actions button {
+  font: inherit;
+  font-size: 0.82rem;
+  margin-left: auto;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  border: none;
+  border-radius: 999px;
+  padding: 0.3rem 0.8rem;
+  cursor: pointer;
+}
+
+.seeker-actions button:disabled {
+  opacity: 0.65;
+  cursor: default;
+}
+
+.seeker-more {
+  display: flex;
+  justify-content: center;
+  margin-top: 1.4rem;
+}
+
+.seeker-attribution {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  text-align: center;
+  margin-top: 2rem;
+}
+
+@media (max-width: 640px) {
+  .seeker-map {
+    height: 280px;
+  }
+
+  .seeker-field-grow {
+    flex-basis: 100%;
+  }
+}

@@ -945,18 +945,14 @@ const EDITABLE_WISH_LISTS = `
      or exists (select 1 from wishlist_members m
                 where m.wishlist_id = w.id and m.user_id = $2)`;
 
-export async function addWish(formData: FormData): Promise<void> {
-  const user = await currentUser();
-  if (!user) throw new Error("Unauthorized");
-
-  const wishlistId = String(formData.get("wishlist_id") ?? "");
-  if (!wishlistId || !(await canEditWishlist(wishlistId, user.id))) {
-    throw new Error("Not found");
-  }
-
-  const title = String(formData.get("title") ?? "").trim();
-  if (!title) redirect(`/u/${user.username}#wishlist`);
-
+// Shared by the wishlist form and Cragseeker: insert the route, tell the other
+// people on the list, refresh the profile. Callers own where the user goes next.
+async function insertWish(
+  user: { id: string; username: string },
+  wishlistId: string,
+  title: string,
+  formData: FormData
+): Promise<void> {
   const coords = parseCoords(formData);
   await pool.query(
     `insert into wishes (user_id, wishlist_id, title, location, grade_max, rating, pitches, height_m, c2c_url, note, partners, lat, lon)
@@ -1002,7 +998,42 @@ export async function addWish(formData: FormData): Promise<void> {
   );
 
   revalidatePath(`/u/${user.username}`);
+}
+
+export async function addWish(formData: FormData): Promise<void> {
+  const user = await currentUser();
+  if (!user) throw new Error("Unauthorized");
+
+  const wishlistId = String(formData.get("wishlist_id") ?? "");
+  if (!wishlistId || !(await canEditWishlist(wishlistId, user.id))) {
+    throw new Error("Not found");
+  }
+
+  const title = String(formData.get("title") ?? "").trim();
+  if (!title) redirect(`/u/${user.username}#wishlist`);
+
+  await insertWish(user, wishlistId, title, formData);
   redirect(`/u/${user.username}#wishlist`);
+}
+
+// Cragseeker saves without leaving the search: it reports back instead of
+// redirecting, so the results list can just tick the route off.
+export async function saveWishFromSearch(
+  formData: FormData
+): Promise<{ ok: boolean; error?: "auth" | "list" | "title" }> {
+  const user = await currentUser();
+  if (!user) return { ok: false, error: "auth" };
+
+  const wishlistId = String(formData.get("wishlist_id") ?? "");
+  if (!wishlistId || !(await canEditWishlist(wishlistId, user.id))) {
+    return { ok: false, error: "list" };
+  }
+
+  const title = String(formData.get("title") ?? "").trim();
+  if (!title) return { ok: false, error: "title" };
+
+  await insertWish(user, wishlistId, title, formData);
+  return { ok: true };
 }
 
 export async function createWishlist(formData: FormData): Promise<void> {
