@@ -548,30 +548,30 @@ export default async function ProfilePage({
                 {taggedWishes.map((wish) => (
                   <li key={wish.id} className="tagged-wish">
                     <span className="tagged-wish-main">
-                      {/* The route is on their list, so that is where clicking
-                          it goes; camptocamp stays a link of its own. */}
-                      <Link href={`/u/${wish.owner_username}#wishlist`}>{wish.title}</Link>
+                      {/* The route itself points at its topo; getting to the
+                          list it sits on is what the owner's name is for. */}
+                      {wish.c2c_url ? (
+                        <a href={wish.c2c_url} target="_blank" rel="noopener noreferrer">
+                          {wish.title}
+                        </a>
+                      ) : (
+                        <strong>{wish.title}</strong>
+                      )}
                       <span className="tagged-wish-meta">
                         {[wish.location, wish.grade_max, wish.rating]
                           .filter(Boolean)
                           .join(" · ")}
-                        {wish.c2c_url && (
-                          <>
-                            {" · "}
-                            <a href={wish.c2c_url} target="_blank" rel="noopener noreferrer">
-                              {t.seeker.openOnC2c}
-                            </a>
-                          </>
-                        )}
                       </span>
                     </span>
                     <span className="tagged-wish-by">
                       {t.wishlist.taggedBy}{" "}
-                      <Link href={`/u/${wish.owner_username}`}>{wish.owner_display_name}</Link>
+                      {/* Their name goes to the list the route is on, not to
+                          the top of their profile. */}
+                      <Link href={`/u/${wish.owner_username}#wishlist`}>
+                        {wish.owner_display_name}
+                      </Link>
                       {" · "}
-                      {/* Straight to the list the route is on, not just the
-                          profile it belongs to. */}
-                      <Link href={`/u/${wish.owner_username}#wishlist`}>{wish.list_name}</Link>
+                      {wish.list_name}
                     </span>
                   </li>
                 ))}
