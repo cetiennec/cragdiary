@@ -4334,3 +4334,25 @@ a {
   gap: 0.3rem 0.9rem;
   font-size: 0.85rem;
 }
+
+/* Memory-keeping, not measurement. */
+.on-this-day {
+  margin-bottom: 2rem;
+}
+
+.seeker-climbed {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.shared-day {
+  margin: 0 0 1.2rem;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.shared-day a {
+  color: var(--accent);
+}

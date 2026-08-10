@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { currentUser } from "@/lib/auth";
 import { getDict } from "@/lib/i18n";
-import { getEditableWishlists } from "@/lib/queries";
+import { getClimbedRouteIds, getEditableWishlists } from "@/lib/queries";
 import Cragseeker, { type SeekerParams } from "@/components/Cragseeker";
 
 export const metadata: Metadata = {
@@ -22,8 +22,10 @@ export default async function CragseekerPage({
   ]);
   // Logged-out visitors can search all they like; only saving needs a list.
   const wishlists = user ? await getEditableWishlists(user.id) : [];
+  // Routes already in the journal, so the search can say "you've done this one".
+  const climbed = user ? await getClimbedRouteIds(user.id) : [];
 
   // A shared link arrives as query params; the component takes it from there
   // and keeps the URL in step from the client.
-  return <Cragseeker t={t.seeker} locale={locale} wishlists={wishlists} params={params} />;
+  return <Cragseeker t={t.seeker} locale={locale} wishlists={wishlists} climbed={climbed} params={params} />;
 }

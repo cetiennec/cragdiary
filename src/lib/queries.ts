@@ -358,6 +358,59 @@ export async function getEditableWishlists(
   return result.rows;
 }
 
+// "On this day": your own entries from the same calendar day in earlier years.
+// Memory-keeping rather than measurement — the point is to be handed a day you
+// had forgotten, so the newest year comes first.
+export async function getOnThisDay(userId: string): Promise<EntryWithAuthor[]> {
+  const result = await pool.query<EntryWithAuthor>(
+    `select e.*, u.username, u.display_name, u.visibility as author_visibility
+     from entries e join users u on u.id = e.user_id
+     where e.user_id = $1
+       and extract(month from e.entry_date) = extract(month from current_date)
+       and extract(day from e.entry_date) = extract(day from current_date)
+       and extract(year from e.entry_date) <> extract(year from current_date)
+     order by e.entry_date desc`,
+    [userId]
+  );
+  return attachPhotos(result.rows);
+}
+
+// Camptocamp route ids the user has already logged, so Cragseeker can say so.
+// Entries store the full topo URL; the id is the last path segment.
+export async function getClimbedRouteIds(userId: string): Promise<number[]> {
+  const result = await pool.query<{ id: string }>(
+    `select distinct substring(c2c_url from 'routes/([0-9]+)') as id
+     from entries
+     where user_id = $1 and c2c_url is not null`,
+    [userId]
+  );
+  return result.rows.map((r) => Number(r.id)).filter((n) => Number.isFinite(n));
+}
+
+// The same day, written by someone who climbed it with you. Matched on the date
+// plus a partner mention in either direction, so two strangers at the same crag
+// on the same Saturday are never linked. Respects the viewer's visibility.
+export async function getSharedDay(
+  entryId: string,
+  viewerId: string | null
+): Promise<{ id: string; username: string; display_name: string }[]> {
+  const result = await pool.query<{ id: string; username: string; display_name: string }>(
+    `select o.id, ou.username, ou.display_name
+     from entries e
+     join users u on u.id = e.user_id
+     join entries o on o.entry_date = e.entry_date and o.user_id <> e.user_id
+     join users ou on ou.id = o.user_id
+     where e.id = $1
+       and (o.partners ilike '%@' || u.username || '%'
+            or e.partners ilike '%@' || ou.username || '%')
+       and (o.visibility = 'public' or o.user_id = $2::uuid)
+       and (ou.visibility = 'public' or ou.id = $2::uuid)
+     order by ou.display_name`,
+    [entryId, viewerId]
+  );
+  return result.rows;
+}
+
 // A single list for authorization checks (who owns it).
 export async function getWishlist(id: string): Promise<Wishlist | null> {
   const result = await pool.query<Wishlist>(

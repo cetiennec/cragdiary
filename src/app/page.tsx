@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getEntryYears, getFeed, type EntryFilters } from "@/lib/queries";
+import { getEntryYears, getFeed, getOnThisDay, type EntryFilters } from "@/lib/queries";
 import { currentUser } from "@/lib/auth";
 import { getDict, type Locale, type Dict } from "@/lib/i18n";
 import EntryCard from "@/components/EntryCard";
@@ -94,6 +94,8 @@ export default async function Home({ searchParams }: { searchParams: Promise<SP>
   const show = parseShow(params, "show");
   const showCordees = parseShow(params, "showc");
   const years = await getEntryYears();
+  // Memory-keeping, not measurement: the same calendar day in earlier years.
+  const onThisDay = user ? await getOnThisDay(user.id) : [];
 
   const filterBar = (
     <FilterBar
@@ -139,6 +141,13 @@ export default async function Home({ searchParams }: { searchParams: Promise<SP>
 
   return (
     <div className="page-container">
+      {onThisDay.length > 0 && !hasFilters && (
+        <section className="feed-section on-this-day">
+          <h2 className="feed-heading">{t.feed.onThisDay}</h2>
+          <Grid entries={onThisDay} locale={locale} demoLabel={t.demo.banner} />
+        </section>
+      )}
+
       {filterBar}
 
       {user && (

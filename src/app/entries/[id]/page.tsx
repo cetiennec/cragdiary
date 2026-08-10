@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getEntry } from "@/lib/queries";
+import { getEntry, getSharedDay } from "@/lib/queries";
 import { currentUser } from "@/lib/auth";
 import { formatDate, getDict } from "@/lib/i18n";
 import { renderMentions } from "@/lib/mentions";
@@ -145,6 +145,8 @@ export default async function EntryPage({
   const galleryPhotos = entry.photos.filter((p) => !p.align);
   const [cover, ...gallery] = galleryPhotos;
   const isDemo = isDemoAccount(entry.username);
+  // Someone who climbed this day with you and wrote their own version of it.
+  const sharedDay = await getSharedDay(entry.id, user?.id ?? null);
 
   const pitchesAndHeight = [
     entry.pitches ? `${entry.pitches}L` : null,
@@ -328,6 +330,18 @@ export default async function EntryPage({
               )}
             </footer>
           </blockquote>
+        )}
+
+        {sharedDay.length > 0 && (
+          <p className="shared-day">
+            {t.entry.alsoWroteAbout}{" "}
+            {sharedDay.map((other, i) => (
+              <span key={other.id}>
+                {i > 0 && ", "}
+                <Link href={`/entries/${other.id}`}>{other.display_name}</Link>
+              </span>
+            ))}
+          </p>
         )}
 
         {isDemo && (

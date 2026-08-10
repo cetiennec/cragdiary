@@ -115,13 +115,17 @@ export default function Cragseeker({
   t,
   locale,
   wishlists,
+  climbed,
   params,
 }: {
   t: Dict["seeker"];
   locale: Locale;
   wishlists: { id: string; name: string }[];
+  /** Camptocamp route ids already logged in the journal. */
+  climbed: number[];
   params: SeekerParams;
 }) {
+  const climbedIds = useMemo(() => new Set(climbed), [climbed]);
   const [activity, setActivity] = useState<C2cActivity>(
     (C2C_ACTIVITIES as readonly string[]).includes(params.act ?? "")
       ? (params.act as C2cActivity)
@@ -694,6 +698,11 @@ export default function Cragseeker({
                 )}
               </div>
               {route.area && <p className="seeker-area">{route.area}</p>}
+              {climbedIds.has(route.id) && (
+                <p className="seeker-climbed" title={t.climbedHint}>
+                  ✓ {t.climbed}
+                </p>
+              )}
               <p className="seeker-tags">
                 {[
                   route.outdoor_type ? t.outdoorTypes[route.outdoor_type] : null,
