@@ -425,14 +425,41 @@ export default function Cragseeker({
       ? fill(t.resultCountCapped, "n", 5000)
       : fill(t.resultCountAbout, "n", estimatedTotal);
 
+  // A marker carries the same overview as its list card, so hovering a point on
+  // the map answers "what is this route?" without hunting for it further down.
   const points: SeekerPoint[] = useMemo(
     () =>
-      results.flatMap((r) =>
-        r.lat != null && r.lon != null
-          ? [{ id: r.id, title: r.title, lat: r.lat, lon: r.lon, url: r.url }]
-          : []
-      ),
-    [results]
+      results.flatMap((r) => {
+        if (r.lat == null || r.lon == null) return [];
+        const travel = origin
+          ? fill(t.byCar, "t", formatDuration(drivingMinutes(origin, { lat: r.lat, lon: r.lon })))
+          : null;
+        return [
+          {
+            id: r.id,
+            title: r.title,
+            lat: r.lat,
+            lon: r.lon,
+            url: r.url,
+            area: r.area,
+            tags: [
+              r.outdoor_type ? t.outdoorTypes[r.outdoor_type] : null,
+              r.grade,
+              r.required_grade ? `${t.mandatoryTag} ${r.required_grade}` : null,
+              r.rating,
+              r.equipment,
+              r.height_m ? `${r.height_m} m` : null,
+              r.orientation,
+            ].filter((tag): tag is string => Boolean(tag)),
+            distance:
+              travel ??
+              (r.distance_km != null ? fill(t.away, "km", Math.round(r.distance_km)) : null),
+            climbed: climbedIds.has(r.id) ? `✓ ${t.climbed}` : null,
+            summary: r.summary,
+          },
+        ];
+      }),
+    [results, origin, climbedIds, t]
   );
 
   return (

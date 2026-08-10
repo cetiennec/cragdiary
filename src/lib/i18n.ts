@@ -504,7 +504,8 @@ const en = {
     locationDenied: "Couldn't get your position — search for a place instead.",
     droppedPin: "Pin on the map",
     radius: "Around",
-    mapHint: "Click anywhere on the map to move the search pin.",
+    mapHint:
+      "Hover a marker for the route at a glance. Click anywhere else on the map to move the search pin.",
     activity: "Activity",
     activities: {
       rock_climbing: "Rock climbing",
@@ -1096,7 +1097,8 @@ const fr: Dict = {
     locationDenied: "Position indisponible — cherchez plutôt un lieu.",
     droppedPin: "Point sur la carte",
     radius: "Dans un rayon de",
-    mapHint: "Cliquez n'importe où sur la carte pour déplacer le point de recherche.",
+    mapHint:
+      "Survolez un point pour voir la voie en un coup d'œil. Cliquez ailleurs sur la carte pour déplacer le point de recherche.",
     activity: "Activité",
     activities: {
       rock_climbing: "Escalade",

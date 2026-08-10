@@ -9,7 +9,67 @@ export type SeekerPoint = {
   lat: number;
   lon: number;
   url: string;
+  /** Everything the list card shows as a chip: style, grade, rating, height… */
+  tags: string[];
+  area: string | null;
+  /** Already localised ("12 km away" / "35 min by car"), or null with no centre. */
+  distance: string | null;
+  climbed: string | null;
+  summary: string | null;
 };
+
+const TOOLTIP_SUMMARY_CHARS = 120;
+
+// Built from DOM nodes rather than an HTML string: titles, areas and summaries
+// come from camptocamp, and `textContent` can't be talked into being markup.
+function tooltipCard(point: SeekerPoint): HTMLElement {
+  const card = document.createElement("div");
+  card.className = "seeker-tip";
+
+  const title = document.createElement("strong");
+  title.className = "seeker-tip-title";
+  title.textContent = point.title;
+  card.append(title);
+
+  if (point.area) {
+    const area = document.createElement("span");
+    area.className = "seeker-tip-area";
+    area.textContent = point.area;
+    card.append(area);
+  }
+
+  if (point.tags.length) {
+    const tags = document.createElement("span");
+    tags.className = "seeker-tip-tags";
+    for (const tag of point.tags) {
+      const chip = document.createElement("span");
+      chip.className = "seeker-tip-tag";
+      chip.textContent = tag;
+      tags.append(chip);
+    }
+    card.append(tags);
+  }
+
+  const meta = [point.distance, point.climbed].filter(Boolean).join(" · ");
+  if (meta) {
+    const line = document.createElement("span");
+    line.className = "seeker-tip-meta";
+    line.textContent = meta;
+    card.append(line);
+  }
+
+  if (point.summary) {
+    const summary = document.createElement("span");
+    summary.className = "seeker-tip-summary";
+    summary.textContent =
+      point.summary.length > TOOLTIP_SUMMARY_CHARS
+        ? `${point.summary.slice(0, TOOLTIP_SUMMARY_CHARS).trimEnd()}…`
+        : point.summary;
+    card.append(summary);
+  }
+
+  return card;
+}
 
 type Leaflet = typeof import("leaflet");
 
@@ -134,7 +194,15 @@ export default function SeekerMap({
         fillColor: MARKER_COLOR,
         fillOpacity: 0.9,
       })
-        .bindTooltip(point.title)
+        .bindTooltip(tooltipCard(point), {
+          direction: "top",
+          offset: [0, -8],
+          opacity: 1,
+          className: "seeker-tip-wrap",
+        })
+        // Hovering a marker also lights up its card in the list below, so the
+        // overview on the map and the full entry always agree.
+        .on("mouseover", () => handlers.current.onSelect(point.id))
         .on("click", (e) => {
           // Leaflet bubbles layer clicks up to the map: without this, picking a
           // route would also drop a new pin and restart the search.
