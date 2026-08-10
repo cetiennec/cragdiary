@@ -62,6 +62,8 @@ export type User = {
   has_cover: boolean;
   email: string | null;
   wishlist_public: boolean;
+  /** When on, a new follower waits as a request until this user accepts. */
+  approve_followers: boolean;
   created_at: string;
 };
 

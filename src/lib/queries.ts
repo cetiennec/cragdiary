@@ -85,7 +85,8 @@ export async function getFeed(
     // A rope party: someone you follow, someone you tagged as a partner,
     // or someone who tagged you as a partner.
     conds.push(`(
-      e.user_id in (select followee_id from follows where follower_id = $${pid})
+      e.user_id in (select followee_id from follows
+                    where follower_id = $${pid} and status = 'accepted')
       or exists (select 1 from entries mine
                  where mine.user_id = $${pid}
                    and mine.partners ~* ('@' || u.username || '([^a-z0-9-]|$)'))
@@ -126,7 +127,7 @@ export async function getEntry(id: string): Promise<EntryWithAuthor | null> {
 
 export async function getUserByUsername(username: string): Promise<User | null> {
   const result = await pool.query<User>(
-    "select id, username, display_name, bio, visibility, email, avatar is not null as has_avatar, cover is not null as has_cover, wishlist_public, created_at from users where username = $1",
+    "select id, username, display_name, bio, visibility, email, avatar is not null as has_avatar, cover is not null as has_cover, wishlist_public, approve_followers, created_at from users where username = $1",
     [username]
   );
   return result.rows[0] ?? null;
@@ -166,12 +167,18 @@ export async function getEntryYears(userId?: string): Promise<number[]> {
   return result.rows.map((r) => r.year);
 }
 
-export async function isFollowing(followerId: string, followeeId: string): Promise<boolean> {
-  const result = await pool.query(
-    "select 1 from follows where follower_id = $1 and followee_id = $2",
+/** Nothing, a request waiting on the followee, or a live follow. */
+export type FollowState = "none" | "pending" | "accepted";
+
+export async function followState(
+  followerId: string,
+  followeeId: string
+): Promise<FollowState> {
+  const result = await pool.query<{ status: FollowState }>(
+    "select status from follows where follower_id = $1 and followee_id = $2",
     [followerId, followeeId]
   );
-  return result.rows.length > 0;
+  return result.rows[0]?.status ?? "none";
 }
 
 export type FollowUser = {
@@ -180,12 +187,25 @@ export type FollowUser = {
   has_avatar: boolean;
 };
 
-// People who follow this user.
+// People who follow this user. Pending requests are not followers yet, hence
+// `status` — `getFollowRequests` lists the other side.
 export async function getFollowers(userId: string): Promise<FollowUser[]> {
   const result = await pool.query<FollowUser>(
     `select u.username, u.display_name, u.avatar is not null as has_avatar
      from follows f join users u on u.id = f.follower_id
-     where f.followee_id = $1
+     where f.followee_id = $1 and f.status = 'accepted'
+     order by f.created_at desc`,
+    [userId]
+  );
+  return result.rows;
+}
+
+// People waiting for this user to accept them.
+export async function getFollowRequests(userId: string): Promise<FollowUser[]> {
+  const result = await pool.query<FollowUser>(
+    `select u.username, u.display_name, u.avatar is not null as has_avatar
+     from follows f join users u on u.id = f.follower_id
+     where f.followee_id = $1 and f.status = 'pending'
      order by f.created_at desc`,
     [userId]
   );
@@ -197,7 +217,7 @@ export async function getFollowing(userId: string): Promise<FollowUser[]> {
   const result = await pool.query<FollowUser>(
     `select u.username, u.display_name, u.avatar is not null as has_avatar
      from follows f join users u on u.id = f.followee_id
-     where f.follower_id = $1
+     where f.follower_id = $1 and f.status = 'accepted'
      order by f.created_at desc`,
     [userId]
   );
@@ -216,7 +236,8 @@ export async function getCordees(userId: string, username: string): Promise<Cord
   const result = await pool.query<Cordee>(
     `select u.username, u.display_name, u.avatar is not null as has_avatar,
             exists (select 1 from follows f
-                    where f.follower_id = $1 and f.followee_id = u.id) as i_follow,
+                    where f.follower_id = $1 and f.followee_id = u.id
+                      and f.status = 'accepted') as i_follow,
             (
               (select count(*) from entries me
                where me.user_id = $1
@@ -228,7 +249,8 @@ export async function getCordees(userId: string, username: string): Promise<Cord
      from users u
      where u.visibility != 'private' and u.id <> $1
        and (
-         exists (select 1 from follows f where f.follower_id = $1 and f.followee_id = u.id)
+         exists (select 1 from follows f where f.follower_id = $1 and f.followee_id = u.id
+                   and f.status = 'accepted')
          or exists (select 1 from entries me
                     where me.user_id = $1
                       and me.partners ~* ('@' || u.username || '([^a-z0-9-]|$)'))

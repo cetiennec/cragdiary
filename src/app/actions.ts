@@ -972,13 +972,15 @@ export async function markNotificationsRead(): Promise<void> {
   revalidatePath("/", "layout");
 }
 
+// Follow, unfollow, or withdraw a request — the button is one toggle, and a
+// pending request is undone the same way a live follow is.
 export async function toggleFollow(formData: FormData): Promise<void> {
   const user = await currentUser();
   if (!user) redirect("/login");
 
   const username = String(formData.get("username") ?? "").trim().toLowerCase();
-  const target = await pool.query<{ id: string; visibility: string }>(
-    "select id, visibility from users where username = $1",
+  const target = await pool.query<{ id: string; visibility: string; approve_followers: boolean }>(
+    "select id, visibility, approve_followers from users where username = $1",
     [username]
   );
   const followee = target.rows[0];
@@ -989,17 +991,91 @@ export async function toggleFollow(formData: FormData): Promise<void> {
     [user.id, followee.id]
   );
   if (deleted.rowCount === 0) {
+    const status = followee.approve_followers ? "pending" : "accepted";
     const inserted = await pool.query(
-      "insert into follows (follower_id, followee_id) values ($1, $2) on conflict do nothing",
-      [user.id, followee.id]
+      "insert into follows (follower_id, followee_id, status) values ($1, $2, $3) on conflict do nothing",
+      [user.id, followee.id, status]
     );
     if (inserted.rowCount && inserted.rowCount > 0) {
-      await notify({ userId: followee.id, actorId: user.id, type: "follow" });
+      await notify({
+        userId: followee.id,
+        actorId: user.id,
+        type: status === "pending" ? "follow_request" : "follow",
+      });
     }
   }
 
   revalidatePath(`/u/${username}`);
+  revalidatePath(`/u/${user.username}`);
   revalidatePath("/");
+}
+
+// Accept or turn down someone waiting to follow you. Turning down deletes the
+// row rather than remembering the refusal: they may ask again, and we don't
+// tell them either way.
+export async function answerFollowRequest(formData: FormData): Promise<void> {
+  const user = await currentUser();
+  if (!user) throw new Error("Unauthorized");
+
+  const username = String(formData.get("username") ?? "").trim().toLowerCase();
+  const accept = formData.get("decision") === "accept";
+  const asker = await pool.query<{ id: string }>("select id from users where username = $1", [
+    username,
+  ]);
+  const follower = asker.rows[0];
+  if (!follower) return;
+
+  if (accept) {
+    const updated = await pool.query(
+      `update follows set status = 'accepted'
+       where follower_id = $1 and followee_id = $2 and status = 'pending'`,
+      [follower.id, user.id]
+    );
+    if (updated.rowCount) {
+      await notify({ userId: follower.id, actorId: user.id, type: "follow_accepted" });
+    }
+  } else {
+    await pool.query(
+      "delete from follows where follower_id = $1 and followee_id = $2 and status = 'pending'",
+      [follower.id, user.id]
+    );
+  }
+
+  revalidatePath(`/u/${user.username}`);
+  revalidatePath("/notifications");
+  revalidatePath("/");
+}
+
+// Drop a follower. They aren't told, and nothing stops them following again —
+// approval (or a private profile) is what makes that stick.
+export async function removeFollower(formData: FormData): Promise<void> {
+  const user = await currentUser();
+  if (!user) throw new Error("Unauthorized");
+
+  const username = String(formData.get("username") ?? "").trim().toLowerCase();
+  await pool.query(
+    `delete from follows
+     where followee_id = $1
+       and follower_id = (select id from users where username = $2)`,
+    [user.id, username]
+  );
+
+  revalidatePath(`/u/${user.username}`);
+  revalidatePath("/");
+}
+
+// Turning approval on doesn't retract the followers you already have — it only
+// decides what happens to the next one.
+export async function setFollowApproval(formData: FormData): Promise<void> {
+  const user = await currentUser();
+  if (!user) throw new Error("Unauthorized");
+
+  await pool.query("update users set approve_followers = $1 where id = $2", [
+    formData.get("approve_followers") === "on",
+    user.id,
+  ]);
+
+  revalidatePath(`/u/${user.username}`);
 }
 
 // A list's owner or any of its members may edit its routes.

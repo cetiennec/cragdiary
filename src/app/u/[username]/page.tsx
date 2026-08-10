@@ -9,7 +9,9 @@ import {
   getUserStats,
   getOwnedWishlists,
   getSharedWishlists,
-  isFollowing,
+  followState,
+  getFollowers,
+  getFollowRequests,
   type EntryFilters,
 } from "@/lib/queries";
 import { coverEmojis } from "@/components/AutoCover";
@@ -26,6 +28,7 @@ import { formatMeters, getDict } from "@/lib/i18n";
 import EntryCard from "@/components/EntryCard";
 import ProfileMap from "@/components/ProfileMap";
 import ProfileSettingsForm from "@/components/ProfileSettingsForm";
+import FollowersPanel from "@/components/FollowersPanel";
 import ProfileCover from "@/components/ProfileCover";
 import WelcomeTour from "@/components/WelcomeTour";
 
@@ -89,16 +92,27 @@ export default async function ProfilePage({
 
   const isSelf = user?.id === profile.id;
   if (profile.visibility === "private" && !isSelf) notFound();
-  const [entries, stats, years, wishlists, sharedWishlists, following, pinEntries] =
-    await Promise.all([
-      getEntriesByUser(profile.id, { includeNonPublic: isSelf, filters }),
-      getUserStats(profile.id, { includeNonPublic: isSelf }),
-      getEntryYears(profile.id),
-      getOwnedWishlists(profile.id, user?.id ?? null),
-      isSelf ? getSharedWishlists(profile.id) : Promise.resolve([]),
-      user && !isSelf ? isFollowing(user.id, profile.id) : Promise.resolve(false),
-      isSelf ? getPinCollection(profile.id, { includeNonPublic: true }) : Promise.resolve([]),
-    ]);
+  const [
+    entries,
+    stats,
+    years,
+    wishlists,
+    sharedWishlists,
+    follow,
+    pinEntries,
+    followers,
+    followRequests,
+  ] = await Promise.all([
+    getEntriesByUser(profile.id, { includeNonPublic: isSelf, filters }),
+    getUserStats(profile.id, { includeNonPublic: isSelf }),
+    getEntryYears(profile.id),
+    getOwnedWishlists(profile.id, user?.id ?? null),
+    isSelf ? getSharedWishlists(profile.id) : Promise.resolve([]),
+    user && !isSelf ? followState(user.id, profile.id) : Promise.resolve("none" as const),
+    isSelf ? getPinCollection(profile.id, { includeNonPublic: true }) : Promise.resolve([]),
+    isSelf ? getFollowers(profile.id) : Promise.resolve([]),
+    isSelf ? getFollowRequests(profile.id) : Promise.resolve([]),
+  ]);
   const wishes = [...wishlists, ...sharedWishlists].flatMap((l) => l.wishes);
   const showWishlist = isSelf || wishlists.length > 0;
 
@@ -245,10 +259,22 @@ export default async function ProfilePage({
           {profile.bio && <p className="profile-bio">{profile.bio}</p>}
         </div>
         {user && !isSelf && (
+          // One button, three states: asking, waiting, or following. Clicking
+          // it always undoes whatever it says.
           <form action={toggleFollow} className="follow-form">
             <input type="hidden" name="username" value={profile.username} />
-            <button type="submit" className={following ? "btn-follow following" : "btn-follow"}>
-              {following ? t.follow.following : t.follow.follow}
+            <button
+              type="submit"
+              className={follow === "none" ? "btn-follow" : "btn-follow following"}
+              title={follow === "pending" ? t.follow.requestedHint : undefined}
+            >
+              {follow === "accepted"
+                ? t.follow.following
+                : follow === "pending"
+                  ? t.follow.requested
+                  : profile.approve_followers
+                    ? t.follow.request
+                    : t.follow.follow}
             </button>
           </form>
         )}
@@ -284,6 +310,15 @@ export default async function ProfilePage({
             }}
           />
         </details>
+      )}
+
+      {isSelf && (
+        <FollowersPanel
+          followers={followers}
+          requests={followRequests}
+          approveFollowers={profile.approve_followers}
+          t={t.follow}
+        />
       )}
 
       {stats.total > 0 && (

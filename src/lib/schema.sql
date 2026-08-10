@@ -98,9 +98,14 @@ create table if not exists password_resets (
   created_at timestamptz not null default now()
 );
 
+-- A follow is accepted straight away unless the followee asks to approve them
+-- (users.approve_followers), in which case the row waits as 'pending'. Every
+-- read of this table filters on status: a request is not an audience.
 create table if not exists follows (
   follower_id uuid not null references users(id) on delete cascade,
   followee_id uuid not null references users(id) on delete cascade,
+  status text not null default 'accepted'
+    check (status in ('pending','accepted')),
   created_at timestamptz not null default now(),
   primary key (follower_id, followee_id)
 );
@@ -111,7 +116,7 @@ create table if not exists notifications (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references users(id) on delete cascade,   -- recipient
   actor_id uuid references users(id) on delete cascade,           -- who triggered it
-  type text not null,                                             -- follow | tagged | wishlist_invite | wishlist_add
+  type text not null,                                             -- follow | follow_request | follow_accepted | tagged | wishlist_invite | wishlist_add
   data jsonb,                                                     -- {entry_id, wishlist_id, list_name, wish_title}
   read boolean not null default false,
   created_at timestamptz not null default now()
@@ -180,3 +185,14 @@ create table if not exists wishlist_members (
   primary key (wishlist_id, user_id)
 );
 create index if not exists wishlist_members_user_idx on wishlist_members(user_id);
+
+-- Follow requests (migration 026). The column is added separately for
+-- databases whose `follows` predates it; the check has no "if not exists".
+alter table follows add column if not exists status text not null default 'accepted';
+do $$ begin
+  alter table follows add constraint follows_status_check
+    check (status in ('pending','accepted'));
+exception when duplicate_object then null;
+end $$;
+-- When on, a new follower waits as 'pending' until you accept.
+alter table users add column if not exists approve_followers boolean not null default false;

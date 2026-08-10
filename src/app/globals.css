@@ -252,9 +252,17 @@ a {
 }
 
 .notif-row {
+  display: flex;
+  align-items: center;
   border: 1px solid var(--border, #e0d3ba);
   border-radius: 10px;
   background: var(--bg-elevated);
+}
+
+/* Accept / decline on a follow request, at the end of its row. */
+.notif-row .follower-actions {
+  flex-shrink: 0;
+  padding-right: 0.9rem;
 }
 
 .notif-row.unread {
@@ -266,6 +274,8 @@ a {
   display: flex;
   align-items: center;
   gap: 0.7rem;
+  flex: 1;
+  min-width: 0;
   padding: 0.7rem 0.9rem;
   text-decoration: none;
   color: var(--text);
@@ -2789,6 +2799,133 @@ a {
   background: transparent;
   color: var(--text-muted);
   border-color: var(--border);
+}
+
+/* Followers panel — your own profile only */
+
+.profile-followers summary {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.follower-count,
+.follower-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 0.05rem 0.45rem;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+
+/* Requests are the one thing here that wants answering. */
+.follower-badge {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-contrast);
+}
+
+.follow-approval {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.8rem;
+  margin: 0.8rem 0 0.4rem;
+}
+
+.follow-toggle {
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.3rem 0.8rem;
+  cursor: pointer;
+}
+
+.follow-toggle.on {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.follower-list {
+  list-style: none;
+  margin: 0.4rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.follower-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.follower-row:last-child {
+  border-bottom: none;
+}
+
+.follower-link {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex: 1;
+  min-width: 0;
+  text-decoration: none;
+  color: inherit;
+}
+
+.follower-name {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.follower-handle {
+  font-size: 0.78rem;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.follower-actions {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.follower-accept,
+.follower-remove {
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border-radius: 999px;
+  padding: 0.25rem 0.7rem;
+  cursor: pointer;
+}
+
+.follower-accept {
+  background: var(--accent);
+  color: var(--accent-contrast);
+  border: 1px solid var(--accent);
+}
+
+.follower-remove {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+
+.follower-remove:hover {
+  color: var(--accent);
+  border-color: var(--accent);
 }
 
 /* Wishlist */

@@ -1,6 +1,12 @@
 import { pool } from "@/lib/db";
 
-export type NotificationType = "follow" | "tagged" | "wishlist_invite" | "wishlist_add";
+export type NotificationType =
+  | "follow"
+  | "follow_request"
+  | "follow_accepted"
+  | "tagged"
+  | "wishlist_invite"
+  | "wishlist_add";
 
 export type NotificationData = {
   entry_id?: string;
