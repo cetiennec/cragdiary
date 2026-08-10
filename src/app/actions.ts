@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import sharp from "sharp";
@@ -20,6 +21,7 @@ import { clientIp, isRateLimited, recordAttempt, clearAttempts } from "@/lib/rat
 import { c2cImageUrl, importOuting, parseProfileId } from "@/lib/c2c";
 import { notify, extractMentions, userIdsByUsernames, markAllRead } from "@/lib/notifications";
 import { runPool } from "@/lib/pool";
+import { noteMissingC2cOutings } from "@/lib/c2c-check";
 
 // 1600 px keeps photos crisp in the fullscreen lightbox (incl. high-DPI
 // screens); quality 86 is visibly cleaner than 82 at a modest size cost. The
@@ -328,6 +330,8 @@ export async function login(formData: FormData): Promise<void> {
 
   await clearAttempts(bucket);
   await createSession(result.rows[0].id);
+  // After the response, so signing in never waits on camptocamp.
+  after(() => noteMissingC2cOutings(result.rows[0].id));
   redirect("/");
 }
 

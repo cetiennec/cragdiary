@@ -4450,6 +4450,12 @@ a {
 /* "Open in…" — a disclosure, so no click-outside handling is needed. */
 .seeker-open-in {
   position: relative;
+}
+
+/* On a search result the card is narrow and the button belongs at its right
+   edge; in a wishlist row it would end up half a screen from the parking it
+   opens, so it only drifts inside a result. */
+.seeker-result .seeker-open-in {
   margin-left: auto;
 }
 
