@@ -4975,3 +4975,38 @@ a {
   padding-top: 1.2rem;
   border-top: 1px solid var(--border);
 }
+
+/* Routes someone tagged you on: theirs, shown here rather than copied. */
+
+.tagged-wishes {
+  list-style: none;
+  margin: 0.4rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.tagged-wish {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.8rem;
+  padding: 0.55rem 0.9rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.tagged-wish-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.tagged-wish-meta,
+.tagged-wish-by {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}

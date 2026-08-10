@@ -421,6 +421,38 @@ export async function getSharedWishlists(userId: string): Promise<WishlistFull[]
   return assembleWishlists(lists.rows, userId);
 }
 
+export type TaggedWish = Wish & {
+  list_name: string;
+  owner_username: string;
+  owner_display_name: string;
+};
+
+// Routes on someone else's list with this climber tagged on them. Being named
+// on a route is an invitation to see it, but it doesn't put it in your journal
+// — so it is shown here, on their list, rather than copied into yours.
+// Private lists stay private; their owner tagged you, not the world.
+export async function getWishesTaggingUser(
+  userId: string,
+  username: string
+): Promise<TaggedWish[]> {
+  const result = await pool.query<TaggedWish>(
+    `select wi.*, w.name as list_name,
+            u.username as owner_username, u.display_name as owner_display_name
+     from wishes wi
+     join wishlists w on w.id = wi.wishlist_id
+     join users u on u.id = w.owner_id
+     where wi.user_id <> $1
+       and w.owner_id <> $1
+       and w.visibility <> 'private'
+       and u.visibility <> 'private'
+       and wi.partners ~* ('@' || $2 || '([^a-z0-9-]|$)')
+     order by wi.created_at desc
+     limit 50`,
+    [userId, username]
+  );
+  return result.rows;
+}
+
 // Every list the user may add a route to: the ones they own plus the ones they
 // were invited to collaborate on. Default list first, as elsewhere.
 export async function getEditableWishlists(

@@ -10,6 +10,7 @@ import {
   getUserStats,
   getOwnedWishlists,
   getSharedWishlists,
+  getWishesTaggingUser,
   followState,
   getFollowers,
   getFollowRequests,
@@ -110,6 +111,7 @@ export default async function ProfilePage({
     pinEntries,
     followers,
     followRequests,
+    taggedWishes,
   ] = await Promise.all([
     getEntriesByUser(profile.id, { includeNonPublic: isSelf, filters, limit: show }),
     getUserStats(profile.id, { includeNonPublic: isSelf }),
@@ -122,6 +124,8 @@ export default async function ProfilePage({
     getPinCollection(profile.id, { includeNonPublic: isSelf }),
     isSelf ? getFollowers(profile.id) : Promise.resolve([]),
     isSelf ? getFollowRequests(profile.id) : Promise.resolve([]),
+    // Routes someone else tagged you on: not yours, but meant for you.
+    isSelf ? getWishesTaggingUser(profile.id, profile.username) : Promise.resolve([]),
   ]);
   const entries = page.entries;
   const wishes = [...wishlists, ...sharedWishlists].flatMap((l) => l.wishes);
@@ -535,6 +539,38 @@ export default async function ProfilePage({
               />
             ))}
           </div>
+
+          {taggedWishes.length > 0 && (
+            <>
+              <h3 className="wishlist-subheading">{t.wishlist.taggedOnRoutes}</h3>
+              <ul className="tagged-wishes">
+                {taggedWishes.map((wish) => (
+                  <li key={wish.id} className="tagged-wish">
+                    <span className="tagged-wish-main">
+                      {wish.c2c_url ? (
+                        <a href={wish.c2c_url} target="_blank" rel="noopener noreferrer">
+                          {wish.title}
+                        </a>
+                      ) : (
+                        <strong>{wish.title}</strong>
+                      )}
+                      <span className="tagged-wish-meta">
+                        {[wish.location, wish.grade_max, wish.rating]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </span>
+                    </span>
+                    <span className="tagged-wish-by">
+                      {t.wishlist.taggedBy}{" "}
+                      <Link href={`/u/${wish.owner_username}`}>{wish.owner_display_name}</Link>
+                      {" · "}
+                      {wish.list_name}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
 
           {sharedWishlists.length > 0 && (
             <>
