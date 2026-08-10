@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import SeekerMap, { type SeekerPoint } from "./SeekerMap";
+import ParkingLink from "./ParkingLink";
 import { saveWishFromSearch } from "@/app/actions";
 import { drivingMinutes, formatDuration } from "@/lib/travel";
 import type { C2cRouteResult } from "@/app/api/c2c/routes/route";
@@ -30,24 +31,6 @@ type SaveState = "idle" | "saving" | "done" | "error";
 // templates rather than functions ("{n} routes found").
 function fill(template: string, key: string, value: string | number): string {
   return template.replace(`{${key}}`, String(value));
-}
-
-// Where a parking can be opened. Google and Apple get a directions link so the
-// phone starts navigating; Waze and OSM take a plain point.
-function mapLinks({ lat, lon, name }: C2cAccessPoint) {
-  const point = `${lat.toFixed(5)},${lon.toFixed(5)}`;
-  return [
-    { name: "Google Maps", url: `https://www.google.com/maps/dir/?api=1&destination=${point}` },
-    {
-      name: "Apple Plans",
-      url: `https://maps.apple.com/?daddr=${point}&dirflg=d${name ? `&q=${encodeURIComponent(name)}` : ""}`,
-    },
-    { name: "Waze", url: `https://waze.com/ul?ll=${point}&navigate=yes` },
-    {
-      name: "OpenStreetMap",
-      url: `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=15/${lat}/${lon}`,
-    },
-  ];
 }
 
 // A pair of "any → any" dropdowns over one of camptocamp's ordered scales.
@@ -413,6 +396,12 @@ export default function CragSeeker({
     form.set("c2c_url", route.url);
     if (route.lat != null) form.set("lat", String(route.lat));
     if (route.lon != null) form.set("lon", String(route.lon));
+    const parking = access[route.id];
+    if (parking) {
+      form.set("parking_lat", String(parking.lat));
+      form.set("parking_lon", String(parking.lon));
+      if (parking.name) form.set("parking_name", parking.name);
+    }
     try {
       const res = await saveWishFromSearch(form);
       setSaved((s) => ({ ...s, [route.id]: res.ok ? "done" : "error" }));
@@ -730,28 +719,12 @@ export default function CragSeeker({
                 </p>
               )}
               {access[route.id] && (
-                <div className="seeker-parking">
-                  <span className="seeker-parking-mark" aria-hidden>
-                    P
-                  </span>
-                  <span className="seeker-parking-name">
-                    {access[route.id].name ?? t.parking}
-                  </span>
-                  {/* <details> keeps this a plain disclosure: no outside-click
-                      handling, and it closes itself on Escape. */}
-                  <details className="seeker-open-in">
-                    <summary title={t.parkingHint}>{t.openIn}</summary>
-                    <ul>
-                      {mapLinks(access[route.id]).map((link) => (
-                        <li key={link.name}>
-                          <a href={link.url} target="_blank" rel="noopener noreferrer">
-                            {link.name}
-                          </a>
-                        </li>
-                      ))}
-                    </ul>
-                  </details>
-                </div>
+                <ParkingLink
+                  parking={access[route.id]}
+                  label={t.parking}
+                  openIn={t.openIn}
+                  hint={t.parkingHint}
+                />
               )}
               <div className="seeker-actions">
                 <a href={route.url} target="_blank" rel="noopener noreferrer">

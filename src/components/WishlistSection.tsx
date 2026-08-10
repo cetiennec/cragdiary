@@ -8,6 +8,7 @@ import WishPartnersEditor from "@/components/WishPartnersEditor";
 import WishlistManageBar from "@/components/WishlistManageBar";
 import WishlistMembers from "@/components/WishlistMembers";
 import WishlistRename from "@/components/WishlistRename";
+import ParkingLink from "@/components/ParkingLink";
 
 type WishlistDict = Dict["wishlist"];
 
@@ -22,6 +23,7 @@ export default function WishlistSection({
   partnerNodes,
   locale,
   t,
+  seeker,
   attribution,
   emptyLabel,
 }: {
@@ -31,6 +33,8 @@ export default function WishlistSection({
   partnerNodes: Map<string, ReactNode>;
   locale: Locale;
   t: WishlistDict;
+  /** CragSeeker's wording, reused for the parking a saved route carries. */
+  seeker: Pick<Dict["seeker"], "parking" | "openIn">;
   attribution: string;
   /** Overrides "nothing here yet" when the list is empty only because of a filter. */
   emptyLabel?: string;
@@ -128,6 +132,17 @@ export default function WishlistSection({
                   .filter(Boolean)
                   .join(" · ")}
               </span>
+              {wish.parking_lat != null && wish.parking_lon != null && (
+                <ParkingLink
+                  parking={{
+                    lat: wish.parking_lat,
+                    lon: wish.parking_lon,
+                    name: wish.parking_name,
+                  }}
+                  label={seeker.parking}
+                  openIn={seeker.openIn}
+                />
+              )}
             </div>
             {canEdit ? (
               <WishPartnersEditor

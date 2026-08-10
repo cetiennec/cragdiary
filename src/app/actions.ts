@@ -954,9 +954,14 @@ async function insertWish(
   formData: FormData
 ): Promise<void> {
   const coords = parseCoords(formData);
+  // Parking is optional and only ever arrives from CragSeeker, where it comes
+  // from camptocamp's access waypoint.
+  const parkingLat = optionalCoord(formData.get("parking_lat"), -90, 90);
+  const parkingLon = optionalCoord(formData.get("parking_lon"), -180, 180);
+  const hasParking = parkingLat !== null && parkingLon !== null;
   await pool.query(
-    `insert into wishes (user_id, wishlist_id, title, location, grade_max, rating, pitches, height_m, c2c_url, note, partners, lat, lon)
-     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+    `insert into wishes (user_id, wishlist_id, title, location, grade_max, rating, pitches, height_m, c2c_url, note, partners, lat, lon, parking_lat, parking_lon, parking_name)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
     [
       user.id,
       wishlistId,
@@ -971,6 +976,9 @@ async function insertWish(
       optionalText(formData.get("partners")),
       coords.lat,
       coords.lon,
+      hasParking ? parkingLat : null,
+      hasParking ? parkingLon : null,
+      hasParking ? optionalText(formData.get("parking_name")) : null,
     ]
   );
 

@@ -99,6 +99,9 @@ export type Wish = {
   partners: string | null;
   lat: number | null;
   lon: number | null;
+  parking_lat: number | null;
+  parking_lon: number | null;
+  parking_name: string | null;
   created_at: string;
 };
 

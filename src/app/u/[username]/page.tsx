@@ -434,6 +434,7 @@ export default async function ProfilePage({
                 partnerNodes={wishPartnerNodes}
                 locale={locale}
                 t={t.wishlist}
+                seeker={t.seeker}
                 attribution={t.editor.suggestionsAttribution}
                 emptyLabel={wishFiltering ? t.filters.noResults : undefined}
               />
@@ -453,6 +454,7 @@ export default async function ProfilePage({
                     partnerNodes={wishPartnerNodes}
                     locale={locale}
                     t={t.wishlist}
+                    seeker={t.seeker}
                     attribution={t.editor.suggestionsAttribution}
                     emptyLabel={wishFiltering ? t.filters.noResults : undefined}
                   />
