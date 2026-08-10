@@ -436,10 +436,18 @@ export async function entriesAlreadyInJournal(
 // The same day, written by someone who climbed it with you. Matched on the date
 // plus a partner mention in either direction, so two strangers at the same crag
 // on the same Saturday are never linked. Respects the viewer's visibility.
+export type SharedDay = {
+  id: string;
+  username: string;
+  display_name: string;
+  /** Their photos of the day, borrowed rather than copied — see below. */
+  photos: Photo[];
+};
+
 export async function getSharedDay(
   entryId: string,
   viewerId: string | null
-): Promise<{ id: string; username: string; display_name: string }[]> {
+): Promise<SharedDay[]> {
   const result = await pool.query<{ id: string; username: string; display_name: string }>(
     `select o.id, ou.username, ou.display_name
      from entries e
@@ -454,7 +462,28 @@ export async function getSharedDay(
      order by ou.display_name`,
     [entryId, viewerId]
   );
-  return result.rows;
+
+  if (result.rows.length === 0) return [];
+
+  // Their photos are shown on your day without being copied into it: the same
+  // pixels stored twice would be paid for twice, and these stay theirs — served
+  // under their entry's visibility, and gone from here the day they take them
+  // down. Anything you want to keep for good has to be your own photo.
+  // Only the gallery ones: a photo placed inside their story belongs to it.
+  const photos = await pool.query<Photo>(
+    `select id, entry_id, content_type, position, size, align, para, width, height, caption
+     from photos
+     where entry_id = any($1) and align is null
+     order by position asc`,
+    [result.rows.map((r) => r.id)]
+  );
+  const byEntry = new Map<string, Photo[]>();
+  for (const photo of photos.rows) {
+    const list = byEntry.get(photo.entry_id) ?? [];
+    list.push(photo);
+    byEntry.set(photo.entry_id, list);
+  }
+  return result.rows.map((r) => ({ ...r, photos: byEntry.get(r.id) ?? [] }));
 }
 
 // A single list for authorization checks (who owns it).

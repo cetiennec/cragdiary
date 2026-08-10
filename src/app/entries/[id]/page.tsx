@@ -340,15 +340,46 @@ export default async function EntryPage({
         )}
 
         {sharedDay.length > 0 && (
-          <p className="shared-day">
-            {t.entry.alsoWroteAbout}{" "}
-            {sharedDay.map((other, i) => (
-              <span key={other.id}>
-                {i > 0 && ", "}
-                <Link href={`/entries/${other.id}`}>{other.display_name}</Link>
-              </span>
-            ))}
-          </p>
+          <div className="shared-day-block">
+            <p className="shared-day">
+              {t.entry.alsoWroteAbout}{" "}
+              {sharedDay.map((other, i) => (
+                <span key={other.id}>
+                  {i > 0 && ", "}
+                  <Link href={`/entries/${other.id}`}>{other.display_name}</Link>
+                </span>
+              ))}
+            </p>
+
+            {/* Their photos, shown from their entry rather than copied into
+                this one — so they stay theirs, and cost nothing twice. */}
+            {sharedDay
+              .filter((other) => other.photos.length > 0)
+              .map((other) => (
+                <section key={`${other.id}-photos`} className="borrowed-photos">
+                  <h3 className="borrowed-photos-title">
+                    {t.entry.photosBy.replace("{user}", other.display_name)}
+                  </h3>
+                  <div className="borrowed-photos-strip">
+                    {other.photos.map((photo) => (
+                      <Link
+                        key={photo.id}
+                        href={`/entries/${other.id}`}
+                        className="borrowed-photo"
+                        title={photo.caption ?? undefined}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element -- our own DB-backed route, already resized */}
+                        <img
+                          src={`/api/photos/${photo.id}?t=1`}
+                          alt={photo.caption ?? ""}
+                          loading="lazy"
+                        />
+                      </Link>
+                    ))}
+                  </div>
+                </section>
+              ))}
+          </div>
         )}
 
         {isDemo && (

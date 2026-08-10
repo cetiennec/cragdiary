@@ -4852,3 +4852,47 @@ a {
   min-width: 14rem;
   max-width: min(22rem, 90vw);
 }
+
+/* Photos from the day as someone else logged it. Shown from their entry, not
+   copied into this one — hence the link out on every thumbnail. */
+
+.shared-day-block {
+  margin: 1.4rem 0;
+}
+
+.borrowed-photos {
+  margin-top: 0.6rem;
+}
+
+.borrowed-photos-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin: 0 0 0.4rem;
+}
+
+.borrowed-photos-strip {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 0.3rem;
+}
+
+.borrowed-photo {
+  flex: 0 0 auto;
+  line-height: 0;
+  border-radius: var(--radius-photo);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.borrowed-photo img {
+  width: 132px;
+  height: 96px;
+  object-fit: cover;
+  transition: transform 0.15s ease;
+}
+
+.borrowed-photo:hover img {
+  transform: scale(1.05);
+}
