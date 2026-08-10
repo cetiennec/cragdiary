@@ -1,4 +1,4 @@
-// Logs in, searches in CragSeeker, and saves a route to a wishlist — then
+// Logs in, searches in Cragseeker, and saves a route to a wishlist — then
 // checks it really landed on the profile. Point it at a throwaway database.
 //   node scripts/seeker-save-check.mjs [baseUrl] [outDir] [user] [password]
 import { chromium } from "playwright";

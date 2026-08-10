@@ -2,15 +2,15 @@ import type { Metadata } from "next";
 import { currentUser } from "@/lib/auth";
 import { getDict } from "@/lib/i18n";
 import { getEditableWishlists } from "@/lib/queries";
-import CragSeeker, { type SeekerParams } from "@/components/CragSeeker";
+import Cragseeker, { type SeekerParams } from "@/components/Cragseeker";
 
 export const metadata: Metadata = {
-  title: "CragSeeker — Cragdiary",
+  title: "Cragseeker — Cragdiary",
   description:
     "Search the Camptocamp route database around a place or a pin on the map, by activity, grade and orientation.",
 };
 
-export default async function CragSeekerPage({
+export default async function CragseekerPage({
   searchParams,
 }: {
   searchParams: Promise<SeekerParams>;
@@ -25,5 +25,5 @@ export default async function CragSeekerPage({
 
   // A shared link arrives as query params; the component takes it from there
   // and keeps the URL in step from the client.
-  return <CragSeeker t={t.seeker} locale={locale} wishlists={wishlists} params={params} />;
+  return <Cragseeker t={t.seeker} locale={locale} wishlists={wishlists} params={params} />;
 }

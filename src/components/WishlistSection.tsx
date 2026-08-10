@@ -33,7 +33,7 @@ export default function WishlistSection({
   partnerNodes: Map<string, ReactNode>;
   locale: Locale;
   t: WishlistDict;
-  /** CragSeeker's wording, reused for the parking a saved route carries. */
+  /** Cragseeker's wording, reused for the parking a saved route carries. */
   seeker: Pick<Dict["seeker"], "parking" | "openIn">;
   attribution: string;
   /** Overrides "nothing here yet" when the list is empty only because of a filter. */

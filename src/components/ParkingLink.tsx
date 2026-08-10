@@ -21,7 +21,7 @@ function mapLinks({ lat, lon, name }: ParkingPoint) {
 }
 
 // The parking camptocamp records as a route's access point — shown on a
-// CragSeeker result and carried over to a wishlist when the route is saved.
+// Cragseeker result and carried over to a wishlist when the route is saved.
 export default function ParkingLink({
   parking,
   label,

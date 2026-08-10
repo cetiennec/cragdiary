@@ -238,7 +238,7 @@ export async function importOuting(id: number, lang: string): Promise<C2cOutingI
   };
 }
 
-// ---- Route search ("CragSeeker") -------------------------------------------
+// ---- Route search ("Cragseeker") -------------------------------------------
 
 // Every scale below is ordered easiest → hardest: the c2c API reads a
 // `min,max` pair positionally against its own ordering, so these lists must
@@ -273,7 +273,7 @@ export const C2C_EQUIPMENT_RATINGS = [
   "P1", "P1+", "P2", "P2+", "P3", "P3+", "P4", "P4+",
 ] as const;
 
-// Every range filter c2c offers that CragSeeker exposes, keyed by the API's own
+// Every range filter c2c offers that Cragseeker exposes, keyed by the API's own
 // parameter name. Each scale is ordered easiest → hardest, because the API reads
 // a `min,max` pair positionally against its own ordering.
 export const C2C_RANGE_SCALES = {

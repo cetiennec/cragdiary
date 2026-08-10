@@ -124,7 +124,7 @@ create table if not exists wishes (
 );
 create index if not exists wishes_user_id_idx on wishes(user_id);
 alter table wishes add column if not exists partners text;
--- Parking carried over from CragSeeker: camptocamp's access waypoint.
+-- Parking carried over from Cragseeker: camptocamp's access waypoint.
 alter table wishes add column if not exists parking_lat double precision;
 alter table wishes add column if not exists parking_lon double precision;
 alter table wishes add column if not exists parking_name text;

@@ -3702,7 +3702,7 @@ a {
   }
 }
 
-/* ---- CragSeeker: route search over the camptocamp database --------------- */
+/* ---- Cragseeker: route search over the camptocamp database --------------- */
 
 .seeker-head {
   margin-bottom: 1.4rem;
@@ -4084,7 +4084,7 @@ a {
   }
 }
 
-/* Buttons that close the CragSeeker filter panel: travel time, share, clear. */
+/* Buttons that close the Cragseeker filter panel: travel time, share, clear. */
 .seeker-row-actions {
   display: flex;
   align-items: center;
@@ -4279,25 +4279,34 @@ a {
   color: var(--accent-contrast);
 }
 
-/* Demo content: a pill sharing the bottom edge with the grade tag, so the two
-   read as one line, and a light disclaimer opening the entry's text. */
+/* Demo content: a band across the foot of the photo, and a light disclaimer
+   opening the entry's text. */
 .demo-banner {
   position: absolute;
-  left: 0.6rem;
-  bottom: 0.5rem;
+  left: 0;
+  right: 0;
+  bottom: 0;
   z-index: 2;
-  max-width: calc(100% - 1.2rem);
-  padding: 0.15rem 0.6rem;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--bg-elevated) 82%, transparent);
-  border: 1px solid var(--border);
-  color: var(--text-muted);
-  font-size: 0.7rem;
+  padding: 0.25rem 0.55rem;
+  background: rgba(26, 19, 12, 0.72);
+  color: #f6efe4;
+  font-size: 0.62rem;
   font-weight: 600;
-  line-height: 1.35;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  letter-spacing: 0.02em;
+  line-height: 1.3;
+  text-align: center;
+}
+
+/* The big cover puts its credit caption bottom-right, so the band goes above
+   the image there rather than on top of it. */
+.notion-cover .demo-banner {
+  top: 0;
+  bottom: auto;
+}
+
+/* The grade tag normally sits where the band now is — lift it clear. */
+.entry-card-cover:has(.demo-banner) .auto-cover-tag {
+  bottom: 1.85rem;
 }
 
 /* The cover and gallery figures need to be a positioning context for it. */

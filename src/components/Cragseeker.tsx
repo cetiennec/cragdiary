@@ -111,7 +111,7 @@ function initialCentre(params: SeekerParams): Centre | null {
   return { lat, lon, name: params.place?.slice(0, 80) || null };
 }
 
-export default function CragSeeker({
+export default function Cragseeker({
   t,
   locale,
   wishlists,

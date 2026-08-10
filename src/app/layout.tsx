@@ -84,7 +84,7 @@ export default async function RootLayout({
                   <Link href={`/u/${user.username}#wishlist`}>{t.nav.myWishlist}</Link>
                 </>
               )}
-              {/* CragSeeker sits where "New entry" used to: open to everyone,
+              {/* Cragseeker sits where "New entry" used to: open to everyone,
                   logged in or not. */}
               <Link href="/cragseeker">{t.seeker.navLabel}</Link>
               {user ? (

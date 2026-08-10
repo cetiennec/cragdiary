@@ -2,7 +2,7 @@ import { routeAccessPoint, type C2cAccessPoint } from "@/lib/c2c";
 
 export type { C2cAccessPoint } from "@/lib/c2c";
 
-// One page of CragSeeker results at a time; each id costs an upstream request,
+// One page of Cragseeker results at a time; each id costs an upstream request,
 // so the batch is capped and the answers are cached hard.
 const MAX_IDS = 40;
 

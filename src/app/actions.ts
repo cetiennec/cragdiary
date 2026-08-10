@@ -945,7 +945,7 @@ const EDITABLE_WISH_LISTS = `
      or exists (select 1 from wishlist_members m
                 where m.wishlist_id = w.id and m.user_id = $2)`;
 
-// Shared by the wishlist form and CragSeeker: insert the route, tell the other
+// Shared by the wishlist form and Cragseeker: insert the route, tell the other
 // people on the list, refresh the profile. Callers own where the user goes next.
 async function insertWish(
   user: { id: string; username: string },
@@ -954,7 +954,7 @@ async function insertWish(
   formData: FormData
 ): Promise<void> {
   const coords = parseCoords(formData);
-  // Parking is optional and only ever arrives from CragSeeker, where it comes
+  // Parking is optional and only ever arrives from Cragseeker, where it comes
   // from camptocamp's access waypoint.
   const parkingLat = optionalCoord(formData.get("parking_lat"), -90, 90);
   const parkingLon = optionalCoord(formData.get("parking_lon"), -180, 180);
@@ -1024,7 +1024,7 @@ export async function addWish(formData: FormData): Promise<void> {
   redirect(`/u/${user.username}#wishlist`);
 }
 
-// CragSeeker saves without leaving the search: it reports back instead of
+// Cragseeker saves without leaving the search: it reports back instead of
 // redirecting, so the results list can just tick the route off.
 export async function saveWishFromSearch(
   formData: FormData

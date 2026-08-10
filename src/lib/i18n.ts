@@ -414,7 +414,7 @@ const en = {
       { name: "What we store", text: "Your account (username, display name, password hash — never the password itself, optional recovery email), your entries, photos, and profile pictures. That's all." },
       { name: "Cookies", text: "One session cookie to keep you logged in (90 days) and one cookie remembering your language. The visual theme stays in your browser (localStorage). Nothing follows you across sites." },
       { name: "Photos", text: "Photos are recompressed in your browser before upload, which strips camera metadata such as GPS position. They belong to you." },
-      { name: "Third parties", text: "Route and place searches — in the editor and in CragSeeker — are relayed to Camptocamp and Photon/OpenStreetMap (your search text, and for CragSeeker the map area you are looking at). Map tiles load from OpenStreetMap. Reset emails go through our email provider. Nothing else leaves the site." },
+      { name: "Third parties", text: "Route and place searches — in the editor and in Cragseeker — are relayed to Camptocamp and Photon/OpenStreetMap (your search text, and for Cragseeker the map area you are looking at). Map tiles load from OpenStreetMap. Reset emails go through our email provider. Nothing else leaves the site." },
       { name: "Visibility", text: "You choose per entry (public, link-only, private) and per profile (public, link-only, private) what others can see." },
       { name: "Deleting", text: "You can delete any entry, and delete your whole account from your profile settings — everything goes with it, immediately and permanently." },
     ],
@@ -431,7 +431,7 @@ const en = {
       {
         name: "Camptocamp.org",
         url: "https://www.camptocamp.org",
-        text: "Route information suggested in the editor and searched in CragSeeker (names, grades, heights, orientations, summaries) comes from the Camptocamp community database, licensed CC BY-SA.",
+        text: "Route information suggested in the editor and searched in Cragseeker (names, grades, heights, orientations, summaries) comes from the Camptocamp community database, licensed CC BY-SA.",
       },
       {
         name: "OpenStreetMap",
@@ -446,7 +446,7 @@ const en = {
       {
         name: "Leaflet",
         url: "https://leafletjs.com",
-        text: "Profile maps and the CragSeeker map are rendered with Leaflet, an open-source mapping library (BSD-2).",
+        text: "Profile maps and the Cragseeker map are rendered with Leaflet, an open-source mapping library (BSD-2).",
       },
     ],
   },
@@ -457,8 +457,8 @@ const en = {
       "⚠️ Demo content — this outing is made up. The photo comes from Wikimedia Commons, credited at the end.",
   },
   seeker: {
-    navLabel: "CragSeeker",
-    title: "CragSeeker",
+    navLabel: "Cragseeker",
+    title: "Cragseeker",
     tagline:
       "Find your next route in the Camptocamp database: search around a place or drop a pin on the map, then narrow it down by activity, grade and orientation.",
     beta: "Beta — click to send feedback",
@@ -970,7 +970,7 @@ const fr: Dict = {
       { name: "Ce qui est stocké", text: "Votre compte (nom d'utilisateur, nom affiché, hash du mot de passe — jamais le mot de passe lui-même, email de récupération optionnel), vos entrées, photos et images de profil. C'est tout." },
       { name: "Cookies", text: "Un cookie de session pour rester connecté·e (90 jours) et un cookie de langue. Le thème visuel reste dans votre navigateur (localStorage). Rien ne vous suit sur d'autres sites." },
       { name: "Photos", text: "Les photos sont recompressées dans votre navigateur avant envoi, ce qui retire les métadonnées de l'appareil comme la position GPS. Elles vous appartiennent." },
-      { name: "Tiers", text: "Les recherches de voies et de lieux — dans l'éditeur et dans CragSeeker — sont relayées à Camptocamp et Photon/OpenStreetMap (le texte cherché, et pour CragSeeker la zone de carte consultée). Les tuiles de carte viennent d'OpenStreetMap. Les emails de réinitialisation passent par notre prestataire d'envoi. Rien d'autre ne sort du site." },
+      { name: "Tiers", text: "Les recherches de voies et de lieux — dans l'éditeur et dans Cragseeker — sont relayées à Camptocamp et Photon/OpenStreetMap (le texte cherché, et pour Cragseeker la zone de carte consultée). Les tuiles de carte viennent d'OpenStreetMap. Les emails de réinitialisation passent par notre prestataire d'envoi. Rien d'autre ne sort du site." },
       { name: "Visibilité", text: "Vous choisissez par entrée (publique, par lien, privée) et par profil (public, par lien, privé) ce que les autres voient." },
       { name: "Suppression", text: "Vous pouvez supprimer chaque entrée, et supprimer tout votre compte depuis les réglages du profil — tout part avec, immédiatement et définitivement." },
     ],
@@ -987,7 +987,7 @@ const fr: Dict = {
       {
         name: "Camptocamp.org",
         url: "https://www.camptocamp.org",
-        text: "Les informations de voies proposées dans l'éditeur et cherchées dans CragSeeker (noms, cotations, hauteurs, orientations, résumés) proviennent de la base communautaire Camptocamp, sous licence CC BY-SA.",
+        text: "Les informations de voies proposées dans l'éditeur et cherchées dans Cragseeker (noms, cotations, hauteurs, orientations, résumés) proviennent de la base communautaire Camptocamp, sous licence CC BY-SA.",
       },
       {
         name: "OpenStreetMap",
@@ -1002,7 +1002,7 @@ const fr: Dict = {
       {
         name: "Leaflet",
         url: "https://leafletjs.com",
-        text: "Les cartes de profil et celle de CragSeeker sont rendues avec Leaflet, bibliothèque cartographique open source (BSD-2).",
+        text: "Les cartes de profil et celle de Cragseeker sont rendues avec Leaflet, bibliothèque cartographique open source (BSD-2).",
       },
     ],
   },
@@ -1013,8 +1013,8 @@ const fr: Dict = {
       "⚠️ Contenu démo — sortie fictive. La photo vient de Wikimedia Commons, créditée en fin de texte.",
   },
   seeker: {
-    navLabel: "CragSeeker",
-    title: "CragSeeker",
+    navLabel: "Cragseeker",
+    title: "Cragseeker",
     tagline:
       "Trouvez votre prochaine voie dans la base Camptocamp : cherchez autour d'un lieu ou posez un point sur la carte, puis affinez par activité, cotation et orientation.",
     beta: "Bêta — cliquer pour faire des retours",
