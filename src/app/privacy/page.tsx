@@ -12,9 +12,24 @@ export default async function PrivacyPage() {
           <li key={section.name}>
             <strong>{section.name}</strong>
             <p>{section.text}</p>
+            {/* Contact and the supervisory authority have to be reachable, not
+                just mentioned — a notice nobody can act on isn't information. */}
+            {"url" in section && section.url && (
+              <p>
+                <a
+                  href={section.url}
+                  {...(section.url.startsWith("http")
+                    ? { target: "_blank", rel: "noopener noreferrer" }
+                    : {})}
+                >
+                  {section.url.replace(/^mailto:/, "")}
+                </a>
+              </p>
+            )}
           </li>
         ))}
       </ul>
+      <p className="form-hint">{t.privacy.updated}</p>
     </div>
   );
 }

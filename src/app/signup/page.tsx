@@ -45,6 +45,13 @@ export default async function SignupPage({
           />
         </label>
         {error && <p className="form-error">{errors[error] ?? t.signup.errors.generic}</p>}
+        {/* GDPR Art. 13 wants the notice where the data is collected, not
+            merely somewhere on the site. */}
+        <p className="form-hint">
+          {t.signup.privacyPre}
+          <Link href="/privacy">{t.signup.privacyLink}</Link>
+          {t.signup.privacyPost}
+        </p>
         <button type="submit" className="btn-primary">
           {t.signup.submit}
         </button>
