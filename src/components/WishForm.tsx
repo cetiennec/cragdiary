@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
+import MentionInput from "@/components/MentionInput";
 import { addWish } from "@/app/actions";
 import type { C2cSuggestion } from "@/app/api/c2c/search/route";
 import type { Locale } from "@/lib/i18n";
@@ -159,12 +160,10 @@ export default function WishForm({
         )}
       </div>
       <input type="text" name="note" placeholder={t.notePlaceholder} className="wish-note" />
-      <input
-        type="text"
+      <MentionInput
         name="partners"
         placeholder={t.partnersPlaceholder}
         className="wish-note"
-        autoComplete="off"
       />
       <SubmitButton label={t.add} />
     </form>

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { updateWishPartners } from "@/app/actions";
+import MentionInput from "@/components/MentionInput";
 
 // Owner-side partners field on a wishlist row. Shows the saved partners as
 // text (with @mentions rendered server-side and passed as a node), and only
@@ -73,17 +74,11 @@ export default function WishPartnersEditor({
       }}
     >
       <input type="hidden" name="id" value={wishId} />
-      <input
-        type="text"
+      <MentionInput
         name="partners"
         defaultValue={partners}
         placeholder={t.placeholder}
-        autoComplete="off"
         autoFocus
-        disabled={pending}
-        onKeyDown={(e) => {
-          if (e.key === "Escape") setEditing(false);
-        }}
       />
       <button type="submit" className="wish-partners-save" disabled={pending}>
         {pending ? "…" : t.save}

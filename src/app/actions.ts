@@ -927,14 +927,20 @@ export async function autosaveEntry(formData: FormData): Promise<void> {
   const pitches = optionalInt(formData.get("pitches"));
   const coords = parseCoords(formData);
 
-  await pool.query(
-    `update entries
+  // The partners as they were before this save: autosave runs while you type,
+  // so by the time "save" is pressed the row already holds the new mention and
+  // updateEntry sees nothing new to announce. Whoever was just tagged has to
+  // be told from here. The CTE reads the old value in the same statement.
+  const saved = await pool.query<{ previous_partners: string | null }>(
+    `with old as (select partners from entries where id = $24 and user_id = $25)
+     update entries
      set entry_date = $1, month_only = $2, crag = $3, location = $4, style = $5,
          grade_max = $6, rating = $7, orientation = $8, equipment = $9, pitches = $10,
          height_m = $11, routes = $12, partners = $13, notes = $14, c2c_url = $15,
          c2c_summary = $16, pitch_notes = $17, lat = $18, lon = $19, show_pins = $20,
          star_level = $21, country = $22, visibility = $23
-     where id = $24 and user_id = $25`,
+     where id = $24 and user_id = $25
+     returning (select partners from old) as previous_partners`,
     [
       entryDate,
       monthOnly,
@@ -962,6 +968,13 @@ export async function autosaveEntry(formData: FormData): Promise<void> {
       id,
       user.id,
     ]
+  );
+
+  await notifyTaggedPartners(
+    user.id,
+    optionalText(formData.get("partners")),
+    id,
+    saved.rows[0]?.previous_partners ?? null
   );
 
   revalidatePath("/");
