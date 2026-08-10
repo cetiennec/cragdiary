@@ -205,6 +205,8 @@ export default function EntryForm({
   const [noteMentionOpen, setNoteMentionOpen] = useState(false);
   const [noteHighlighted, setNoteHighlighted] = useState(-1);
   const noteToken = useRef<{ start: number; text: string } | null>(null);
+  // Where to put the menu: under the caret, not under the whole eight-row box.
+  const [noteMenuAt, setNoteMenuAt] = useState<{ top: number; left: number } | null>(null);
   const [cordeeToast, setCordeeToast] = useState<string | null>(null);
 
   function detectMention(value: string, caret: number) {
@@ -242,6 +244,34 @@ export default function EntryForm({
     setMentionSuggestions([]);
   }
 
+  // The caret's pixel position inside a textarea can only be had by measuring:
+  // a hidden copy of the text, styled identically, with a marker where the
+  // caret is. Cheap enough at one measurement per keystroke that opens a menu.
+  function caretPosition(area: HTMLTextAreaElement, caret: number) {
+    const style = getComputedStyle(area);
+    const mirror = document.createElement("div");
+    for (const prop of [
+      "boxSizing", "width", "paddingTop", "paddingRight", "paddingBottom", "paddingLeft",
+      "borderWidth", "fontFamily", "fontSize", "fontWeight", "lineHeight", "letterSpacing",
+      "textTransform", "whiteSpace", "wordSpacing",
+    ] as const) {
+      mirror.style[prop] = style[prop];
+    }
+    mirror.style.position = "absolute";
+    mirror.style.visibility = "hidden";
+    mirror.style.whiteSpace = "pre-wrap";
+    mirror.style.wordWrap = "break-word";
+    mirror.textContent = area.value.slice(0, caret);
+    const marker = document.createElement("span");
+    marker.textContent = "\u200b";
+    mirror.append(marker);
+    document.body.append(mirror);
+    const top = marker.offsetTop - area.scrollTop + parseFloat(style.lineHeight || "20");
+    const left = marker.offsetLeft;
+    mirror.remove();
+    return { top, left };
+  }
+
   function detectNoteMention(value: string, caret: number) {
     const match = /@([a-z0-9-]*)$/i.exec(value.slice(0, caret));
     if (!match) {
@@ -254,6 +284,7 @@ export default function EntryForm({
       setNoteMentionOpen(false);
       return;
     }
+    if (notesRef.current) setNoteMenuAt(caretPosition(notesRef.current, caret));
     fetch(`/api/users/search?q=${encodeURIComponent(match[1])}`)
       .then((res) => res.json())
       .then((data: { results: UserSuggestion[] }) => {
@@ -1382,7 +1413,11 @@ export default function EntryForm({
             aria-label={t.notesAria}
           />
           {noteMentionOpen && (
-            <ul className="combobox-list" role="listbox">
+            <ul
+              className="combobox-list combobox-at-caret"
+              role="listbox"
+              style={noteMenuAt ? { top: noteMenuAt.top, left: noteMenuAt.left } : undefined}
+            >
               {noteMentions.map((s, i) => (
                 <li key={s.username}>
                   <button

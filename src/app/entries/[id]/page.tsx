@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { getEntry, getSharedDay } from "@/lib/queries";
 import { currentUser } from "@/lib/auth";
 import { formatDate, getDict } from "@/lib/i18n";
-import { renderMentions } from "@/lib/mentions";
+import { renderMentions, renderMentionsAll } from "@/lib/mentions";
 import DeleteEntryButton from "@/components/DeleteEntryButton";
 import AutoCover from "@/components/AutoCover";
 import ShareButton from "@/components/ShareButton";
@@ -23,8 +23,11 @@ type InlinePhoto = {
   caption: string | null;
 };
 
-function NotesFlow({ notes, photos }: { notes: string | null; photos: InlinePhoto[] }) {
+async function NotesFlow({ notes, photos }: { notes: string | null; photos: InlinePhoto[] }) {
   const paragraphs = notes ? notes.split(/\n{2,}/) : [];
+  // @climbers written in the story link to their profile, like the ones in the
+  // partners field — one lookup for the whole text.
+  const rendered = await renderMentionsAll(paragraphs);
   const byPara = new Map<number, InlinePhoto[]>();
   for (const photo of photos) {
     const idx = Math.min(photo.para ?? 0, paragraphs.length);
@@ -74,10 +77,10 @@ function NotesFlow({ notes, photos }: { notes: string | null; photos: InlinePhot
 
   return (
     <div className="notes-flow">
-      {paragraphs.map((para, i) => (
+      {rendered.map((nodes, i) => (
         <div key={i} className="notes-para-group">
           {renderGroup(byPara.get(i) ?? [])}
-          <p className="notes-para">{para}</p>
+          <p className="notes-para">{nodes}</p>
         </div>
       ))}
       {renderGroup(byPara.get(paragraphs.length) ?? [])}

@@ -4831,3 +4831,24 @@ a {
     animation: none;
   }
 }
+
+/* A climber mentioned in a story or a partners list. */
+.mention {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.mention:hover {
+  text-decoration: underline;
+}
+
+/* The @ menu inside the story text follows the caret, so it doesn't land
+   below eight rows of empty box. */
+.combobox-at-caret {
+  top: auto;
+  right: auto;
+  width: max-content;
+  min-width: 14rem;
+  max-width: min(22rem, 90vw);
+}
