@@ -32,8 +32,13 @@ export async function GET(
   return new Response(new Uint8Array(row.cover), {
     headers: {
       "Content-Type": row.cover_type ?? "image/webp",
-      // no-cache: a freshly uploaded picture must show immediately (same URL)
-      "Cache-Control": "no-cache",
+      // The URL never changes, so this can't be cached for long — but "not at
+      // all" meant a function call and a database read for every avatar on
+      // every page. A minute at the edge removes nearly all of them, and is
+      // the longest anyone sees their own new picture missing.
+      "Cache-Control": row.visibility === "public"
+        ? "public, s-maxage=60, stale-while-revalidate=86400"
+        : "private, no-cache",
     },
   });
 }

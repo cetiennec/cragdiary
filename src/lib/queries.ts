@@ -73,8 +73,11 @@ function filterConditions(
 
 export async function getFeed(
   filters: EntryFilters = {},
-  { cordeesOf = null }: { cordeesOf?: { id: string; username: string } | null } = {}
-): Promise<EntryWithAuthor[]> {
+  {
+    cordeesOf = null,
+    limit = null,
+  }: { cordeesOf?: { id: string; username: string } | null; limit?: number | null } = {}
+): Promise<{ entries: EntryWithAuthor[]; total: number }> {
   const params: unknown[] = [];
   const conds = ["e.visibility = 'public'"];
   if (cordeesOf) {
@@ -101,15 +104,35 @@ export async function getFeed(
   }
   filterConditions(filters, params, conds);
 
-  const result = await pool.query<Entry & { username: string; display_name: string; author_visibility: Visibility }>(
-    `select e.*, u.username, u.display_name, u.visibility as author_visibility
+  // Without a limit this read every public entry there is — and every photo row
+  // belonging to them — to render twelve cards. The window count still reports
+  // how many there are in total, so "12 / 340" stays honest for one query.
+  let limitClause = "";
+  if (limit != null) {
+    params.push(limit);
+    limitClause = ` limit $${params.length}`;
+  }
+
+  const result = await pool.query<
+    Entry & {
+      username: string;
+      display_name: string;
+      author_visibility: Visibility;
+      feed_total: string;
+    }
+  >(
+    `select e.*, u.username, u.display_name, u.visibility as author_visibility,
+            count(*) over() as feed_total
      from entries e
      join users u on u.id = e.user_id
      where ${conds.join(" and ")}
-     order by e.entry_date desc, e.created_at desc`,
+     order by e.entry_date desc, e.created_at desc${limitClause}`,
     params
   );
-  return attachPhotos(result.rows);
+  return {
+    entries: await attachPhotos(result.rows),
+    total: Number(result.rows[0]?.feed_total ?? 0),
+  };
 }
 
 export async function getEntry(id: string): Promise<EntryWithAuthor | null> {

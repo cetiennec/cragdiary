@@ -4957,3 +4957,10 @@ a {
   font-size: 0.78rem;
   color: var(--text-muted);
 }
+
+/* Delete sits at the very bottom of the editor, well clear of Save. */
+.entry-footer-editor {
+  margin-bottom: 3rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--border);
+}

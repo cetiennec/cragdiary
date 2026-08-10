@@ -13,7 +13,7 @@ import { Client } from "pg";
 import sharp from "sharp";
 
 // Keep in step with THUMB_WIDTH / PHOTO_QUALITY in src/app/actions.ts.
-const THUMB_WIDTH = 900;
+const THUMB_WIDTH = 640;
 
 const apply = process.argv.includes("--apply");
 

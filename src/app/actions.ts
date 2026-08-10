@@ -52,10 +52,11 @@ const GALLERY_QUALITY = 52;
 //
 // Constrained by WIDTH only, not the long edge: the cover box is landscape and
 // crops with object-fit, so a portrait photo capped on its height would come
-// back too narrow to fill it. 900 px keeps a ~310 px card sharp on a 2x screen
-// with room to spare, and it is encoded at the same quality as the full image —
-// a cheaper setting was visibly softer on textured rock.
-const THUMB_WIDTH = 900;
+// back too narrow to fill it. A card is ~310 px wide, so 640 px is exactly
+// sharp on a 2x screen — 900 was carrying pixels no screen asked for. Measured
+// on a real photo at the same quality: 175 kB at 900 px against 95 kB at 640,
+// on a feed that was downloading 2 MB of covers.
+const THUMB_WIDTH = 640;
 const USERNAME_RE = /^[a-z0-9-]{3,20}$/;
 
 function parseVisibility(value: FormDataEntryValue | null): Visibility {

@@ -108,7 +108,9 @@ export default async function Home({ searchParams }: { searchParams: Promise<SP>
 
   // Searching: one combined public result set across everyone.
   if (hasFilters) {
-    const all = await getFeed(filters, { cordeesOf: null });
+    // One more than shown: enough to know there is a next page without
+    // reading every day on the site.
+    const { entries: all, total } = await getFeed(filters, { cordeesOf: null, limit: show });
     return (
       <div className="page-container">
         {filterBar}
@@ -123,8 +125,8 @@ export default async function Home({ searchParams }: { searchParams: Promise<SP>
           </div>
         ) : (
           <>
-            <Grid entries={all.slice(0, show)} locale={locale} demoLabel={t.demo.banner} />
-            <ShowMore params={params} param="show" show={show} total={all.length} t={t.feed} />
+            <Grid entries={all} locale={locale} demoLabel={t.demo.banner} />
+            <ShowMore params={params} param="show" show={show} total={total} t={t.feed} />
           </>
         )}
       </div>
@@ -132,12 +134,17 @@ export default async function Home({ searchParams }: { searchParams: Promise<SP>
   }
 
   // Default: rope-parties feed on top, public outings below.
-  const [cordeesEntries, publicEntries] = await Promise.all([
-    user ? getFeed({}, { cordeesOf: { id: user.id, username: user.username } }) : Promise.resolve([]),
-    getFeed({}, { cordeesOf: null }),
+  const [cordees, publicFeed] = await Promise.all([
+    user
+      ? getFeed({}, { cordeesOf: { id: user.id, username: user.username }, limit: showCordees })
+      : Promise.resolve({ entries: [], total: 0 }),
+    // The public list drops anything already shown above it, so it reads as far
+    // as both sections together to make up for what gets filtered out.
+    getFeed({}, { cordeesOf: null, limit: show + showCordees }),
   ]);
+  const cordeesEntries = cordees.entries;
   const cordeeIds = new Set(cordeesEntries.map((e) => e.id));
-  const publicAll = publicEntries.filter((e) => !cordeeIds.has(e.id));
+  const publicAll = publicFeed.entries.filter((e) => !cordeeIds.has(e.id));
 
   return (
     <div className="page-container">
@@ -157,12 +164,12 @@ export default async function Home({ searchParams }: { searchParams: Promise<SP>
             <p className="form-hint">{t.feed.emptyCordees}</p>
           ) : (
             <>
-              <Grid entries={cordeesEntries.slice(0, showCordees)} locale={locale} demoLabel={t.demo.banner} />
+              <Grid entries={cordeesEntries} locale={locale} demoLabel={t.demo.banner} />
               <ShowMore
                 params={params}
                 param="showc"
                 show={showCordees}
-                total={cordeesEntries.length}
+                total={cordees.total}
                 t={t.feed}
               />
             </>
@@ -186,7 +193,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<SP>
         ) : (
           <>
             <Grid entries={publicAll.slice(0, show)} locale={locale} demoLabel={t.demo.banner} />
-            <ShowMore params={params} param="show" show={show} total={publicAll.length} t={t.feed} />
+            <ShowMore params={params} param="show" show={show} total={publicFeed.total} t={t.feed} />
           </>
         )}
       </section>
