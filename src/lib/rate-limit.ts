@@ -50,3 +50,22 @@ export async function clearAttempts(bucket: string): Promise<void> {
     // best-effort
   }
 }
+
+// Guard for the unauthenticated GET endpoints: the camptocamp and Photon
+// proxies, and user search. Left open, they let anyone relay third-party APIs
+// on our bill, or walk the public user list one prefix at a time. Generous
+// enough that a person typing in a search box never notices.
+export async function limitPublicApi(
+  name: string,
+  { max = 120, windowMinutes = 5 }: { max?: number; windowMinutes?: number } = {}
+): Promise<Response | null> {
+  const bucket = `api:${name}:${await clientIp()}`;
+  if (await isRateLimited(bucket, max, windowMinutes)) {
+    return new Response(JSON.stringify({ results: [], error: "rate_limited" }), {
+      status: 429,
+      headers: { "Content-Type": "application/json", "Retry-After": String(windowMinutes * 60) },
+    });
+  }
+  await recordAttempt(bucket);
+  return null;
+}

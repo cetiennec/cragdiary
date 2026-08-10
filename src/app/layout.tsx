@@ -133,6 +133,7 @@ export default async function RootLayout({
           <p className="footer-links">
             <Link href="/credits">{t.credits.linkLabel}</Link> ·{" "}
             <Link href="/privacy">{t.privacy.linkLabel}</Link> ·{" "}
+            <Link href="/legal">{t.legal.linkLabel}</Link> ·{" "}
             <Link href="/feedback">{t.feedback.linkLabel}</Link> ·{" "}
             <Link href="/install">{t.install.linkLabel}</Link>
           </p>

@@ -71,6 +71,7 @@ const en = {
       password: "Password must be at least 8 characters.",
       taken: "That username is already taken.",
       "email-taken": "That email is already linked to another account.",
+      throttled: "Too many accounts created from here — please try again later.",
       generic: "Something went wrong.",
     },
   },
@@ -409,6 +410,19 @@ const en = {
     confirm: "Set the new password",
     invalid: "This link is invalid or has expired. Request a new one from the login page.",
   },
+  legal: {
+    linkLabel: "Legal notice",
+    title: "Legal notice",
+    intro:
+      "Required by French law (LCEN, article 6-III). Cragdiary is a free, non-commercial project run by one person.",
+    sections: [
+      { name: "Publisher", text: "Cragdiary — a personal, non-commercial project. Contact: cragdiary@pm.me. The publishing director is the site's owner, reachable at that address.", url: "mailto:cragdiary@pm.me" },
+      { name: "Hosting", text: "Vercel Inc., 440 N Barranca Ave #4133, Covina, CA 91723, United States. The database is hosted by Neon in Frankfurt, Germany.", url: "https://vercel.com" },
+      { name: "Content", text: "Entries, photos and texts belong to the climbers who wrote them. Route information comes from the Camptocamp community database (CC BY-SA) and maps from OpenStreetMap (ODbL); each is credited where it appears." },
+      { name: "Reporting a problem", text: "To report content that shouldn't be here — someone else's photo, a private detail, anything unlawful — write to cragdiary@pm.me and it will be looked at promptly.", url: "mailto:cragdiary@pm.me" },
+      { name: "Personal data", text: "How your data is handled is set out separately in the privacy notice." },
+    ],
+  },
   privacy: {
     linkLabel: "Privacy",
     title: "Privacy",
@@ -643,6 +657,7 @@ const fr: Dict = {
       password: "Le mot de passe doit faire au moins 8 caractères.",
       taken: "Ce nom d'utilisateur est déjà pris.",
       "email-taken": "Cet email est déjà lié à un autre compte.",
+      throttled: "Trop de comptes créés depuis ici — réessayez plus tard.",
       generic: "Une erreur est survenue.",
     },
   },
@@ -982,6 +997,19 @@ const fr: Dict = {
     newPassword: "Nouveau mot de passe",
     confirm: "Définir le nouveau mot de passe",
     invalid: "Ce lien est invalide ou a expiré. Redemandez-en un depuis la page de connexion.",
+  },
+  legal: {
+    linkLabel: "Mentions légales",
+    title: "Mentions légales",
+    intro:
+      "Exigées par la loi française (LCEN, article 6-III). Cragdiary est un projet gratuit et non commercial, tenu par une seule personne.",
+    sections: [
+      { name: "Éditeur", text: "Cragdiary — projet personnel et non commercial. Contact : cragdiary@pm.me. Le directeur de la publication est le propriétaire du site, joignable à cette adresse.", url: "mailto:cragdiary@pm.me" },
+      { name: "Hébergement", text: "Vercel Inc., 440 N Barranca Ave #4133, Covina, CA 91723, États-Unis. La base de données est hébergée par Neon à Francfort, en Allemagne.", url: "https://vercel.com" },
+      { name: "Contenus", text: "Les entrées, photos et textes appartiennent aux grimpeurs qui les ont écrits. Les informations de voies proviennent de la base communautaire Camptocamp (CC BY-SA) et les cartes d'OpenStreetMap (ODbL) ; chacune est créditée là où elle apparaît." },
+      { name: "Signaler un problème", text: "Pour signaler un contenu qui ne devrait pas être là — la photo de quelqu'un d'autre, un détail privé, quoi que ce soit d'illicite — écrivez à cragdiary@pm.me et ce sera examiné rapidement.", url: "mailto:cragdiary@pm.me" },
+      { name: "Données personnelles", text: "Le traitement de vos données est décrit séparément dans la note de confidentialité." },
+    ],
   },
   privacy: {
     linkLabel: "Confidentialité",

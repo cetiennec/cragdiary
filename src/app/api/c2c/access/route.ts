@@ -1,3 +1,4 @@
+import { limitPublicApi } from "@/lib/rate-limit";
 import { routeAccessPoint, type C2cAccessPoint } from "@/lib/c2c";
 
 export type { C2cAccessPoint } from "@/lib/c2c";
@@ -7,6 +8,9 @@ export type { C2cAccessPoint } from "@/lib/c2c";
 const MAX_IDS = 40;
 
 export async function GET(req: Request) {
+  const limited = await limitPublicApi("c2c-access");
+  if (limited) return limited;
+
   const { searchParams } = new URL(req.url);
   const lang = searchParams.get("lang") === "en" ? "en" : "fr";
 

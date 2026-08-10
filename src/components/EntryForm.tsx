@@ -396,10 +396,14 @@ export default function EntryForm({
     }
   }
 
-  // Auto-import when the editor is opened from "import a c2c outing".
+  // Auto-import when the editor is opened from "import a c2c outing". Deferred
+  // a tick: the import sets state as it goes, and doing that from an effect
+  // body cascades renders before the editor has painted once.
   const c2cOuting = defaults?.c2cOuting;
   useEffect(() => {
-    if (!editing && c2cOuting) void importOuting(c2cOuting);
+    if (editing || !c2cOuting) return;
+    const id = setTimeout(() => void importOuting(c2cOuting), 0);
+    return () => clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

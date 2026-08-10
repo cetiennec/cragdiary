@@ -14,7 +14,6 @@ import sharp from "sharp";
 
 // Keep in step with THUMB_WIDTH / PHOTO_QUALITY in src/app/actions.ts.
 const THUMB_WIDTH = 900;
-const THUMB_QUALITY = 86;
 
 const apply = process.argv.includes("--apply");
 
@@ -76,9 +75,11 @@ for (const row of todo) {
   if (rows.length === 0) continue;
 
   try {
+    const meta = await sharp(rows[0].data).metadata();
     const thumb = await sharp(rows[0].data)
       .resize({ width: THUMB_WIDTH, withoutEnlargement: true })
-      .webp({ quality: THUMB_QUALITY, smartSubsample: true })
+      // Match the photo's own format so the two are served under one mime type.
+      .toFormat(meta.format === "avif" ? "avif" : "webp", { quality: 86 })
       .toBuffer();
 
     await client.query("update photos set thumb = $2 where id = $1", [row.id, thumb]);

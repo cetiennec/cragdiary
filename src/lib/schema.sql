@@ -75,6 +75,14 @@ create table if not exists photos (
 
 -- Small derivative served to card and profile grids; null on older rows, in
 -- which case the photo route falls back to the full image.
+-- Columns added after the initial schema; kept as alters so an existing
+-- database can be brought up to date by re-running this file.
+alter table photos add column if not exists width integer;
+alter table photos add column if not exists height integer;
+alter table photos add column if not exists caption text;
+
+-- Small derivative served to card and profile grids; null on older rows, in
+-- which case the photo route falls back to the full image.
 alter table photos add column if not exists thumb bytea;
 
 create index if not exists photos_entry_id_idx on photos(entry_id);
@@ -133,6 +141,8 @@ alter table wishes add column if not exists parking_lat double precision;
 alter table wishes add column if not exists parking_lon double precision;
 alter table wishes add column if not exists parking_name text;
 alter table users add column if not exists wishlist_public boolean not null default true;
+-- Bumping this invalidates every session token issued before the bump.
+alter table users add column if not exists session_version integer not null default 0;
 alter table entries add column if not exists starred boolean not null default false;
 alter table entries add column if not exists country text;
 alter table entries add column if not exists star_level integer not null default 0;

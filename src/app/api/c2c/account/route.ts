@@ -1,3 +1,4 @@
+import { limitPublicApi } from "@/lib/rate-limit";
 import { currentUser } from "@/lib/auth";
 import { pool } from "@/lib/db";
 import { listUserOutings, parseProfileId } from "@/lib/c2c";
@@ -6,6 +7,9 @@ import { listUserOutings, parseProfileId } from "@/lib/c2c";
 // can pick which to bulk-import. Public data. Flags outings already imported
 // (an entry whose c2c_url points at the same outing) so the UI can skip them.
 export async function GET(req: Request) {
+  const limited = await limitPublicApi("c2c-account");
+  if (limited) return limited;
+
   const user = await currentUser();
   if (!user) {
     return Response.json({ error: "unauthorized" }, { status: 401 });

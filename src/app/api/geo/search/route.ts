@@ -1,3 +1,4 @@
+import { limitPublicApi } from "@/lib/rate-limit";
 const PHOTON_API = "https://photon.komoot.io/api/";
 
 type PhotonFeature = {
@@ -42,6 +43,9 @@ function region(p: PhotonFeature["properties"], primary: string): string | null 
 }
 
 export async function GET(req: Request) {
+  const limited = await limitPublicApi("geo");
+  if (limited) return limited;
+
   const { searchParams } = new URL(req.url);
   const q = (searchParams.get("q") ?? "").trim();
   const lang = searchParams.get("lang") === "en" ? "en" : "fr";

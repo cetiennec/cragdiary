@@ -1,3 +1,4 @@
+import { limitPublicApi } from "@/lib/rate-limit";
 import { pool } from "@/lib/db";
 
 export type UserSuggestion = {
@@ -6,6 +7,9 @@ export type UserSuggestion = {
 };
 
 export async function GET(req: Request) {
+  const limited = await limitPublicApi("users");
+  if (limited) return limited;
+
   const { searchParams } = new URL(req.url);
   const q = (searchParams.get("q") ?? "").trim().toLowerCase();
 

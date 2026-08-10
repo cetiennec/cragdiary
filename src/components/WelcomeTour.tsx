@@ -17,11 +17,17 @@ export default function WelcomeTour({ t }: { t: WelcomeDict }) {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    try {
-      if (!localStorage.getItem(SEEN_KEY)) setOpen(true);
-    } catch {
-      // localStorage unavailable — just don't show it.
-    }
+    // Deferred a tick on purpose: reading localStorage is an external lookup,
+    // and setting state straight from an effect body cascades a second render
+    // before the first has painted.
+    const id = setTimeout(() => {
+      try {
+        if (!localStorage.getItem(SEEN_KEY)) setOpen(true);
+      } catch {
+        // localStorage unavailable — just don't show it.
+      }
+    }, 0);
+    return () => clearTimeout(id);
   }, []);
 
   function dismiss() {

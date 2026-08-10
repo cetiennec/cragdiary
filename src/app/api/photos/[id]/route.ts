@@ -42,7 +42,9 @@ export async function GET(
 
   return new Response(new Uint8Array(body), {
     headers: {
-      "Content-Type": wantThumb && thumb ? "image/webp" : content_type,
+      // The thumbnail is encoded in the same format as the photo it came from,
+      // so both are served under the row's own content type.
+      "Content-Type": content_type,
       "Cache-Control":
         visibility === "public"
           ? "public, max-age=31536000, immutable"

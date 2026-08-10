@@ -1,8 +1,12 @@
+import { limitPublicApi } from "@/lib/rate-limit";
 import { C2C_API, parseRoute, type C2cRouteDoc, type C2cSuggestion } from "@/lib/c2c";
 
 export type { C2cSuggestion } from "@/lib/c2c";
 
 export async function GET(req: Request) {
+  const limited = await limitPublicApi("c2c-search");
+  if (limited) return limited;
+
   const { searchParams } = new URL(req.url);
   const q = (searchParams.get("q") ?? "").trim();
   const lang = searchParams.get("lang") === "en" ? "en" : "fr";

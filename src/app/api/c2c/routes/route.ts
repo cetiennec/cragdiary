@@ -1,3 +1,4 @@
+import { limitPublicApi } from "@/lib/rate-limit";
 import {
   bboxAround,
   searchRoutes,
@@ -44,6 +45,9 @@ function coord(value: string | null, limit: number): number | null {
 }
 
 export async function GET(req: Request) {
+  const limited = await limitPublicApi("c2c-routes");
+  if (limited) return limited;
+
   const { searchParams: sp } = new URL(req.url);
   const lang = sp.get("lang") === "en" ? "en" : "fr";
 
