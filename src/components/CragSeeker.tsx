@@ -32,6 +32,24 @@ function fill(template: string, key: string, value: string | number): string {
   return template.replace(`{${key}}`, String(value));
 }
 
+// Where a parking can be opened. Google and Apple get a directions link so the
+// phone starts navigating; Waze and OSM take a plain point.
+function mapLinks({ lat, lon, name }: C2cAccessPoint) {
+  const point = `${lat.toFixed(5)},${lon.toFixed(5)}`;
+  return [
+    { name: "Google Maps", url: `https://www.google.com/maps/dir/?api=1&destination=${point}` },
+    {
+      name: "Apple Plans",
+      url: `https://maps.apple.com/?daddr=${point}&dirflg=d${name ? `&q=${encodeURIComponent(name)}` : ""}`,
+    },
+    { name: "Waze", url: `https://waze.com/ul?ll=${point}&navigate=yes` },
+    {
+      name: "OpenStreetMap",
+      url: `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=15/${lat}/${lon}`,
+    },
+  ];
+}
+
 // A pair of "any → any" dropdowns over one of camptocamp's ordered scales.
 function RangeSelect({
   label,
@@ -709,19 +727,28 @@ export default function CragSeeker({
                 </p>
               )}
               {access[route.id] && (
-                <p className="seeker-parking">
-                  <a
-                    href={`https://www.openstreetmap.org/?mlat=${access[route.id].lat}&mlon=${access[route.id].lon}#map=15/${access[route.id].lat}/${access[route.id].lon}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    title={t.parkingHint}
-                  >
-                    <span className="seeker-parking-mark" aria-hidden>
-                      P
-                    </span>
+                <div className="seeker-parking">
+                  <span className="seeker-parking-mark" aria-hidden>
+                    P
+                  </span>
+                  <span className="seeker-parking-name">
                     {access[route.id].name ?? t.parking}
-                  </a>
-                </p>
+                  </span>
+                  {/* <details> keeps this a plain disclosure: no outside-click
+                      handling, and it closes itself on Escape. */}
+                  <details className="seeker-open-in">
+                    <summary title={t.parkingHint}>{t.openIn}</summary>
+                    <ul>
+                      {mapLinks(access[route.id]).map((link) => (
+                        <li key={link.name}>
+                          <a href={link.url} target="_blank" rel="noopener noreferrer">
+                            {link.name}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                </div>
               )}
               <div className="seeker-actions">
                 <a href={route.url} target="_blank" rel="noopener noreferrer">
