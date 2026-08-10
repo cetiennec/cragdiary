@@ -20,6 +20,14 @@ export async function GET(req: Request) {
     return Response.json({ days: [] });
   }
 
-  const days = await findLinkableDays(user.id, user.username, username, date);
+  // The place of the day being written, so a match on where can stand in for a
+  // match on when.
+  const crag = (searchParams.get("crag") ?? "").slice(0, 120);
+  const location = (searchParams.get("loc") ?? "").slice(0, 120);
+
+  const days = await findLinkableDays(user.id, user.username, username, date, {
+    crag,
+    location,
+  });
   return Response.json({ days }, { headers: { "Cache-Control": "no-store" } });
 }

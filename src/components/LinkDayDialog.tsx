@@ -12,6 +12,8 @@ export type LinkDayLabels = {
   link: string;
   ignore: string;
   alreadyLinked: string;
+  matchedDate: string;
+  matchedPlace: string;
   /** Confirmation once linked. */
   linked: string;
 };
@@ -74,6 +76,12 @@ export default function LinkDayDialog({
                 <span className="link-day-meta">
                   {day.entry_date}
                   {day.location ? ` · ${day.location}` : ""}
+                </span>
+                <span className="link-day-meta">
+                  {/* Why this day came up at all. */}
+                  {[day.same_date && t.matchedDate, day.same_place && t.matchedPlace]
+                    .filter(Boolean)
+                    .join(" · ")}
                 </span>
                 <span className="link-day-meta">
                   {day.already_linked

@@ -441,39 +441,71 @@ export type LinkableDay = {
   photo_id: string | null;
   /** Already mentions the viewer, so the two days are linked already. */
   already_linked: boolean;
+  /** Why it came up: the date, the place, or both. */
+  same_date: boolean;
+  same_place: boolean;
 };
 
-// Days this climber logged around a date, among those the viewer may see: the
-// public ones, and — because accepting a follower is saying "you may read me" —
-// the link-only ones when they accepted the viewer's follow. Never the private
-// ones. Used to offer linking your day to theirs when you tag them.
+/** `%` and `_` typed into a crag name would widen an ilike into a net. */
+function likeLiteral(value: string): string {
+  return value.replace(/[\\%_]/g, (c) => `\\${c}`);
+}
+
+// Days this climber logged that could be the same day as yours: same date (give
+// or take a couple of days) or same place. The climber is already named — you
+// tagged them — so a match on either is enough, and a match on both is the
+// strongest. Among those the viewer may see: the public ones, and — because
+// accepting a follower is saying "you may read me" — the link-only ones when
+// they accepted the viewer's follow. Never the private ones.
 export async function findLinkableDays(
   viewerId: string,
   viewerUsername: string,
   username: string,
   date: string,
-  dayWindow = 2
+  { crag = "", location = "", dayWindow = 2 }: {
+    crag?: string;
+    location?: string;
+    dayWindow?: number;
+  } = {}
 ): Promise<LinkableDay[]> {
+  const place = [crag, location]
+    .map((v) => v.trim())
+    .filter((v) => v.length >= 3)
+    .map(likeLiteral);
+
   const result = await pool.query<LinkableDay>(
     `select e.id, to_char(e.entry_date, 'YYYY-MM-DD') as entry_date, e.crag, e.location,
             (select p.id from photos p
              where p.entry_id = e.id and p.align is null
              order by p.position asc limit 1) as photo_id,
-            e.partners ~* ('@' || $3 || '([^a-z0-9-]|$)') as already_linked
+            e.partners ~* ('@' || $3 || '([^a-z0-9-]|$)') as already_linked,
+            abs(e.entry_date - $4::date) <= $5 as same_date,
+            (cardinality($6::text[]) > 0
+             and exists (select 1 from unnest($6::text[]) as q
+                         where e.crag ilike '%' || q || '%'
+                            or e.location ilike '%' || q || '%')) as same_place
      from entries e
      join users u on u.id = e.user_id
      where u.username = $1
        and u.visibility <> 'private'
        and u.id <> $2
-       and abs(e.entry_date - $4::date) <= $5
+       and (abs(e.entry_date - $4::date) <= $5
+            or (cardinality($6::text[]) > 0
+                and exists (select 1 from unnest($6::text[]) as q
+                            where e.crag ilike '%' || q || '%'
+                               or e.location ilike '%' || q || '%'))
+            -- Already listed on their day: linked whatever the date says.
+            or e.partners ~* ('@' || $3 || '([^a-z0-9-]|$)'))
        and (e.visibility = 'public'
             or (e.visibility = 'unlisted'
                 and exists (select 1 from follows f
                             where f.follower_id = $2 and f.followee_id = u.id
                               and f.status = 'accepted')))
-     order by abs(e.entry_date - $4::date), e.entry_date desc
+     order by e.partners ~* ('@' || $3 || '([^a-z0-9-]|$)') desc,
+              (abs(e.entry_date - $4::date) <= $5) desc, abs(e.entry_date - $4::date),
+              e.entry_date desc
      limit 5`,
-    [username, viewerId, viewerUsername, date, dayWindow]
+    [username, viewerId, viewerUsername, date, dayWindow, place]
   );
   return result.rows;
 }

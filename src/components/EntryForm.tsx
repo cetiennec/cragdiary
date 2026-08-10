@@ -222,9 +222,10 @@ export default function EntryForm({
     const date = dateValue.length === 7 ? `${dateValue}-01` : dateValue;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
     try {
-      const res = await fetch(
-        `/api/entries/linkable?user=${encodeURIComponent(username)}&date=${date}`
-      );
+      const params = new URLSearchParams({ user: username, date });
+      if (title.trim()) params.set("crag", title.trim());
+      if (location.trim()) params.set("loc", location.trim());
+      const res = await fetch(`/api/entries/linkable?${params}`);
       if (!res.ok) return;
       const { days } = (await res.json()) as { days: LinkableDay[] };
       if (days.length > 0) setLinkOffer({ username, days });

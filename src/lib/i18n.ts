@@ -117,6 +117,8 @@ const en = {
       link: "Link",
       ignore: "Not the same day",
       alreadyLinked: "Already linked to your journal.",
+      matchedDate: "same dates",
+      matchedPlace: "same place",
       linked: "Linked to @{user}'s day",
     },
     copiedFrom:
@@ -776,6 +778,8 @@ const fr: Dict = {
       link: "Lier",
       ignore: "Pas la même journée",
       alreadyLinked: "Déjà liée à votre carnet.",
+      matchedDate: "mêmes dates",
+      matchedPlace: "même lieu",
       linked: "Liée à la journée de @{user}",
     },
     copiedFrom:
