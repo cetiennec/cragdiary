@@ -3702,7 +3702,7 @@ a {
   }
 }
 
-/* ---- Cragseeker: route search over the camptocamp database --------------- */
+/* ---- CragSeeker: route search over the camptocamp database --------------- */
 
 .seeker-head {
   margin-bottom: 1.4rem;
@@ -3909,7 +3909,9 @@ a {
 }
 
 .seeker-map {
-  height: 380px;
+  /* Tall enough that fitting the search circle vertically doesn't leave the
+     map zoomed way out sideways. */
+  height: 460px;
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
   overflow: hidden;
@@ -4073,4 +4075,46 @@ a {
   .seeker-field-grow {
     flex-basis: 100%;
   }
+}
+
+/* Buttons that close the CragSeeker filter panel: travel time, share, clear. */
+.seeker-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+
+.seeker-locate.on {
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.seeker-travel {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* List picker and its Add button travel as one control on a result card. */
+.seeker-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-left: auto;
+}
+
+.seeker-add select {
+  max-width: 9rem;
+  text-overflow: ellipsis;
+}
+
+.seeker-add button {
+  margin-left: 0;
+}
+
+/* Multi-pitch / single-pitch: same chips as the orientation row. */
+.seeker-styles legend {
+  line-height: 1.6;
 }

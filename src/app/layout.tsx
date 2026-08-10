@@ -78,12 +78,17 @@ export default async function RootLayout({
             <nav className="site-nav">
               <Link href="/">{t.nav.feed}</Link>
               <Link href="/climbers">{t.nav.climbers}</Link>
-              <Link href="/cragseeker">{t.seeker.navLabel}</Link>
-              {user ? (
+              {user && (
                 <>
                   <Link href={`/u/${user.username}`}>{t.nav.myJournal}</Link>
                   <Link href={`/u/${user.username}#wishlist`}>{t.nav.myWishlist}</Link>
-                  <Link href="/entries/new">{t.nav.newEntry}</Link>
+                </>
+              )}
+              {/* CragSeeker sits where "New entry" used to: open to everyone,
+                  logged in or not. */}
+              <Link href="/cragseeker">{t.seeker.navLabel}</Link>
+              {user ? (
+                <>
                   <form action={logout}>
                     <button type="submit">{t.nav.logout}</button>
                   </form>

@@ -1,4 +1,4 @@
-// Logs in, searches in Cragseeker, and saves a route to a wishlist — then
+// Logs in, searches in CragSeeker, and saves a route to a wishlist — then
 // checks it really landed on the profile. Point it at a throwaway database.
 //   node scripts/seeker-save-check.mjs [baseUrl] [outDir] [user] [password]
 import { chromium } from "playwright";
@@ -28,6 +28,8 @@ await page.waitForTimeout(3000);
 
 const first = page.locator(".seeker-result").first();
 const title = await first.locator(".seeker-result-head a").innerText();
+console.log("list options:", await first.locator("select").locator("option").allInnerTexts());
+await first.locator("select").selectOption({ label: "Projets 2027" });
 await first.getByRole("button").click();
 await page.waitForTimeout(1500);
 console.log("saved:", title, "→ button now reads:", await first.getByRole("button").innerText());

@@ -3,14 +3,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import SeekerMap, { type SeekerPoint } from "./SeekerMap";
 import { saveWishFromSearch } from "@/app/actions";
+import { drivingMinutes, formatDuration } from "@/lib/travel";
 import type { C2cRouteResult } from "@/app/api/c2c/routes/route";
 import type { GeoSuggestion } from "@/app/api/geo/search/route";
 import {
+  ACTIVITY_HEIGHT_PARAM,
+  ACTIVITY_RANGE_FILTERS,
   C2C_ACTIVITIES,
-  C2C_EQUIPMENT_RATINGS,
-  C2C_FREE_GRADES,
-  C2C_GLOBAL_RATINGS,
   C2C_ORIENTATIONS,
+  C2C_OUTDOOR_TYPES,
+  C2C_RANGE_SCALES,
+  type C2cActivity,
+  type C2cRangeKey,
 } from "@/lib/c2c";
 import type { Dict, Locale } from "@/lib/i18n";
 
@@ -23,7 +27,7 @@ type SaveState = "idle" | "saving" | "done" | "error";
 
 // The dictionary crosses the server→client boundary, so its counted strings are
 // templates rather than functions ("{n} routes found").
-function fill(template: string, key: string, value: number): string {
+function fill(template: string, key: string, value: string | number): string {
   return template.replace(`{${key}}`, String(value));
 }
 
@@ -76,28 +80,82 @@ function RangeSelect({
   );
 }
 
+// A shared link carries the whole search, so state starts from the query
+// string. Anything unrecognised falls back to the default rather than failing.
+export type SeekerParams = Record<string, string | undefined>;
+
+type Ranges = Partial<Record<C2cRangeKey, { min: string; max: string }>>;
+
+// Each range travels as one "min,max" param under c2c's own name, e.g.
+// `?frat=6a,6c`. Values off the scale are dropped rather than trusted.
+function initialRanges(params: SeekerParams): Ranges {
+  const out: Ranges = {};
+  for (const key of Object.keys(C2C_RANGE_SCALES) as C2cRangeKey[]) {
+    const raw = params[key];
+    if (!raw) continue;
+    const scale = C2C_RANGE_SCALES[key] as readonly string[];
+    const [min, max] = raw.split(",");
+    const pick = (v: string | undefined) => (v && scale.includes(v) ? v : "");
+    if (pick(min) || pick(max)) out[key] = { min: pick(min), max: pick(max) };
+  }
+  return out;
+}
+
+function initialCentre(params: SeekerParams): Centre | null {
+  const lat = Number(params.lat);
+  const lon = Number(params.lon);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+  if (Math.abs(lat) > 90 || Math.abs(lon) > 180) return null;
+  return { lat, lon, name: params.place?.slice(0, 80) || null };
+}
+
 export default function CragSeeker({
   t,
   locale,
   wishlists,
+  params,
 }: {
   t: Dict["seeker"];
   locale: Locale;
   wishlists: { id: string; name: string }[];
+  params: SeekerParams;
 }) {
-  const [activity, setActivity] = useState<string>("rock_climbing");
-  const [centre, setCentre] = useState<Centre | null>(null);
-  const [radius, setRadius] = useState(50);
-  const [q, setQ] = useState("");
-  const [grade, setGrade] = useState({ min: "", max: "" });
-  const [mandatory, setMandatory] = useState({ min: "", max: "" });
-  const [rating, setRating] = useState({ min: "", max: "" });
-  const [equipment, setEquipment] = useState({ min: "", max: "" });
-  const [height, setHeight] = useState({ min: "", max: "" });
-  const [facing, setFacing] = useState<string[]>([]);
+  const [activity, setActivity] = useState<C2cActivity>(
+    (C2C_ACTIVITIES as readonly string[]).includes(params.act ?? "")
+      ? (params.act as C2cActivity)
+      : "rock_climbing"
+  );
+  const [centre, setCentre] = useState<Centre | null>(() => initialCentre(params));
+  const [radius, setRadius] = useState(() =>
+    RADII.includes(Number(params.radius)) ? Number(params.radius) : 50
+  );
+  const [q, setQ] = useState(params.q?.slice(0, 80) ?? "");
+  // Ranges are keyed by c2c's own param name ("frat", "irat", …) so which ones
+  // exist follows the activity rather than a fixed list of climbing fields.
+  const [ranges, setRanges] = useState<Ranges>(() => initialRanges(params));
+  const [height, setHeight] = useState({
+    min: String(parseInt(params.hmin ?? "", 10) || ""),
+    max: String(parseInt(params.hmax ?? "", 10) || ""),
+  });
+  const [facing, setFacing] = useState<string[]>(() =>
+    (params.fac ?? "").split(",").filter((o) => (C2C_ORIENTATIONS as readonly string[]).includes(o))
+  );
+  const [outdoorType, setOutdoorType] = useState(() =>
+    (C2C_OUTDOOR_TYPES as readonly string[]).includes(params.crtyp ?? "") ? params.crtyp! : ""
+  );
+
+  const activeRanges = ACTIVITY_RANGE_FILTERS[activity];
+  const heightLabel = ACTIVITY_HEIGHT_PARAM[activity] === "hdif" ? t.heightGain : t.height;
+
+  // Multi-pitch vs single-pitch is a rock-climbing distinction; c2c doesn't
+  // record it for mountaineering or ski touring.
+  const showOutdoorType = activity === "rock_climbing";
 
   const [results, setResults] = useState<C2cRouteResult[]>([]);
-  const [total, setTotal] = useState(0);
+  // c2c counts its bounding box; the circle keeps only ~π/4 of it, so this is an
+  // estimate until every page is in and `allLoaded` makes the count exact.
+  const [estimatedTotal, setEstimatedTotal] = useState(0);
+  const [boxTotal, setBoxTotal] = useState(0);
   // Where the next page starts upstream. Not `results.length`: c2c documents
   // without a usable title are dropped, and the list is re-sorted by distance.
   const [nextOffset, setNextOffset] = useState(0);
@@ -108,34 +166,45 @@ export default function CragSeeker({
   const [activeId, setActiveId] = useState<number | null>(null);
   const [saved, setSaved] = useState<Record<number, SaveState>>({});
   const [listId, setListId] = useState(wishlists[0]?.id ?? "");
+  const [origin, setOrigin] = useState<{ lat: number; lon: number } | null>(null);
+  const [originPending, setOriginPending] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   // Place autocomplete
-  const [placeInput, setPlaceInput] = useState("");
+  const [placeInput, setPlaceInput] = useState(params.place?.slice(0, 80) ?? "");
   const [places, setPlaces] = useState<GeoSuggestion[]>([]);
   const [placesOpen, setPlacesOpen] = useState(false);
   const placeArmed = useRef(false);
 
-  const query = useMemo(() => {
-    const sp = new URLSearchParams({ act: activity, lang: locale });
+  // One description of the search, used both to call the API and to write the
+  // address bar — so any link a visitor copies reproduces exactly what they see.
+  const search = useMemo(() => {
+    const sp = new URLSearchParams({ act: activity });
     if (centre) {
       sp.set("lat", centre.lat.toFixed(5));
       sp.set("lon", centre.lon.toFixed(5));
       sp.set("radius", String(radius));
+      if (centre.name) sp.set("place", centre.name);
     }
     if (q.trim()) sp.set("q", q.trim());
-    if (grade.min) sp.set("fmin", grade.min);
-    if (grade.max) sp.set("fmax", grade.max);
-    if (mandatory.min) sp.set("mmin", mandatory.min);
-    if (mandatory.max) sp.set("mmax", mandatory.max);
-    if (rating.min) sp.set("rmin", rating.min);
-    if (rating.max) sp.set("rmax", rating.max);
-    if (equipment.min) sp.set("pmin", equipment.min);
-    if (equipment.max) sp.set("pmax", equipment.max);
+    for (const key of activeRanges) {
+      const r = ranges[key];
+      if (r?.min || r?.max) sp.set(key, `${r.min ?? ""},${r.max ?? ""}`);
+    }
     if (height.min) sp.set("hmin", height.min);
     if (height.max) sp.set("hmax", height.max);
     if (facing.length) sp.set("fac", facing.join(","));
+    if (outdoorType && showOutdoorType) sp.set("crtyp", outdoorType);
     return sp.toString();
-  }, [activity, centre, radius, q, grade, mandatory, rating, equipment, height, facing, locale]);
+  }, [activity, activeRanges, centre, radius, q, ranges, height, facing, outdoorType, showOutdoorType]);
+
+  const query = `${search}&lang=${locale}`;
+
+  // Shallow routing: update the address bar without re-running the server
+  // component, so the URL always describes the current search.
+  useEffect(() => {
+    window.history.replaceState(null, "", search ? `?${search}` : window.location.pathname);
+  }, [search]);
 
   // Only the newest request may write to state: filters change faster than
   // camptocamp answers, and a slow early reply must not overwrite a fast late one.
@@ -148,10 +217,15 @@ export default function CragSeeker({
       setFailed(false);
       try {
         const res = await fetch(`/api/c2c/routes?${query}&offset=${offset}`);
-        const data = (await res.json()) as { total: number; results: C2cRouteResult[] };
+        const data = (await res.json()) as {
+          boxTotal: number;
+          estimatedTotal: number;
+          results: C2cRouteResult[];
+        };
         if (id !== requestId.current) return;
         setResults((prev) => (offset === 0 ? data.results : [...prev, ...data.results]));
-        setTotal(data.total);
+        setEstimatedTotal(data.estimatedTotal);
+        setBoxTotal(data.boxTotal);
         setNextOffset(offset + PAGE_SIZE);
       } catch {
         if (id === requestId.current) setFailed(true);
@@ -219,14 +293,60 @@ export default function CragSeeker({
     );
   }
 
+  // Travel time is opt-in and computed in the browser: asking for the position
+  // is the whole point of the button, and it never leaves the page.
+  function estimateTravel() {
+    if (origin) {
+      setOrigin(null);
+      return;
+    }
+    setGeoError(false);
+    setOriginPending(true);
+    navigator.geolocation?.getCurrentPosition(
+      (pos) => {
+        setOriginPending(false);
+        setOrigin({ lat: pos.coords.latitude, lon: pos.coords.longitude });
+      },
+      () => {
+        setOriginPending(false);
+        setGeoError(true);
+      },
+      { timeout: 10000 }
+    );
+  }
+
+  async function shareSearch() {
+    const url = window.location.href;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: t.title, text: `${t.shareText}\n${url}` });
+        return;
+      } catch {
+        // Share sheet dismissed — fall through to the clipboard.
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // No clipboard permission: leave the button alone rather than lie.
+    }
+  }
+
+  function setRange(key: C2cRangeKey, end: "min" | "max", value: string) {
+    setRanges((prev) => ({
+      ...prev,
+      [key]: { min: "", max: "", ...prev[key], [end]: value },
+    }));
+  }
+
   function clearAll() {
     setQ("");
-    setGrade({ min: "", max: "" });
-    setMandatory({ min: "", max: "" });
-    setRating({ min: "", max: "" });
-    setEquipment({ min: "", max: "" });
+    setRanges({});
     setHeight({ min: "", max: "" });
     setFacing([]);
+    setOutdoorType("");
   }
 
   async function save(route: C2cRouteResult) {
@@ -249,6 +369,17 @@ export default function CragSeeker({
       setSaved((s) => ({ ...s, [route.id]: "error" }));
     }
   }
+
+  // Once every upstream page is in, `results.length` is the real number of
+  // routes inside the circle; before that only an estimate can be honest.
+  const allLoaded = nextOffset >= boxTotal;
+  const countLabel = allLoaded
+    ? results.length === 1
+      ? t.resultCountOne
+      : fill(t.resultCount, "n", results.length)
+    : estimatedTotal > 5000
+      ? fill(t.resultCountCapped, "n", 5000)
+      : fill(t.resultCountAbout, "n", estimatedTotal);
 
   const points: SeekerPoint[] = useMemo(
     () =>
@@ -273,7 +404,7 @@ export default function CragSeeker({
         <div className="seeker-row">
           <label className="seeker-field">
             <span className="seeker-field-label">{t.activity}</span>
-            <select value={activity} onChange={(e) => setActivity(e.target.value)}>
+            <select value={activity} onChange={(e) => setActivity(e.target.value as C2cActivity)}>
               {C2C_ACTIVITIES.map((a) => (
                 <option key={a} value={a}>
                   {t.activities[a]}
@@ -281,6 +412,23 @@ export default function CragSeeker({
               ))}
             </select>
           </label>
+
+          {showOutdoorType && (
+            <fieldset className="seeker-facing seeker-styles">
+              <legend className="seeker-field-label">{t.routeStyle}</legend>
+              {["", ...C2C_OUTDOOR_TYPES].map((type) => (
+                <label key={type || "any"} className="seeker-chip">
+                  <input
+                    type="radio"
+                    name="crtyp"
+                    checked={outdoorType === type}
+                    onChange={() => setOutdoorType(type)}
+                  />
+                  <span>{type ? t.outdoorTypes[type] : t.anyStyle}</span>
+                </label>
+              ))}
+            </fieldset>
+          )}
 
           <div className="seeker-field seeker-field-grow">
             <span className="seeker-field-label">{t.where}</span>
@@ -350,47 +498,22 @@ export default function CragSeeker({
             />
           </label>
 
-          <RangeSelect
-            label={t.freeGrade}
-            scale={C2C_FREE_GRADES}
-            min={grade.min}
-            max={grade.max}
-            onMin={(v) => setGrade((g) => ({ ...g, min: v }))}
-            onMax={(v) => setGrade((g) => ({ ...g, max: v }))}
-            t={t}
-          />
-          <RangeSelect
-            label={t.mandatoryGrade}
-            hint={t.mandatoryHint}
-            scale={C2C_FREE_GRADES}
-            min={mandatory.min}
-            max={mandatory.max}
-            onMin={(v) => setMandatory((m) => ({ ...m, min: v }))}
-            onMax={(v) => setMandatory((m) => ({ ...m, max: v }))}
-            t={t}
-          />
-          <RangeSelect
-            label={t.globalRating}
-            scale={C2C_GLOBAL_RATINGS}
-            min={rating.min}
-            max={rating.max}
-            onMin={(v) => setRating((r) => ({ ...r, min: v }))}
-            onMax={(v) => setRating((r) => ({ ...r, max: v }))}
-            t={t}
-          />
-          <RangeSelect
-            label={t.equipment}
-            hint={t.equipmentHint}
-            scale={C2C_EQUIPMENT_RATINGS}
-            min={equipment.min}
-            max={equipment.max}
-            onMin={(v) => setEquipment((p) => ({ ...p, min: v }))}
-            onMax={(v) => setEquipment((p) => ({ ...p, max: v }))}
-            t={t}
-          />
+          {activeRanges.map((key) => (
+            <RangeSelect
+              key={key}
+              label={t.ranges[key]}
+              hint={t.rangeHints[key]}
+              scale={C2C_RANGE_SCALES[key]}
+              min={ranges[key]?.min ?? ""}
+              max={ranges[key]?.max ?? ""}
+              onMin={(v) => setRange(key, "min", v)}
+              onMax={(v) => setRange(key, "max", v)}
+              t={t}
+            />
+          ))}
 
           <label className="seeker-field">
-            <span className="seeker-field-label">{t.height}</span>
+            <span className="seeker-field-label">{heightLabel}</span>
             <span className="seeker-range">
               <input
                 type="number"
@@ -398,7 +521,7 @@ export default function CragSeeker({
                 step={10}
                 value={height.min}
                 placeholder={t.min}
-                aria-label={`${t.height} ${t.min}`}
+                aria-label={`${heightLabel} ${t.min}`}
                 onChange={(e) => setHeight((h) => ({ ...h, min: e.target.value }))}
               />
               <span aria-hidden>→</span>
@@ -408,7 +531,7 @@ export default function CragSeeker({
                 step={10}
                 value={height.max}
                 placeholder={t.max}
-                aria-label={`${t.height} ${t.max}`}
+                aria-label={`${heightLabel} ${t.max}`}
                 onChange={(e) => setHeight((h) => ({ ...h, max: e.target.value }))}
               />
             </span>
@@ -431,9 +554,23 @@ export default function CragSeeker({
               </label>
             ))}
           </fieldset>
-          <button type="button" className="filter-clear seeker-clear" onClick={clearAll}>
-            {t.clear}
-          </button>
+          <div className="seeker-row-actions">
+            <button
+              type="button"
+              className={`seeker-locate${origin ? " on" : ""}`}
+              onClick={estimateTravel}
+              disabled={originPending}
+              title={t.travelHint}
+            >
+              {originPending ? t.locating : origin ? `⏱ ${t.travelOff}` : `⏱ ${t.travelTime}`}
+            </button>
+            <button type="button" className="seeker-locate" onClick={shareSearch}>
+              {copied ? `✓ ${t.copied}` : `🔗 ${t.share}`}
+            </button>
+            <button type="button" className="filter-clear seeker-clear" onClick={clearAll}>
+              {t.clear}
+            </button>
+          </div>
         </div>
         {geoError && <p className="seeker-note">{t.locationDenied}</p>}
       </section>
@@ -454,13 +591,7 @@ export default function CragSeeker({
         ) : failed ? (
           <span>{t.error}</span>
         ) : (
-          <span>
-            {total > 5000
-              ? fill(t.resultCountCapped, "n", 5000)
-              : total === 1
-                ? t.resultCountOne
-                : fill(t.resultCount, "n", total)}
-          </span>
+          <span>{countLabel}</span>
         )}
         {!centre && <span className="seeker-note">{t.noLocation}</span>}
         {wishlists.length === 0 && <span className="seeker-note">{t.loginToSave}</span>}
@@ -481,10 +612,20 @@ export default function CragSeeker({
                 <a href={route.url} target="_blank" rel="noopener noreferrer">
                   {route.title}
                 </a>
-                {route.distance_km != null && (
-                  <span className="seeker-distance">
-                    {fill(t.away, "km", Math.round(route.distance_km))}
+                {origin && route.lat != null && route.lon != null ? (
+                  <span className="seeker-distance seeker-travel">
+                    {fill(
+                      t.byCar,
+                      "t",
+                      formatDuration(drivingMinutes(origin, { lat: route.lat, lon: route.lon }))
+                    )}
                   </span>
+                ) : (
+                  route.distance_km != null && (
+                    <span className="seeker-distance">
+                      {fill(t.away, "km", Math.round(route.distance_km))}
+                    </span>
+                  )
                 )}
               </div>
               {route.area && <p className="seeker-area">{route.area}</p>}
@@ -517,20 +658,20 @@ export default function CragSeeker({
                   {t.openOnC2c}
                 </a>
                 {wishlists.length > 0 && (
-                  <>
-                    {wishlists.length > 1 && (
-                      <select
-                        value={listId}
-                        onChange={(e) => setListId(e.target.value)}
-                        aria-label={t.addToList}
-                      >
-                        {wishlists.map((w) => (
-                          <option key={w.id} value={w.id}>
-                            {w.name}
-                          </option>
-                        ))}
-                      </select>
-                    )}
+                  /* Which list, then add — the pair sits together at the foot
+                     of the card so the target is never in doubt. */
+                  <span className="seeker-add">
+                    <select
+                      value={listId}
+                      onChange={(e) => setListId(e.target.value)}
+                      aria-label={t.addToList}
+                    >
+                      {wishlists.map((w) => (
+                        <option key={w.id} value={w.id}>
+                          {w.name}
+                        </option>
+                      ))}
+                    </select>
                     <button
                       type="button"
                       onClick={() => save(route)}
@@ -542,9 +683,9 @@ export default function CragSeeker({
                           ? t.added
                           : state === "error"
                             ? t.addFailed
-                            : `+ ${t.addToList}`}
+                            : `+ ${t.add}`}
                     </button>
-                  </>
+                  </span>
                 )}
               </div>
             </li>
@@ -552,7 +693,7 @@ export default function CragSeeker({
         })}
       </ul>
 
-      {results.length > 0 && nextOffset < total && (
+      {results.length > 0 && !allLoaded && (
         <div className="seeker-more">
           <button
             type="button"

@@ -28,7 +28,10 @@ const securityHeaders = [
   { key: "X-Frame-Options", value: "DENY" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-  { key: "Permissions-Policy", value: "geolocation=(), camera=(), microphone=()" },
+  // `self` and not `()`: CragSeeker's "Near me" and travel-time buttons ask the
+  // browser for a position. Still nothing for embedded third parties, and the
+  // browser's own permission prompt remains the gate.
+  { key: "Permissions-Policy", value: "geolocation=(self), camera=(), microphone=()" },
 ];
 
 const nextConfig: NextConfig = {

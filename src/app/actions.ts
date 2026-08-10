@@ -945,7 +945,7 @@ const EDITABLE_WISH_LISTS = `
      or exists (select 1 from wishlist_members m
                 where m.wishlist_id = w.id and m.user_id = $2)`;
 
-// Shared by the wishlist form and Cragseeker: insert the route, tell the other
+// Shared by the wishlist form and CragSeeker: insert the route, tell the other
 // people on the list, refresh the profile. Callers own where the user goes next.
 async function insertWish(
   user: { id: string; username: string },
@@ -1016,7 +1016,7 @@ export async function addWish(formData: FormData): Promise<void> {
   redirect(`/u/${user.username}#wishlist`);
 }
 
-// Cragseeker saves without leaving the search: it reports back instead of
+// CragSeeker saves without leaving the search: it reports back instead of
 // redirecting, so the results list can just tick the route off.
 export async function saveWishFromSearch(
   formData: FormData

@@ -238,7 +238,7 @@ export async function importOuting(id: number, lang: string): Promise<C2cOutingI
   };
 }
 
-// ---- Route search ("Cragseeker") -------------------------------------------
+// ---- Route search ("CragSeeker") -------------------------------------------
 
 // Every scale below is ordered easiest → hardest: the c2c API reads a
 // `min,max` pair positionally against its own ordering, so these lists must
@@ -273,7 +273,61 @@ export const C2C_EQUIPMENT_RATINGS = [
   "P1", "P1+", "P2", "P2+", "P3", "P3+", "P4", "P4+",
 ] as const;
 
+// Every range filter c2c offers that CragSeeker exposes, keyed by the API's own
+// parameter name. Each scale is ordered easiest → hardest, because the API reads
+// a `min,max` pair positionally against its own ordering.
+export const C2C_RANGE_SCALES = {
+  frat: C2C_FREE_GRADES,
+  rrat: C2C_FREE_GRADES,
+  prat: C2C_EQUIPMENT_RATINGS,
+  grat: C2C_GLOBAL_RATINGS,
+  erat: ["I", "II", "III", "IV", "V", "VI"],
+  arat: ["A0", "A0+", "A1", "A1+", "A2", "A2+", "A3", "A3+", "A4", "A4+", "A5"],
+  irat: ["1", "2", "3", "3+", "4", "4+", "5", "5+", "6", "6+", "7", "7+"],
+  mrat: [
+    "M1", "M2", "M3", "M3+", "M4", "M4+", "M5", "M5+", "M6", "M6+",
+    "M7", "M7+", "M8", "M8+", "M9", "M9+", "M10", "M10+", "M11", "M11+", "M12", "M12+",
+  ],
+  krat: ["K1", "K2", "K3", "K4", "K5", "K6"],
+  hrat: ["T1", "T2", "T3", "T4", "T5"],
+  trat: [
+    "1.1", "1.2", "1.3", "2.1", "2.2", "2.3", "3.1", "3.2", "3.3",
+    "4.1", "4.2", "4.3", "5.1", "5.2", "5.3", "5.4", "5.5", "5.6",
+  ],
+  sexpo: ["E1", "E2", "E3", "E4"],
+  srat: ["S1", "S2", "S3", "S4", "S5", "S6", "S7"],
+} as const satisfies Record<string, readonly string[]>;
+
+export type C2cRangeKey = keyof typeof C2C_RANGE_SCALES;
+
+// Which of those make sense for which activity — a free-climbing grade means
+// nothing on a hiking route, and c2c leaves the field empty there anyway.
+// `dhei` is the height actually climbed, `hdif` the elevation gained walking or
+// skiing up — the same box means a different thing depending on the activity.
+export const ACTIVITY_HEIGHT_PARAM: Record<C2cActivity, "dhei" | "hdif"> = {
+  rock_climbing: "dhei",
+  mountain_climbing: "dhei",
+  snow_ice_mixed: "dhei",
+  ice_climbing: "dhei",
+  via_ferrata: "dhei",
+  skitouring: "hdif",
+  hiking: "hdif",
+};
+
+export const ACTIVITY_RANGE_FILTERS: Record<C2cActivity, readonly C2cRangeKey[]> = {
+  rock_climbing: ["frat", "rrat", "prat", "grat"],
+  mountain_climbing: ["grat", "erat", "frat", "rrat", "arat"],
+  snow_ice_mixed: ["grat", "irat", "mrat", "erat"],
+  ice_climbing: ["grat", "irat", "erat"],
+  via_ferrata: ["krat"],
+  skitouring: ["trat", "sexpo", "srat", "grat"],
+  hiking: ["hrat"],
+};
+
 export const C2C_ORIENTATIONS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"] as const;
+
+// `climbing_outdoor_type` — how the route is climbed, not how hard it is.
+export const C2C_OUTDOOR_TYPES = ["multi", "single", "bloc"] as const;
 
 const EARTH_RADIUS_KM = 6371;
 
@@ -290,34 +344,23 @@ export function distanceKm(
   return 2 * EARTH_RADIUS_KM * Math.asin(Math.min(1, Math.sqrt(h)));
 }
 
-// c2c's only geographic filter is a box, so "around 50 km" is a square reaching
-// 50 km along each axis — its corners sit ~1.4× further out. The map draws this
-// very box rather than a circle, so what's searched is what's shown.
-function mercatorBox(lat: number, lon: number, radiusKm: number) {
+// c2c's only geographic filter is a box, so a circular search means asking for
+// the square that *circumscribes* the circle and dropping the corners
+// ourselves — see `searchRoutes`. The box is never shown to the user.
+export function bboxAround(lat: number, lon: number, radiusKm: number): string {
   const centre = wgs84ToMercator(lat, lon);
   // Mercator stretches distances by 1/cos(lat); undo that so the box on the
   // ground is the size the user asked for.
   const half = (radiusKm * 1000) / Math.cos((lat * Math.PI) / 180);
-  return { minX: centre.x - half, minY: centre.y - half, maxX: centre.x + half, maxY: centre.y + half };
+  return [centre.x - half, centre.y - half, centre.x + half, centre.y + half]
+    .map((n) => Math.round(n))
+    .join(",");
 }
 
-export function bboxAround(lat: number, lon: number, radiusKm: number): string {
-  const { minX, minY, maxX, maxY } = mercatorBox(lat, lon, radiusKm);
-  return [minX, minY, maxX, maxY].map((n) => Math.round(n)).join(",");
-}
-
-// The same box in lat/lon, for drawing. Derived from `mercatorBox` so the
-// rectangle on screen can never drift from the one sent to camptocamp.
-export function boxBoundsAround(
-  lat: number,
-  lon: number,
-  radiusKm: number
-): { south: number; west: number; north: number; east: number } {
-  const { minX, minY, maxX, maxY } = mercatorBox(lat, lon, radiusKm);
-  const sw = mercatorPointToWgs84(minX, minY);
-  const ne = mercatorPointToWgs84(maxX, maxY);
-  return { south: sw.lat, west: sw.lon, north: ne.lat, east: ne.lon };
-}
+// A circle covers π/4 of its circumscribing square. Applied to c2c's box total
+// it gives the honest "about N routes" shown until every page has been loaded
+// and the real count is known.
+export const CIRCLE_OF_BOX = Math.PI / 4;
 
 export type C2cRouteResult = C2cSuggestion & {
   required_grade: string | null;
@@ -332,14 +375,13 @@ export type C2cRouteFilters = {
   q?: string;
   /** "minx,miny,maxx,maxy" in Web Mercator metres — see `bboxAround`. */
   bbox?: string;
-  /** Free-climbing grade of the hardest move (`rock_free_rating`). */
-  freeGrade?: [string, string];
-  /** Mandatory grade you must climb clean between bolts (`rock_required_rating`). */
-  requiredGrade?: [string, string];
-  globalRating?: [string, string];
-  equipment?: [string, string];
+  /** Range filters keyed by c2c's own param name — see `C2C_RANGE_SCALES`. */
+  ranges?: Partial<Record<C2cRangeKey, [string, string]>>;
+  /** Vertical range, under whichever param suits the activity. */
   heightM?: [number, number];
+  heightParam?: "dhei" | "hdif";
   orientations?: string[];
+  outdoorType?: string;
   offset?: number;
   limit?: number;
 };
@@ -347,28 +389,29 @@ export type C2cRouteFilters = {
 export async function searchRoutes(
   filters: C2cRouteFilters,
   lang: string,
-  near?: { lat: number; lon: number }
-): Promise<{ total: number; results: C2cRouteResult[] }> {
+  near?: { lat: number; lon: number; radiusKm: number }
+): Promise<{ boxTotal: number; results: C2cRouteResult[] }> {
   const params = new URLSearchParams();
   if (filters.activity) params.set("act", filters.activity);
   if (filters.q) params.set("q", filters.q);
   if (filters.bbox) params.set("bbox", filters.bbox);
-  // c2c's `rrat` is the *required* rating; the free grade lives under `frat`.
-  if (filters.freeGrade) params.set("frat", filters.freeGrade.join(","));
-  if (filters.requiredGrade) params.set("rrat", filters.requiredGrade.join(","));
-  if (filters.globalRating) params.set("grat", filters.globalRating.join(","));
-  if (filters.equipment) params.set("prat", filters.equipment.join(","));
-  if (filters.heightM) params.set("hdif", filters.heightM.join(","));
+  // Each range goes out under c2c's own param name; `rrat` is the *required*
+  // rating and `frat` the free one, a pairing that is easy to get backwards.
+  for (const [key, pair] of Object.entries(filters.ranges ?? {})) {
+    if (pair) params.set(key, pair.join(","));
+  }
+  if (filters.heightM) params.set(filters.heightParam ?? "dhei", filters.heightM.join(","));
   if (filters.orientations?.length) params.set("fac", filters.orientations.join(","));
+  if (filters.outdoorType) params.set("crtyp", filters.outdoorType);
   params.set("limit", String(filters.limit ?? 30));
   params.set("offset", String(filters.offset ?? 0));
 
   const data = await fetchJson<{ total?: number; documents?: C2cRouteDoc[] }>(
     `${C2C_API}/routes?${params}`
   );
-  if (!data) return { total: 0, results: [] };
+  if (!data) return { boxTotal: 0, results: [] };
 
-  const results = (data.documents ?? []).flatMap<C2cRouteResult>((doc) => {
+  const all = (data.documents ?? []).flatMap<C2cRouteResult>((doc) => {
     const base = parseRoute(doc, lang);
     if (!base) return [];
     return [
@@ -386,13 +429,15 @@ export async function searchRoutes(
     ];
   });
 
-  // Nearest first when there's a pin to measure from; otherwise keep c2c's own
-  // relevance order.
-  if (near) {
-    results.sort((a, b) => (a.distance_km ?? Infinity) - (b.distance_km ?? Infinity));
-  }
+  // Trim the box back to the circle the user actually asked for, then sort
+  // nearest first. Without a pin, keep c2c's own relevance order.
+  const results = near
+    ? all
+        .filter((r) => r.distance_km != null && r.distance_km <= near.radiusKm)
+        .sort((a, b) => (a.distance_km ?? Infinity) - (b.distance_km ?? Infinity))
+    : all;
 
-  return { total: data.total ?? results.length, results };
+  return { boxTotal: data.total ?? all.length, results };
 }
 
 // ---- Account import (list all of a user's outings) -------------------------
