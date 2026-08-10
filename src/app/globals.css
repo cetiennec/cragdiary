@@ -4704,3 +4704,130 @@ a {
   gap: 0.6rem;
   margin-top: 1.2rem;
 }
+
+/* Hover card on the profile map: the day at a glance, with its links. */
+
+.leaflet-popup.map-pop-wrap .leaflet-popup-content-wrapper {
+  padding: 0;
+  overflow: hidden;
+  border-radius: var(--radius-card);
+  background: var(--bg-elevated);
+  color: var(--text);
+  box-shadow: var(--shadow-card);
+}
+
+.leaflet-popup.map-pop-wrap .leaflet-popup-content {
+  margin: 0;
+  width: auto !important;
+}
+
+.leaflet-popup.map-pop-wrap .leaflet-popup-tip {
+  background: var(--bg-elevated);
+}
+
+.map-pop {
+  display: flex;
+  flex-direction: column;
+  width: 200px;
+}
+
+.map-pop-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0 0 0.5rem;
+  text-decoration: none;
+  color: var(--text);
+}
+
+.map-pop-thumb {
+  width: 100%;
+  height: 110px;
+  object-fit: cover;
+  display: block;
+  margin-bottom: 0.4rem;
+}
+
+.map-pop-title,
+.map-pop-date,
+.map-pop-c2c {
+  padding: 0 0.6rem;
+}
+
+.map-pop-title {
+  font-size: 0.88rem;
+  line-height: 1.3;
+}
+
+.map-pop-date {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.map-pop-c2c {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--accent);
+  text-decoration: none;
+  padding-bottom: 0.55rem;
+}
+
+/* Leaflet paints every <a> inside a map its own blue (.leaflet-container a),
+   which beats a class on its own — so the card's links are set from here. */
+.leaflet-popup.map-pop-wrap .map-pop-main {
+  color: var(--text);
+}
+
+.leaflet-popup.map-pop-wrap .map-pop-date {
+  color: var(--text-muted);
+}
+
+.leaflet-popup.map-pop-wrap .map-pop-c2c {
+  color: var(--accent);
+}
+
+.leaflet-popup.map-pop-wrap a:hover {
+  text-decoration: underline;
+}
+
+/* Floating confirmation. Bottom centre: the bottom corners are taken by the
+   feedback button and the account bubble. */
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 1.5rem;
+  transform: translateX(-50%);
+  z-index: 4000;
+  max-width: min(30rem, 90vw);
+  padding: 0.7rem 1.1rem;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--accent-contrast);
+  background: var(--accent);
+  box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.5);
+  animation: toast-in 0.18s ease-out;
+}
+
+.toast-error {
+  background: #b3261e;
+  color: #ffffff;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 0.6rem);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast {
+    animation: none;
+  }
+}

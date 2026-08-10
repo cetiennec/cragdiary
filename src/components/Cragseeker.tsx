@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import SeekerMap, { type SeekerPoint } from "./SeekerMap";
 import ParkingLink from "./ParkingLink";
+import Toast from "./Toast";
 import { saveWishFromSearch } from "@/app/actions";
 import { drivingMinutes, formatDuration } from "@/lib/travel";
 import type { C2cRouteResult } from "@/app/api/c2c/routes/route";
@@ -175,6 +176,9 @@ export default function Cragseeker({
   const [origin, setOrigin] = useState<{ lat: number; lon: number } | null>(null);
   const [originPending, setOriginPending] = useState(false);
   const [copied, setCopied] = useState(false);
+  // Confirms the add, which otherwise happens at the foot of a card the eye
+  // may already have left.
+  const [toast, setToast] = useState<{ text: string; tone: "ok" | "error" } | null>(null);
   // Parking and the outing count, keyed by route id. Only c2c's detail
   // documents carry them, so they arrive after the results and simply appear
   // when they do.
@@ -416,11 +420,21 @@ export default function Cragseeker({
       form.set("parking_lon", String(parking.lon));
       if (parking.name) form.set("parking_name", parking.name);
     }
+    const listName = wishlists.find((w) => w.id === listId)?.name ?? "";
     try {
       const res = await saveWishFromSearch(form);
       setSaved((s) => ({ ...s, [route.id]: res.ok ? "done" : "error" }));
+      setToast(
+        res.ok
+          ? {
+              text: fill(fill(t.addedToast, "title", route.title), "list", listName),
+              tone: "ok",
+            }
+          : { text: t.addFailed, tone: "error" }
+      );
     } catch {
       setSaved((s) => ({ ...s, [route.id]: "error" }));
+      setToast({ text: t.addFailed, tone: "error" });
     }
   }
 
@@ -839,6 +853,10 @@ export default function Cragseeker({
       )}
 
       <p className="seeker-attribution">{t.attribution}</p>
+
+      {toast && (
+        <Toast message={toast.text} tone={toast.tone} onDone={() => setToast(null)} />
+      )}
     </div>
   );
 }

@@ -9,20 +9,79 @@ export type MapPoint = {
   lat: number;
   lon: number;
   href?: string;
+  /** Cover photo, shown as a thumbnail in the hover card. */
+  photoId?: string;
+  /** The camptocamp outing this day came from, if any. */
+  c2cUrl?: string;
+  date?: string;
 };
 
 const WISH_COLOR = "#4a7fa5";
+
+// Built from DOM nodes rather than an HTML string: titles come from the
+// journal, and `textContent` can't be talked into being markup.
+function popupCard(point: MapPoint, openOnC2c: string): HTMLElement {
+  const card = document.createElement("div");
+  card.className = "map-pop";
+
+  const main = document.createElement("a");
+  main.className = "map-pop-main";
+  if (point.href) {
+    main.href = point.href;
+    if (point.href.startsWith("http")) {
+      main.target = "_blank";
+      main.rel = "noopener noreferrer";
+    }
+  }
+
+  if (point.photoId) {
+    const img = document.createElement("img");
+    // The same thumbnail the cards on this page use, so it's already cached.
+    img.src = `/api/photos/${point.photoId}?t=1`;
+    img.alt = "";
+    img.loading = "lazy";
+    img.className = "map-pop-thumb";
+    main.append(img);
+  }
+
+  const title = document.createElement("strong");
+  title.className = "map-pop-title";
+  title.textContent = point.title;
+  main.append(title);
+
+  if (point.date) {
+    const date = document.createElement("span");
+    date.className = "map-pop-date";
+    date.textContent = point.date;
+    main.append(date);
+  }
+  card.append(main);
+
+  if (point.c2cUrl) {
+    const link = document.createElement("a");
+    link.className = "map-pop-c2c";
+    link.href = point.c2cUrl;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.textContent = openOnC2c;
+    card.append(link);
+  }
+
+  return card;
+}
 
 export default function ProfileMap({
   points,
   wishPoints = [],
   wishLabel,
   wishTitle,
+  openOnC2c,
 }: {
   points: MapPoint[];
   wishPoints?: MapPoint[];
   wishLabel?: string;
   wishTitle?: string;
+  openOnC2c: string;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [showWishes, setShowWishes] = useState(false);
@@ -61,18 +120,20 @@ export default function ProfileMap({
           dashArray: wish ? "2 3" : undefined,
         }).addTo(map!);
 
-        if (point.href) {
-          const link = document.createElement("a");
-          link.href = point.href;
-          if (point.href.startsWith("http")) {
-            link.target = "_blank";
-            link.rel = "noopener noreferrer";
-          }
-          link.textContent = point.title;
-          marker.bindPopup(link);
-        } else {
-          marker.bindPopup(point.title);
-        }
+        marker.bindPopup(popupCard(point, openOnC2c), {
+          className: "map-pop-wrap",
+          closeButton: false,
+          // The map clips its overflow, so a card near an edge would be cut
+          // off; letting Leaflet nudge the map keeps it whole. Harmless on
+          // hover, since the card doesn't close when the pointer leaves.
+          autoPan: true,
+          autoPanPadding: [12, 12],
+          maxWidth: 240,
+          offset: [0, -4],
+        });
+        // Hovering is enough to see it; it stays put so its links can be
+        // clicked, and hovering another pin swaps it out.
+        marker.on("mouseover", () => marker.openPopup());
 
         bounds.extend([point.lat, point.lon]);
       };
@@ -87,7 +148,7 @@ export default function ProfileMap({
       disposed = true;
       map?.remove();
     };
-  }, [points, wishPoints, showWishes]);
+  }, [points, wishPoints, showWishes, openOnC2c]);
 
   const nothingToShow = points.length === 0 && (!showWishes || wishPoints.length === 0);
   if (points.length === 0 && wishPoints.length === 0) return null;

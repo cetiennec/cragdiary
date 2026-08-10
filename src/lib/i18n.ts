@@ -566,8 +566,9 @@ const en = {
     },
     keyword: "Name contains",
     keywordPlaceholder: "Dalle, éperon, arête…",
-    outingCount: "{n} outings",
-    outingOne: "1 outing",
+    addedToast: "“{title}” added to {list}",
+    outingCount: "{n} c2c outings",
+    outingOne: "1 c2c outing",
     mandatoryTag: "oblig.",
     // Keyed by camptocamp's own filter names — which ones show depends on the
     // activity, so a hiking search never offers a free-climbing grade.
@@ -1210,8 +1211,9 @@ const fr: Dict = {
     },
     keyword: "Le nom contient",
     keywordPlaceholder: "Dalle, éperon, arête…",
-    outingCount: "{n} sorties",
-    outingOne: "1 sortie",
+    addedToast: "« {title} » ajoutée à {list}",
+    outingCount: "{n} sorties c2c",
+    outingOne: "1 sortie c2c",
     mandatoryTag: "oblig.",
     ranges: {
       frat: "Cotation libre",

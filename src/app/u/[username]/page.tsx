@@ -24,7 +24,7 @@ import AutoFilterForm from "@/components/AutoFilterForm";
 import WishlistSection from "@/components/WishlistSection";
 import CreateWishlistForm from "@/components/CreateWishlistForm";
 import { currentUser } from "@/lib/auth";
-import { formatMeters, getDict } from "@/lib/i18n";
+import { formatDate, formatMeters, getDict } from "@/lib/i18n";
 import EntryCard from "@/components/EntryCard";
 import ProfileMap from "@/components/ProfileMap";
 import ProfileSettingsForm from "@/components/ProfileSettingsForm";
@@ -176,6 +176,10 @@ export default async function ProfilePage({
       lat: e.lat!,
       lon: e.lon!,
       href: `/entries/${e.id}`,
+      // The cover, for the card that opens on hover. Photos come back ordered.
+      photoId: e.photos[0]?.id,
+      c2cUrl: e.c2c_url ?? undefined,
+      date: formatDate(e.entry_date, locale, e.month_only),
     }));
   const mapWishPoints = (showWishlist ? wishes : [])
     .filter((w) => w.lat != null && w.lon != null)
@@ -355,6 +359,7 @@ export default async function ProfilePage({
         wishPoints={mapWishPoints}
         wishLabel={t.wishlist.mapToggleShort}
         wishTitle={t.wishlist.mapToggle}
+        openOnC2c={t.seeker.openOnC2c}
       />
 
       <div className="filter-row">
