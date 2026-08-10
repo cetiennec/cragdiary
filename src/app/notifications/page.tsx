@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
 import { getDict } from "@/lib/i18n";
 import { getNotifications, type Notification } from "@/lib/notifications";
-import { getFollowRequests } from "@/lib/queries";
+import { entriesAlreadyInJournal, getFollowRequests } from "@/lib/queries";
 import { answerFollowRequest, copyEntryToJournal } from "@/app/actions";
 import MarkNotificationsRead from "@/components/MarkNotificationsRead";
 
@@ -35,6 +35,11 @@ export default async function NotificationsPage() {
     getFollowRequests(user.id),
     getDict(),
   ]);
+  // Days already in the journal — no point offering to add them again.
+  const known = await entriesAlreadyInJournal(
+    user.id,
+    items.flatMap((n) => (n.type === "tagged" && n.data?.entry_id ? [n.data.entry_id] : []))
+  );
   const tn = t.notifications;
   // A request already answered leaves its notification behind; only the ones
   // still waiting get buttons.
@@ -83,7 +88,7 @@ export default async function NotificationsPage() {
                 </Link>
                 {/* Their day, in your journal: the facts copied, the story
                     left to you. */}
-                {n.type === "tagged" && n.data?.entry_id && (
+                {n.type === "tagged" && n.data?.entry_id && !known.has(n.data.entry_id) && (
                   <span className="follower-actions">
                     <form action={copyEntryToJournal}>
                       <input type="hidden" name="entry_id" value={n.data.entry_id} />

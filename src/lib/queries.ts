@@ -409,6 +409,30 @@ export async function getClimbedRouteIds(userId: string): Promise<number[]> {
   return result.rows.map((r) => Number(r.id)).filter((n) => Number.isFinite(n));
 }
 
+// Of these entries, the ones whose day is already in this user's journal —
+// same date, same crag, which is exactly what copying one refuses to do twice.
+// Lets the offer to copy disappear once it would be pointless: A tags B, B
+// copies the day and so tags A back, and A must not then be offered the day A
+// wrote in the first place.
+export async function entriesAlreadyInJournal(
+  userId: string,
+  entryIds: string[]
+): Promise<Set<string>> {
+  if (entryIds.length === 0) return new Set();
+  const result = await pool.query<{ id: string }>(
+    `select e.id
+     from entries e
+     where e.id = any($1)
+       and (e.user_id = $2
+            or exists (select 1 from entries mine
+                       where mine.user_id = $2
+                         and mine.entry_date = e.entry_date
+                         and mine.crag = e.crag))`,
+    [entryIds, userId]
+  );
+  return new Set(result.rows.map((r) => r.id));
+}
+
 // The same day, written by someone who climbed it with you. Matched on the date
 // plus a partner mention in either direction, so two strangers at the same crag
 // on the same Saturday are never linked. Respects the viewer's visibility.
