@@ -13,13 +13,16 @@ const SEEN_KEY = "cragdiary-welcome-v1";
 
 // One-time welcome popup shown on a fresh account (first visit in this
 // browser). Explains the main features; dismissed forever via localStorage.
-export default function WelcomeTour({ t }: { t: WelcomeDict }) {
-  const [open, setOpen] = useState(false);
+export default function WelcomeTour({ t, force = false }: { t: WelcomeDict; force?: boolean }) {
+  const [open, setOpen] = useState(force);
+  // `force` comes from the "help" link in the footer: it reopens the tour even
+  // for someone who dismissed it long ago.
 
   useEffect(() => {
     // Deferred a tick on purpose: reading localStorage is an external lookup,
     // and setting state straight from an effect body cascades a second render
     // before the first has painted.
+    if (force) return;
     const id = setTimeout(() => {
       try {
         if (!localStorage.getItem(SEEN_KEY)) setOpen(true);
@@ -28,7 +31,7 @@ export default function WelcomeTour({ t }: { t: WelcomeDict }) {
       }
     }, 0);
     return () => clearTimeout(id);
-  }, []);
+  }, [force]);
 
   function dismiss() {
     try {

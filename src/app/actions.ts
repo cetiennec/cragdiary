@@ -1017,7 +1017,9 @@ export async function copyEntryToJournal(formData: FormData): Promise<void> {
   const sourceId = String(formData.get("entry_id") ?? "");
   if (!sourceId) return;
 
-  // Only a day you can actually see: a public one, or one you were tagged on.
+  // Only a day you can actually see. Being tagged on a private day tells you
+  // it happened; it doesn't open it — the entry page 404s for everyone but its
+  // author, and copying it here would have walked straight round that.
   const source = await pool.query<{
     entry_date: string;
     month_only: boolean;
@@ -1048,6 +1050,7 @@ export async function copyEntryToJournal(formData: FormData): Promise<void> {
      from entries e join users u on u.id = e.user_id
      where e.id = $1
        and e.user_id <> $2
+       and e.visibility <> 'private'
        and (e.visibility = 'public' or e.partners ~* ('@' || $3 || '([^a-z0-9-]|$)'))`,
     [sourceId, user.id, user.username]
   );

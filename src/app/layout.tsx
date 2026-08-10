@@ -136,6 +136,14 @@ export default async function RootLayout({
             <Link href="/legal">{t.legal.linkLabel}</Link> ·{" "}
             <Link href="/feedback">{t.feedback.linkLabel}</Link> ·{" "}
             <Link href="/install">{t.install.linkLabel}</Link>
+            {user && (
+              <>
+                {" · "}
+                {/* Re-opens the welcome tour, which was otherwise a one-time
+                    thing nobody could ask for again. */}
+                <Link href={`/u/${user.username}?tour=1`}>{t.welcome.reopen}</Link>
+              </>
+            )}
           </p>
           <form action={setLocale} className="lang-toggle">
             <button

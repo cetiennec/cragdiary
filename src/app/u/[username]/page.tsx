@@ -68,6 +68,7 @@ export default async function ProfilePage({
   params: Promise<{ username: string }>;
   searchParams: Promise<{
     error?: string;
+    tour?: string;
     show?: string;
     q?: string;
     year?: string;
@@ -242,7 +243,7 @@ export default async function ProfilePage({
 
   return (
     <>
-      {isSelf && <WelcomeTour t={t.welcome} />}
+      {isSelf && <WelcomeTour t={t.welcome} force={sp.tour === "1"} />}
       <div className="page-container profile-page">
       <ProfileCover username={profile.username} hasCover={profile.has_cover} />
       {isSelf && error && (
@@ -564,7 +565,9 @@ export default async function ProfilePage({
                       {t.wishlist.taggedBy}{" "}
                       <Link href={`/u/${wish.owner_username}`}>{wish.owner_display_name}</Link>
                       {" · "}
-                      {wish.list_name}
+                      {/* Straight to the list the route is on, not just the
+                          profile it belongs to. */}
+                      <Link href={`/u/${wish.owner_username}#wishlist`}>{wish.list_name}</Link>
                     </span>
                   </li>
                 ))}

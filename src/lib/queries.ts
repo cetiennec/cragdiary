@@ -501,12 +501,11 @@ export async function getClimbedRouteIds(userId: string): Promise<number[]> {
   return result.rows.map((r) => Number(r.id)).filter((n) => Number.isFinite(n));
 }
 
-// Of these entries, the ones whose day is already in this user's journal —
-// same date, same crag, which is exactly what copying one refuses to do twice.
-// Lets the offer to copy disappear once it would be pointless: A tags B, B
-// copies the day and so tags A back, and A must not then be offered the day A
-// wrote in the first place.
-export async function entriesAlreadyInJournal(
+// Of these entries, the ones not worth offering to copy: already in this
+// journal (same date, same crag — what copying refuses to do twice), or private,
+// which the copy refuses outright. A tags B, B takes the day and so tags A back:
+// A must not then be offered the day A wrote.
+export async function entriesNotOfferable(
   userId: string,
   entryIds: string[]
 ): Promise<Set<string>> {
@@ -516,6 +515,7 @@ export async function entriesAlreadyInJournal(
      from entries e
      where e.id = any($1)
        and (e.user_id = $2
+            or e.visibility = 'private'
             or exists (select 1 from entries mine
                        where mine.user_id = $2
                          and mine.entry_date = e.entry_date

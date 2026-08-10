@@ -311,6 +311,7 @@ const en = {
     title: "Welcome to Cragdiary 👋",
     intro: "A few things that make logging fast:",
     close: "Let's go!",
+    reopen: "Help",
     items: [
       ["🔎", "Auto search from camptocamp", "Type a route name in the title — grade, orientation, height and map point come straight from camptocamp."],
       ["🔄", "Sync your camptocamp account", "Put your profile link in your settings and one button imports every outing you don't have yet, photos included. It never imports the same day twice."],
@@ -978,6 +979,7 @@ const fr: Dict = {
     title: "Bienvenue sur Cragdiary 👋",
     intro: "Quelques atouts pour saisir vite :",
     close: "C'est parti !",
+    reopen: "Aide",
     items: [
       ["🔎", "Recherche auto camptocamp", "Tape un nom de voie dans le titre — cotation, orientation, hauteur et point sur la carte viennent de camptocamp."],
       ["🔄", "Synchronise ton compte camptocamp", "Mets le lien de ton profil dans tes réglages : un bouton importe toutes les sorties qui te manquent, photos comprises. Jamais deux fois la même journée."],
