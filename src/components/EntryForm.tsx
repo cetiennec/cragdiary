@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
 import { addEntryPhoto, autosaveEntry, createEntry, updateEntry } from "@/app/actions";
+import Toast from "@/components/Toast";
 import type { Dict, Locale } from "@/lib/i18n";
 import type { C2cSuggestion } from "@/app/api/c2c/search/route";
 import type { C2cOutingImport } from "@/lib/c2c";
@@ -196,6 +197,16 @@ export default function EntryForm({
   const mentionToken = useRef<{ start: number; text: string } | null>(null);
   const partnersInputRef = useRef<HTMLInputElement>(null);
 
+  // The same @-menu, in the story text. Picking someone there also puts them
+  // in the rope party: writing "grimpé avec @lea" and having to tag her again
+  // in the field above is the kind of chore that gets skipped.
+  const notesRef = useRef<HTMLTextAreaElement>(null);
+  const [noteMentions, setNoteMentions] = useState<UserSuggestion[]>([]);
+  const [noteMentionOpen, setNoteMentionOpen] = useState(false);
+  const [noteHighlighted, setNoteHighlighted] = useState(-1);
+  const noteToken = useRef<{ start: number; text: string } | null>(null);
+  const [cordeeToast, setCordeeToast] = useState<string | null>(null);
+
   function detectMention(value: string, caret: number) {
     const upToCaret = value.slice(0, caret);
     const match = /@([a-z0-9-]*)$/i.exec(upToCaret);
@@ -229,6 +240,45 @@ export default function EntryForm({
     mentionToken.current = null;
     setMentionOpen(false);
     setMentionSuggestions([]);
+  }
+
+  function detectNoteMention(value: string, caret: number) {
+    const match = /@([a-z0-9-]*)$/i.exec(value.slice(0, caret));
+    if (!match) {
+      noteToken.current = null;
+      setNoteMentionOpen(false);
+      return;
+    }
+    noteToken.current = { start: match.index, text: match[1] };
+    if (match[1].length < 1) {
+      setNoteMentionOpen(false);
+      return;
+    }
+    fetch(`/api/users/search?q=${encodeURIComponent(match[1])}`)
+      .then((res) => res.json())
+      .then((data: { results: UserSuggestion[] }) => {
+        setNoteMentions(data.results);
+        setNoteMentionOpen(data.results.length > 0);
+        setNoteHighlighted(-1);
+      })
+      .catch(() => {});
+  }
+
+  function applyNoteMention(s: UserSuggestion) {
+    const token = noteToken.current;
+    if (!token) return;
+    const caret = notesRef.current?.selectionStart ?? notesText.length;
+    setNotesText(`${notesText.slice(0, token.start)}@${s.username} ${notesText.slice(caret)}`);
+    noteToken.current = null;
+    setNoteMentionOpen(false);
+    setNoteMentions([]);
+
+    // …and into the rope party, unless they're already there.
+    const alreadyTagged = new RegExp(`@${s.username}([^a-z0-9-]|$)`, "i").test(partners);
+    if (!alreadyTagged) {
+      setPartners((p) => (p.trim() ? `${p.replace(/[,\s]+$/, "")}, @${s.username}` : `@${s.username}`));
+      setCordeeToast(t.mentionAddedToCordee.replace("{user}", s.username));
+    }
   }
 
   useEffect(() => {
@@ -408,7 +458,7 @@ export default function EntryForm({
   }, []);
 
   function comboKeys(
-    e: React.KeyboardEvent<HTMLInputElement>,
+    e: React.KeyboardEvent<HTMLElement>,
     isOpen: boolean,
     count: number,
     idx: number,
@@ -1305,15 +1355,59 @@ export default function EntryForm({
 
         <hr className="notion-divider" />
 
-        <textarea
-          name="notes"
-          className="notion-notes-input"
-          rows={8}
-          value={notesText}
-          onChange={(e) => setNotesText(e.target.value)}
-          placeholder={t.notesPlaceholder}
-          aria-label={t.notesAria}
-        />
+        <div className="combobox notion-notes-combobox">
+          <textarea
+            name="notes"
+            ref={notesRef}
+            className="notion-notes-input"
+            rows={8}
+            value={notesText}
+            onChange={(e) => {
+              setNotesText(e.target.value);
+              detectNoteMention(e.target.value, e.target.selectionStart ?? e.target.value.length);
+            }}
+            onKeyDown={(e) =>
+              comboKeys(
+                e,
+                noteMentionOpen,
+                noteMentions.length,
+                noteHighlighted,
+                setNoteHighlighted,
+                () => applyNoteMention(noteMentions[noteHighlighted]),
+                () => setNoteMentionOpen(false)
+              )
+            }
+            onBlur={() => setTimeout(() => setNoteMentionOpen(false), 150)}
+            placeholder={t.notesPlaceholder}
+            aria-label={t.notesAria}
+          />
+          {noteMentionOpen && (
+            <ul className="combobox-list" role="listbox">
+              {noteMentions.map((s, i) => (
+                <li key={s.username}>
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={i === noteHighlighted}
+                    data-highlighted={i === noteHighlighted}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      applyNoteMention(s);
+                    }}
+                    onMouseEnter={() => setNoteHighlighted(i)}
+                  >
+                    <span className="combobox-title">{s.display_name}</span>
+                    <span className="combobox-meta">@{s.username}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {cordeeToast && (
+          <Toast message={cordeeToast} onDone={() => setCordeeToast(null)} />
+        )}
 
         {placerPhotos.length > 0 && (
           <PhotoTextPlacer
