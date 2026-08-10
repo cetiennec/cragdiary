@@ -91,6 +91,9 @@ jobs:
           npx wait-on http://localhost:3111/login --timeout 60000
       - name: Follow requests and follower removal
         run: node scripts/follow-check.mjs http://localhost:3111
+      # The one test about something being impossible rather than working.
+      - name: Nothing private leaks
+        run: node scripts/privacy-check.mjs http://localhost:3111 "$DATABASE_URL"
 
   # Everything that leans on camptocamp's API. Same checks, but their outage is
   # their problem: reported, never blocking.
