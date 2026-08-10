@@ -1,0 +1,128 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A push that supersedes another cancels it: the older answer is worthless.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Types, lint and a real build. Catches the class of mistake that reaches
+  # production as a blank page.
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npm run lint -- --max-warnings 5
+      - run: npm run build
+        env:
+          SESSION_SECRET: ci-build-only
+          DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+
+  # schema.sql and the migrations must describe the same database. Drift here
+  # means a deploy meeting a column that isn't there.
+  schema:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready --health-interval 5s
+          --health-timeout 5s --health-retries 10
+        ports: ["5432:5432"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: node scripts/check-schema.mjs
+        env:
+          ADMIN_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+
+  # The journeys, driven in a real browser against a real build and a real
+  # database. No camptocamp here: their outage must not block a merge.
+  journeys:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: cragdiary
+        options: >-
+          --health-cmd pg_isready --health-interval 5s
+          --health-timeout 5s --health-retries 10
+        ports: ["5432:5432"]
+    env:
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/cragdiary
+      DATABASE_SSL: "off"
+      SESSION_SECRET: ci-journeys-only
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Create the schema
+        run: psql "$DATABASE_URL" -f src/lib/schema.sql
+      - run: npm run build
+      - name: Start the app
+        run: |
+          npx next start -p 3111 &
+          npx wait-on http://localhost:3111/login --timeout 60000
+      - name: Follow requests and follower removal
+        run: node scripts/follow-check.mjs http://localhost:3111
+
+  # Everything that leans on camptocamp's API. Same checks, but their outage is
+  # their problem: reported, never blocking.
+  camptocamp:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: cragdiary
+        options: >-
+          --health-cmd pg_isready --health-interval 5s
+          --health-timeout 5s --health-retries 10
+        ports: ["5432:5432"]
+    env:
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/cragdiary
+      DATABASE_SSL: "off"
+      SESSION_SECRET: ci-c2c-only
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: psql "$DATABASE_URL" -f src/lib/schema.sql
+      - run: npm run build
+      - name: Start the app
+        run: |
+          npx next start -p 3111 &
+          npx wait-on http://localhost:3111/login --timeout 60000
+      - name: Importing an outing brings its photos
+        run: node scripts/c2c-import-check.mjs http://localhost:3111 "$DATABASE_URL"
+      - name: The Cragseeker hover card stays inside the map
+        run: node scripts/seeker-tip-check.mjs http://localhost:3111 /tmp
