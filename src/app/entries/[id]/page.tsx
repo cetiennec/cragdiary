@@ -146,7 +146,11 @@ export default async function EntryPage({
       p.align === "left" || p.align === "right" || p.align === "full"
   );
   const galleryPhotos = entry.photos.filter((p) => !p.align);
-  const [cover, ...gallery] = galleryPhotos;
+  const cover = galleryPhotos[0];
+  // The cover stays in the gallery as well. It was the one photo of the day
+  // you couldn't open full size, and a day with a single photo showed no
+  // gallery at all.
+  const gallery = galleryPhotos;
   const isDemo = isDemoAccount(entry.username);
   // Someone who climbed this day with you and wrote their own version of it.
   const sharedDay = await getSharedDay(entry.id, user?.id ?? null);
