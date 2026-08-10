@@ -18,6 +18,8 @@ type Outing = { id: number; date: string | null; title: string; imported?: boole
 
 export type SyncLabels = {
   sync: string;
+  /** What fits in the action row; the full label is the tooltip. */
+  syncShort: string;
   syncing: string;
   syncNothing: string;
   syncComplete: string;
@@ -119,8 +121,17 @@ export default function C2cSync({
 
   return (
     <div className="c2c-sync">
-      <button type="button" className="c2c-sync-btn" onClick={() => void check()} disabled={checking || importing}>
-        {checking ? t.syncing : `⟳ ${t.sync}`}
+      {/* Short enough to sit with the round action buttons; hovering says what
+          it does. */}
+      <button
+        type="button"
+        className="c2c-sync-btn"
+        title={checking ? t.syncing : t.sync}
+        aria-label={checking ? t.syncing : t.sync}
+        onClick={() => void check()}
+        disabled={checking || importing}
+      >
+        <span aria-hidden>⟳</span> {checking ? "…" : t.syncShort}
       </button>
 
       {error && <span className="form-error c2c-sync-note">{t.syncError}</span>}

@@ -233,7 +233,8 @@ const en = {
       "Your profile link or its number. Shown under your bio, and it's what \"sync with c2c\" imports from. Leave empty to unlink.",
     c2cAccountLink: "Camptocamp profile",
     sync: {
-      sync: "Sync with c2c",
+      sync: "Sync with camptocamp — import the outings you don't have yet",
+      syncShort: "C2C",
       syncing: "Checking…",
       syncNothing: "Nothing new — your journal is up to date.",
       syncComplete: "Complete existing days",
@@ -873,7 +874,8 @@ const fr: Dict = {
       "Le lien de votre profil ou son numéro. Affiché sous votre bio, et c'est de là que « synchroniser avec c2c » importe. Laissez vide pour délier.",
     c2cAccountLink: "Profil Camptocamp",
     sync: {
-      sync: "Synchroniser avec C2C",
+      sync: "Synchroniser avec camptocamp — importer les sorties qui manquent",
+      syncShort: "C2C",
       syncing: "Vérification…",
       syncNothing: "Rien de nouveau — votre carnet est à jour.",
       syncComplete: "Compléter les journées existantes",
