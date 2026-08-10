@@ -1,4 +1,5 @@
 import { createHmac, randomBytes, scryptSync, timingSafeEqual } from "crypto";
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { pool } from "@/lib/db";
 
@@ -95,7 +96,9 @@ export async function revokeSessions(userId: string): Promise<void> {
   );
 }
 
-export async function currentUser(): Promise<SessionUser | null> {
+// Cached per request: the layout and the page both ask who you are, and with
+// the database a continent away every duplicate lookup is a round trip.
+export const currentUser = cache(async function currentUser(): Promise<SessionUser | null> {
   const store = await cookies();
   const token = store.get(COOKIE_NAME)?.value;
   if (!token) return null;
@@ -116,4 +119,4 @@ export async function currentUser(): Promise<SessionUser | null> {
   // its signature and expiry.
   if (row.session_version !== claims.version) return null;
   return { id: row.id, username: row.username, displayName: row.display_name };
-}
+})
