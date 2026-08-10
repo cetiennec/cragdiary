@@ -4186,3 +4186,35 @@ a {
 .seeker-row-actions {
   align-self: flex-end;
 }
+
+/* Parking, when camptocamp knows where the approach starts. */
+.seeker-parking {
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+.seeker-parking a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+.seeker-parking a:hover {
+  color: var(--accent);
+}
+
+.seeker-parking-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: 4px;
+  background: #4a7fa5;
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+}

@@ -5,6 +5,7 @@ import SeekerMap, { type SeekerPoint } from "./SeekerMap";
 import { saveWishFromSearch } from "@/app/actions";
 import { drivingMinutes, formatDuration } from "@/lib/travel";
 import type { C2cRouteResult } from "@/app/api/c2c/routes/route";
+import type { C2cAccessPoint } from "@/app/api/c2c/access/route";
 import type { GeoSuggestion } from "@/app/api/geo/search/route";
 import {
   ACTIVITY_HEIGHT_PARAM,
@@ -169,6 +170,9 @@ export default function CragSeeker({
   const [origin, setOrigin] = useState<{ lat: number; lon: number } | null>(null);
   const [originPending, setOriginPending] = useState(false);
   const [copied, setCopied] = useState(false);
+  // Parking, keyed by route id. Only c2c's detail documents carry it, so it
+  // arrives after the results and simply appears when it does.
+  const [access, setAccess] = useState<Record<number, C2cAccessPoint>>({});
 
   // Place autocomplete
   const [placeInput, setPlaceInput] = useState(params.place?.slice(0, 80) ?? "");
@@ -235,6 +239,35 @@ export default function CragSeeker({
     },
     [query]
   );
+
+  // Parking is one upstream request per route, so ask only for the results
+  // actually on screen, and only for ones not already known.
+  useEffect(() => {
+    const missing = results.map((r) => r.id).filter((id) => !(id in access));
+    if (missing.length === 0) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/c2c/access?ids=${missing.join(",")}&lang=${locale}`);
+        const data = (await res.json()) as { access: C2cAccessPoint[] };
+        if (cancelled) return;
+        setAccess((prev) => {
+          const next = { ...prev };
+          for (const point of data.access) next[point.route_id] = point;
+          return next;
+        });
+      } catch {
+        // No parking shown is a fine outcome; the search itself still works.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // `access` is deliberately not a dependency: it changes as a result of this
+    // effect, and `missing` already guards against asking twice.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [results, locale]);
 
   // Filters apply themselves, the way the feed's filter bar does.
   useEffect(() => {
@@ -413,6 +446,23 @@ export default function CragSeeker({
               ))}
             </select>
           </label>
+
+          {showOutdoorType && (
+            <fieldset className="seeker-facing seeker-styles">
+              <legend className="seeker-field-label">{t.routeStyle}</legend>
+              {["", ...C2C_OUTDOOR_TYPES].map((type) => (
+                <label key={type || "any"} className="seeker-chip">
+                  <input
+                    type="radio"
+                    name="crtyp"
+                    checked={outdoorType === type}
+                    onChange={() => setOutdoorType(type)}
+                  />
+                  <span>{type ? t.outdoorTypes[type] : t.anyStyle}</span>
+                </label>
+              ))}
+            </fieldset>
+          )}
         </div>
 
         {/* 2. Where to look. */}
@@ -480,23 +530,6 @@ export default function CragSeeker({
 
         {/* 3. The settings that belong to the chosen activity. */}
         <div className="seeker-row seeker-row-settings">
-          {showOutdoorType && (
-            <fieldset className="seeker-facing seeker-styles">
-              <legend className="seeker-field-label">{t.routeStyle}</legend>
-              {["", ...C2C_OUTDOOR_TYPES].map((type) => (
-                <label key={type || "any"} className="seeker-chip">
-                  <input
-                    type="radio"
-                    name="crtyp"
-                    checked={outdoorType === type}
-                    onChange={() => setOutdoorType(type)}
-                  />
-                  <span>{type ? t.outdoorTypes[type] : t.anyStyle}</span>
-                </label>
-              ))}
-            </fieldset>
-          )}
-
           {activeRanges.map((key) => (
             <RangeSelect
               key={key}
@@ -582,7 +615,6 @@ export default function CragSeeker({
               >
                 {originPending ? t.locating : origin ? `⏱ ${t.travelOff}` : `⏱ ${t.travelTime}`}
               </button>
-              <p className="seeker-note">{t.transportWip}</p>
             </div>
           </div>
 
@@ -674,6 +706,21 @@ export default function CragSeeker({
                   {route.summary.length > SUMMARY_CHARS
                     ? `${route.summary.slice(0, SUMMARY_CHARS).trimEnd()}…`
                     : route.summary}
+                </p>
+              )}
+              {access[route.id] && (
+                <p className="seeker-parking">
+                  <a
+                    href={`https://www.openstreetmap.org/?mlat=${access[route.id].lat}&mlon=${access[route.id].lon}#map=15/${access[route.id].lat}/${access[route.id].lon}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={t.parkingHint}
+                  >
+                    <span className="seeker-parking-mark" aria-hidden>
+                      P
+                    </span>
+                    {access[route.id].name ?? t.parking}
+                  </a>
                 </p>
               )}
               <div className="seeker-actions">

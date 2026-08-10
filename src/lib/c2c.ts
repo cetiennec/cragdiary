@@ -440,6 +440,45 @@ export async function searchRoutes(
   return { boxTotal: data.total ?? all.length, results };
 }
 
+// ---- Access points (where you park) ----------------------------------------
+
+// c2c hangs a route's approach off an associated waypoint of type "access" —
+// the parking or trailhead. It is only on the detail document, never on a
+// search listing, so this costs one request per route.
+type C2cWaypointAssoc = {
+  document_id: number;
+  waypoint_type?: string | null;
+  elevation?: number | null;
+  locales?: C2cLocale[];
+  geometry?: { geom?: string | null } | null;
+};
+
+export type C2cAccessPoint = {
+  route_id: number;
+  name: string | null;
+  lat: number;
+  lon: number;
+};
+
+export async function routeAccessPoint(
+  routeId: number,
+  lang: string
+): Promise<C2cAccessPoint | null> {
+  const doc = await fetchJson<{ associations?: { waypoints?: C2cWaypointAssoc[] } }>(
+    `${C2C_API}/routes/${routeId}`
+  );
+  const access = (doc?.associations?.waypoints ?? []).find((w) => w.waypoint_type === "access");
+  if (!access) return null;
+  const coords = mercatorToWgs84(access.geometry?.geom);
+  if (!coords) return null;
+  return {
+    route_id: routeId,
+    name: pickLocale(access.locales ?? [], lang)?.title ?? null,
+    lat: coords.lat,
+    lon: coords.lon,
+  };
+}
+
 // ---- Account import (list all of a user's outings) -------------------------
 
 // Extract a c2c user document id from a profile URL or bare id.
