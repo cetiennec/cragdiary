@@ -26,6 +26,15 @@ export default async function PrivacyPage() {
                 </a>
               </p>
             )}
+            {"links" in section && section.links && (
+              <p className="privacy-links">
+                {section.links.map((link) => (
+                  <a key={link.url} href={link.url} target="_blank" rel="noopener noreferrer">
+                    {link.name}
+                  </a>
+                ))}
+              </p>
+            )}
           </li>
         ))}
       </ul>

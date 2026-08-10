@@ -388,3 +388,16 @@ Nothing here touches the old stack until Step 7. If anything goes wrong:
 3. `cragdiary.nanocorp.app` is still running, still on the old database, unchanged.
 
 Your `~/cragdiary-backup-*.dump` restores the data anywhere.
+
+## Database TLS
+
+The app verifies the database server's certificate. Managed providers (Neon,
+Supabase, RDS) present certificates signed by a public CA and need no extra
+configuration — note that any `sslmode` in `DATABASE_URL` is ignored, so TLS is
+decided in one place rather than two.
+
+If you terminate TLS yourself with a self-signed certificate, set
+`DATABASE_SSL=no-verify`; for a Postgres on the same host with no TLS at all,
+set `DATABASE_SSL=off`. Both weaken or remove protection of the connection, so
+prefer a properly signed certificate where the database is reachable over a
+network you don't control.

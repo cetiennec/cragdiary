@@ -9,11 +9,38 @@ declare global {
   var _cragdiaryPool: Pool | undefined;
 }
 
+// node-postgres lets an `sslmode` in the connection string win over the `ssl`
+// option below, so with both present the code says one thing and the connection
+// does another. Strip it, and decide TLS in exactly one place: here.
+function connectionString(): string | undefined {
+  const raw = process.env.DATABASE_URL;
+  if (!raw) return raw;
+  try {
+    const url = new URL(raw);
+    url.searchParams.delete("sslmode");
+    return url.toString();
+  } catch {
+    return raw;
+  }
+}
+
+// Verify the server's certificate. Anything less means whoever can intercept
+// the connection can read and alter every row in flight. Neon's chain goes back
+// to a public CA, so Node's own trust store is enough — no bundled CA needed.
+// Self-hosters terminating TLS with a self-signed certificate can set
+// DATABASE_SSL=no-verify, or `off` for a plain local socket.
+function sslConfig(): false | { rejectUnauthorized: boolean } {
+  const mode = process.env.DATABASE_SSL;
+  if (mode === "off") return false;
+  if (mode === "no-verify") return { rejectUnauthorized: false };
+  return { rejectUnauthorized: true };
+}
+
 export const pool =
   global._cragdiaryPool ??
   new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false },
+    connectionString: connectionString(),
+    ssl: sslConfig(),
     idleTimeoutMillis: 30_000,
   });
 
