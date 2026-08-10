@@ -62,7 +62,20 @@ const alice = await signUp(names.a);
 const bob = await signUp(names.b);
 const carol = await signUp(names.c);
 
-// --- Approval off (the default): following is immediate. ---
+// --- Approval is on by default: even the first follower has to ask. ---
+check(
+  "approval is on for a new account",
+  (await (async () => {
+    await alice.goto(`${base}/u/${names.a}`);
+    await openPanel(alice);
+    return alice.locator(".follow-toggle").innerText();
+  })()).includes("approuvés"),
+  true
+);
+
+// Alice opens her door for a moment, so the immediate path is covered too.
+await alice.click(".follow-toggle");
+await alice.waitForTimeout(600);
 check("bob sees a plain Follow button", await followButton(bob, names.a), "Suivre");
 await clickFollow(bob, names.a);
 check("bob follows straight away", await followButton(bob, names.a), "Suivi ✓");
@@ -71,11 +84,11 @@ await alice.goto(`${base}/u/${names.a}`);
 await openPanel(alice);
 check("alice has 1 follower", await alice.locator(".follower-list .follower-row").count(), 1);
 
-// --- Alice asks to approve new followers. ---
+// --- And closes it again. ---
 await alice.click(".follow-toggle");
 await alice.waitForTimeout(600);
 check(
-  "approval is on",
+  "approval is back on",
   (await alice.locator(".follow-toggle").innerText()).includes("approuvés"),
   true
 );
@@ -129,9 +142,8 @@ check(
   true
 );
 
-// --- Following someone who doesn't screen: still immediate. ---
-await clickFollow(bob, names.c);
-check("bob follows carol without asking", await followButton(bob, names.c), "Suivi ✓");
+// --- Carol screens too (the default), so bob has to ask her as well. ---
+check("bob must ask carol", await followButton(bob, names.c), "Demander à suivre");
 
 // --- Withdrawing your own request, before it's answered. ---
 await alice.goto(`${base}/u/${names.a}`);

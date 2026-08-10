@@ -96,7 +96,11 @@ export default function C2cAccountImport({
   // One outing per request, so each stays short (the serverless time limit) and
   // progress is real — but several in flight, since each spends its time
   // waiting on camptocamp. Entries land in the journal as they arrive.
-  async function runImport(choice: { visibility: Visibility; withPhotos: boolean }) {
+  async function runImport(choice: {
+    visibility: Visibility;
+    withPhotos: boolean;
+    complete: boolean;
+  }) {
     const ids = [...selected];
     if (ids.length === 0 || importing) return;
     setAsking(false);
@@ -107,8 +111,11 @@ export default function C2cAccountImport({
       try {
         // The batch revalidates once at the end: revalidating per outing made
         // the browser re-render the whole page after every single one.
+        // Ticking a day that's already in the journal means "complete it" —
+        // the alternative would be a second copy of the same day.
         const r = await importOneC2cOuting(id, choice.withPhotos, choice.visibility, {
           revalidate: false,
+          onExisting: choice.complete ? "merge" : "skip",
         });
         if (r?.ok) ok += 1;
       } catch {
@@ -228,6 +235,7 @@ export default function C2cAccountImport({
       {asking && (
         <ImportOptionsDialog
           count={selected.size}
+          existingCount={(outings ?? []).filter((o) => o.imported && selected.has(o.id)).length}
           t={t.options}
           onCancel={() => setAsking(false)}
           onConfirm={(choice) => void runImport(choice)}

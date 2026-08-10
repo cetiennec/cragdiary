@@ -194,9 +194,17 @@ do $$ begin
     check (status in ('pending','accepted'));
 exception when duplicate_object then null;
 end $$;
--- When on, a new follower waits as 'pending' until you accept.
+-- When on, a new follower waits as 'pending' until you accept. On by default
+-- (migration 029): being followed is not the same as being read, and the
+-- setting is one click away for anyone who wants the open door.
 alter table users add column if not exists approve_followers boolean not null default false;
+alter table users alter column approve_followers set default true;
 
 -- Camptocamp account linked to the profile (migration 027): shown under the
 -- bio, and what "sync with c2c" imports from.
 alter table users add column if not exists c2c_profile_id integer;
+
+-- Which camptocamp image a photo came from (migration 028), so re-syncing an
+-- already-imported day adds only what's missing instead of duplicating the
+-- gallery. Null on photos uploaded by hand, and on anything imported before.
+alter table photos add column if not exists c2c_filename text;

@@ -271,10 +271,10 @@ export default async function ProfilePage({
               </a>
             </p>
           )}
-          {isSelf && profile.c2c_profile_id && (
-            <C2cSync profileId={profile.c2c_profile_id} locale={locale} t={t.profile.sync} />
-          )}
         </div>
+        {isSelf && profile.c2c_profile_id && (
+          <C2cSync profileId={profile.c2c_profile_id} locale={locale} t={t.profile.sync} />
+        )}
         {user && !isSelf && (
           // One button, three states: asking, waiting, or following. Clicking
           // it always undoes whatever it says.

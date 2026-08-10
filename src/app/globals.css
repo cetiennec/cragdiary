@@ -4591,6 +4591,17 @@ a {
   margin-top: 0.5rem;
 }
 
+/* On your own profile it takes the spot the follow button holds on someone
+   else's: top right, out of the way of the bio. */
+.profile-header > .c2c-sync {
+  margin: 0 0 0 auto;
+  align-self: flex-start;
+  flex-direction: column;
+  align-items: flex-end;
+  max-width: 22rem;
+  text-align: right;
+}
+
 .c2c-sync-btn {
   font: inherit;
   font-size: 0.82rem;

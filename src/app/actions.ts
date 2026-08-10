@@ -508,29 +508,102 @@ const C2C_MAX_PHOTOS = 15;
 // simultaneous decodes matters more than the time saved.
 const PHOTO_CONCURRENCY = 4;
 
+type C2cPhotoTarget = {
+  entryId: string;
+  /** Camptocamp filenames already on the entry. */
+  known: Set<string>;
+  startPosition: number;
+};
+
+// Download, re-encode and store an outing's photos, skipping the ones the entry
+// already has. Returns how many were added.
+async function addC2cPhotos(
+  client: import("pg").PoolClient,
+  target: C2cPhotoTarget,
+  filenames: string[]
+): Promise<number> {
+  const wanted = filenames.filter((fn) => !target.known.has(fn)).slice(0, C2C_MAX_PHOTOS);
+  if (wanted.length === 0) return 0;
+
+  // Downloading and re-encoding a photo is mostly waiting on camptocamp, so
+  // several at a time is far quicker than one after another — but only a few:
+  // each one holds a full-size bitmap plus its AVIF encode in memory, and
+  // fifteen at once is how a function runs out of it. Order comes from the
+  // original list, not from what finishes first.
+  const fetched: ({ filename: string; processed: ProcessedPhoto } | undefined)[] = [];
+  await runPool(wanted, PHOTO_CONCURRENCY, async (filename, index) => {
+    try {
+      const r = await fetch(c2cImageUrl(filename, "BI"), {
+        signal: AbortSignal.timeout(15000),
+      });
+      if (!r.ok) return;
+      const processed = await processPhotoBuffer(Buffer.from(await r.arrayBuffer()), {
+        // Only the first photo of a brand-new entry is the cover; an entry
+        // being completed already has one.
+        cover: target.startPosition === 0 && index === 0,
+      });
+      fetched[index] = { filename, processed };
+    } catch {
+      // One bad image shouldn't abort the whole entry.
+    }
+  });
+
+  let position = target.startPosition;
+  let added = 0;
+  for (const item of fetched) {
+    if (!item) continue; // a hole left by a failed download
+    await client.query(
+      `insert into photos
+         (entry_id, content_type, data, thumb, position, size, width, height, c2c_filename)
+       values ($1, $2, $3, $4, $5, 'm', $6, $7, $8)`,
+      [
+        target.entryId,
+        PHOTO_MIME,
+        item.processed.data,
+        item.processed.thumb,
+        position,
+        item.processed.width,
+        item.processed.height,
+        item.filename,
+      ]
+    );
+    position += 1;
+    added += 1;
+  }
+  return added;
+}
+
 export async function importOneC2cOuting(
   id: number,
   withPhotos: boolean,
   // Imported days default to link-only: shareable with whoever you send the
   // link to, but off the public feed until you decide otherwise.
   visibility: string = "unlisted",
-  // A batch revalidates once at the end instead of after every outing: each
-  // revalidation makes the browser re-render the whole page, which for 80
-  // outings meant 80 full page loads' worth of queries.
-  { revalidate = true }: { revalidate?: boolean } = {}
-): Promise<{ ok: boolean; title?: string; skipped?: boolean }> {
+  {
+    revalidate = true,
+    // What to do when the outing is already in the journal: leave it alone, or
+    // fill in what's missing. Never a second copy — importing twice used to be
+    // the one mistake that couldn't be undone in a click.
+    onExisting = "skip",
+  }: { revalidate?: boolean; onExisting?: "skip" | "merge" } = {}
+): Promise<{
+  ok: boolean;
+  title?: string;
+  skipped?: boolean;
+  merged?: boolean;
+  addedPhotos?: number;
+}> {
   const user = await currentUser();
   if (!user) throw new Error("Unauthorized");
   if (!Number.isFinite(id)) return { ok: false };
 
-  // Importing the same outing twice is the one mistake that can't be undone in
-  // one click, and a batch may well be re-run after a failure. The URL is the
-  // outing's identity, so it's also what makes an import idempotent.
-  const already = await pool.query(
-    "select 1 from entries where user_id = $1 and c2c_url like $2 limit 1",
+  // The outing URL is the day's identity on our side.
+  const found = await pool.query<{ id: string }>(
+    "select id from entries where user_id = $1 and c2c_url like $2 limit 1",
     [user.id, `%camptocamp.org/outings/${id}%`]
   );
-  if (already.rowCount) return { ok: true, skipped: true };
+  const existingId = found.rows[0]?.id ?? null;
+  if (existingId && onExisting === "skip") return { ok: true, skipped: true };
 
   const vis = parseVisibility(visibility);
   const lang = await getLocale();
@@ -539,88 +612,102 @@ export async function importOneC2cOuting(
 
   const client = await pool.connect();
   try {
-    const res = await client.query<{ id: string }>(
-      `insert into entries
-         (user_id, entry_date, crag, location, grade_max, rating, orientation,
-          equipment, height_m, partners, notes, c2c_url, c2c_summary, lat, lon,
-          country, visibility)
-       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
-       returning id`,
-      [
-        user.id,
-        o.date,
-        o.title,
-        o.location,
-        o.grade,
-        o.rating,
-        o.orientation,
-        o.equipment,
-        o.height_m,
-        o.partners,
-        o.notes,
-        o.c2c_url,
-        o.c2c_summary,
-        o.lat,
-        o.lon,
-        await entryCountry({ lat: o.lat, lon: o.lon }),
-        vis,
-      ]
-    );
-    const entryId = res.rows[0].id;
+    let entryId: string;
+    let known = new Set<string>();
+    let startPosition = 0;
 
-    if (withPhotos) {
-      // Downloading and re-encoding a photo is mostly waiting on camptocamp, so
-      // several at a time is far quicker than one after another — but only a
-      // few: each one holds a full-size bitmap plus its AVIF encode in memory,
-      // and fifteen at once is how a function runs out of it. Positions come
-      // from the original order, not from what finishes first.
-      const wanted = o.images.slice(0, C2C_MAX_PHOTOS);
-      const fetched: ({ position: number; processed: ProcessedPhoto } | null)[] = [];
-      await runPool(wanted, PHOTO_CONCURRENCY, async (fn, position) => {
-        try {
-          const r = await fetch(c2cImageUrl(fn, "BI"), {
-            signal: AbortSignal.timeout(15000),
-          });
-          if (!r.ok) return;
-          const processed = await processPhotoBuffer(Buffer.from(await r.arrayBuffer()), {
-            cover: position === 0,
-          });
-          fetched[position] = { position, processed };
-        } catch {
-          // One bad image shouldn't abort the whole entry.
-        }
-      });
+    if (existingId) {
+      entryId = existingId;
+      // Only ever fills blanks: anything already written — by hand or by an
+      // earlier import — wins over what camptocamp says today. Date, title and
+      // visibility are never touched; they're the parts people edit.
+      await client.query(
+        `update entries set
+           location    = coalesce(location, $2),
+           grade_max   = coalesce(grade_max, $3),
+           rating      = coalesce(rating, $4),
+           orientation = coalesce(orientation, $5),
+           equipment   = coalesce(equipment, $6),
+           height_m    = coalesce(height_m, $7),
+           partners    = coalesce(partners, $8),
+           notes       = coalesce(notes, $9),
+           c2c_summary = coalesce(c2c_summary, $10),
+           country     = coalesce(country, $13),
+           -- A coordinate only means something as a pair.
+           lat = case when lat is null and lon is null then $11 else lat end,
+           lon = case when lat is null and lon is null then $12 else lon end
+         where id = $1`,
+        [
+          entryId,
+          o.location,
+          o.grade,
+          o.rating,
+          o.orientation,
+          o.equipment,
+          o.height_m,
+          o.partners,
+          o.notes,
+          o.c2c_summary,
+          o.lat,
+          o.lon,
+          await entryCountry({ lat: o.lat, lon: o.lon }),
+        ]
+      );
 
-      // Renumbered so a failed download doesn't leave a hole — and so the
-      // first surviving photo is the cover.
-      let position = 0;
-      for (const item of fetched) {
-        if (!item) continue; // a hole left by a failed download
-        await client.query(
-          `insert into photos (entry_id, content_type, data, thumb, position, size, width, height)
-           values ($1, $2, $3, $4, $5, 'm', $6, $7)`,
-          [
-            entryId,
-            PHOTO_MIME,
-            item.processed.data,
-            item.processed.thumb,
-            position,
-            item.processed.width,
-            item.processed.height,
-          ]
-        );
-        position += 1;
-      }
+      const photos = await client.query<{ c2c_filename: string | null; position: number }>(
+        "select c2c_filename, position from photos where entry_id = $1",
+        [entryId]
+      );
+      // A photo with no filename recorded — uploaded by hand, or imported
+      // before we stored it — can't be matched against camptocamp's list. When
+      // there are any, leave the gallery alone rather than risk duplicating it.
+      const unknown = photos.rows.some((r) => !r.c2c_filename);
+      if (unknown) known = new Set(o.images);
+      else known = new Set(photos.rows.map((r) => r.c2c_filename!));
+      startPosition = photos.rows.reduce((max, r) => Math.max(max, r.position + 1), 0);
+    } else {
+      const res = await client.query<{ id: string }>(
+        `insert into entries
+           (user_id, entry_date, crag, location, grade_max, rating, orientation,
+            equipment, height_m, partners, notes, c2c_url, c2c_summary, lat, lon,
+            country, visibility)
+         values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
+         returning id`,
+        [
+          user.id,
+          o.date,
+          o.title,
+          o.location,
+          o.grade,
+          o.rating,
+          o.orientation,
+          o.equipment,
+          o.height_m,
+          o.partners,
+          o.notes,
+          o.c2c_url,
+          o.c2c_summary,
+          o.lat,
+          o.lon,
+          await entryCountry({ lat: o.lat, lon: o.lon }),
+          vis,
+        ]
+      );
+      entryId = res.rows[0].id;
     }
+
+    const addedPhotos = withPhotos
+      ? await addC2cPhotos(client, { entryId, known, startPosition }, o.images)
+      : 0;
+
+    if (revalidate) {
+      revalidatePath("/");
+      revalidatePath(`/u/${user.username}`);
+    }
+    return { ok: true, title: o.title, merged: Boolean(existingId), addedPhotos };
   } finally {
     client.release();
   }
-
-  if (revalidate) {
-    revalidatePath("/");
-    revalidatePath(`/u/${user.username}`);
-  }
-  return { ok: true, title: o.title };
 }
 
 // Called once when a batch finishes, since the imports themselves skip it.

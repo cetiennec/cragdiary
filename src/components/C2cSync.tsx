@@ -20,6 +20,7 @@ export type SyncLabels = {
   sync: string;
   syncing: string;
   syncNothing: string;
+  syncComplete: string;
   syncFound: string; // "{n} outings not in your journal"
   syncImport: string;
   syncImporting: string;
@@ -46,6 +47,8 @@ export default function C2cSync({
   const router = useRouter();
   const [checking, setChecking] = useState(false);
   const [missing, setMissing] = useState<Outing[] | null>(null);
+  // Days already in the journal: never re-imported, but they can be completed.
+  const [existing, setExisting] = useState<Outing[]>([]);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [imported, setImported] = useState<number | null>(null);
   const [error, setError] = useState(false);
@@ -66,6 +69,7 @@ export default function C2cSync({
       // The endpoint flags what's already in the journal by outing URL, which
       // is what makes syncing twice harmless.
       setMissing(outings.filter((o) => !o.imported));
+      setExisting(outings.filter((o) => o.imported));
     } catch {
       setError(true);
     } finally {
@@ -73,16 +77,28 @@ export default function C2cSync({
     }
   }
 
-  async function run(choice: { visibility: Visibility; withPhotos: boolean }) {
-    if (!missing || missing.length === 0 || importing) return;
+  async function run(choice: {
+    visibility: Visibility;
+    withPhotos: boolean;
+    complete: boolean;
+  }) {
+    if (!missing || importing) return;
+    const work = [
+      ...missing.map((o) => ({ outing: o, onExisting: "skip" as const })),
+      ...(choice.complete
+        ? existing.map((o) => ({ outing: o, onExisting: "merge" as const }))
+        : []),
+    ];
+    if (work.length === 0) return;
     setAsking(false);
     setError(false);
-    setProgress({ done: 0, total: missing.length });
+    setProgress({ done: 0, total: work.length });
     let ok = 0;
-    await runPool(missing, IMPORT_CONCURRENCY, async (outing) => {
+    await runPool(work, IMPORT_CONCURRENCY, async ({ outing, onExisting }) => {
       try {
         const r = await importOneC2cOuting(outing.id, choice.withPhotos, choice.visibility, {
           revalidate: false,
+          onExisting,
         });
         if (r?.ok) ok += 1;
       } catch {
@@ -111,11 +127,15 @@ export default function C2cSync({
       {imported != null && imported > 0 && (
         <span className="c2c-sync-note">{fill(t.syncDone, imported)}</span>
       )}
-      {missing?.length === 0 && <span className="c2c-sync-note">{t.syncNothing}</span>}
+      {missing?.length === 0 && existing.length === 0 && (
+        <span className="c2c-sync-note">{t.syncNothing}</span>
+      )}
 
-      {missing && missing.length > 0 && (
+      {missing && (missing.length > 0 || existing.length > 0) && (
         <div className="c2c-sync-panel">
-          <span className="c2c-sync-note">{fill(t.syncFound, missing.length)}</span>
+          <span className="c2c-sync-note">
+            {missing.length > 0 ? fill(t.syncFound, missing.length) : t.syncNothing}
+          </span>
           <button
             type="button"
             className="btn-primary"
@@ -124,7 +144,9 @@ export default function C2cSync({
           >
             {importing
               ? `${t.syncImporting} ${progress!.done}/${progress!.total}…`
-              : `${t.syncImport} (${missing.length})`}
+              : missing.length > 0
+                ? `${t.syncImport} (${missing.length})`
+                : t.syncComplete}
           </button>
         </div>
       )}
@@ -132,6 +154,8 @@ export default function C2cSync({
       {asking && missing && (
         <ImportOptionsDialog
           count={missing.length}
+          existingCount={existing.length}
+          askComplete
           t={t.options}
           onCancel={() => setAsking(false)}
           onConfirm={(choice) => void run(choice)}
