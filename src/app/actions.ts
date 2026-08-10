@@ -17,7 +17,7 @@ import {
   verifyPassword,
 } from "@/lib/auth";
 import { clientIp, isRateLimited, recordAttempt, clearAttempts } from "@/lib/rate-limit";
-import { c2cImageUrl, importOuting } from "@/lib/c2c";
+import { c2cImageUrl, importOuting, parseProfileId } from "@/lib/c2c";
 import { notify, extractMentions, userIdsByUsernames, markAllRead } from "@/lib/notifications";
 
 // 1600 px keeps photos crisp in the fullscreen lightbox (incl. high-DPI
@@ -333,11 +333,18 @@ export async function updateProfile(formData: FormData): Promise<void> {
   const profileVisibility = formData.has("profile_visibility")
     ? parseVisibility(formData.get("profile_visibility"))
     : null;
+  // Accepts a profile URL or a bare id; anything else clears the link rather
+  // than storing something we can't call the API with.
+  const c2cProfileId = formData.has("c2c_profile")
+    ? parseProfileId(String(formData.get("c2c_profile") ?? ""))
+    : null;
 
   try {
     await pool.query(
-      "update users set bio = $1, visibility = coalesce($2, visibility), email = $3 where id = $4",
-      [bio, profileVisibility, email, user.id]
+      `update users set bio = $1, visibility = coalesce($2, visibility), email = $3,
+              c2c_profile_id = $5
+       where id = $4`,
+      [bio, profileVisibility, email, user.id, c2cProfileId]
     );
   } catch (e) {
     const pgError = e as { code?: string };
@@ -500,11 +507,26 @@ const C2C_MAX_PHOTOS = 15;
 export async function importOneC2cOuting(
   id: number,
   withPhotos: boolean,
-  visibility: string = "private"
-): Promise<{ ok: boolean; title?: string }> {
+  // Imported days default to link-only: shareable with whoever you send the
+  // link to, but off the public feed until you decide otherwise.
+  visibility: string = "unlisted",
+  // A batch revalidates once at the end instead of after every outing: each
+  // revalidation makes the browser re-render the whole page, which for 80
+  // outings meant 80 full page loads' worth of queries.
+  { revalidate = true }: { revalidate?: boolean } = {}
+): Promise<{ ok: boolean; title?: string; skipped?: boolean }> {
   const user = await currentUser();
   if (!user) throw new Error("Unauthorized");
   if (!Number.isFinite(id)) return { ok: false };
+
+  // Importing the same outing twice is the one mistake that can't be undone in
+  // one click, and a batch may well be re-run after a failure. The URL is the
+  // outing's identity, so it's also what makes an import idempotent.
+  const already = await pool.query(
+    "select 1 from entries where user_id = $1 and c2c_url like $2 limit 1",
+    [user.id, `%camptocamp.org/outings/${id}%`]
+  );
+  if (already.rowCount) return { ok: true, skipped: true };
 
   const vis = parseVisibility(visibility);
   const lang = await getLocale();
@@ -543,34 +565,65 @@ export async function importOneC2cOuting(
     const entryId = res.rows[0].id;
 
     if (withPhotos) {
+      // Downloading and re-encoding a photo is mostly waiting on camptocamp, so
+      // fetch them together rather than one after another. Positions come from
+      // the original order, not from what finishes first.
+      const wanted = o.images.slice(0, C2C_MAX_PHOTOS);
+      const fetched = await Promise.all(
+        wanted.map(async (fn, position) => {
+          try {
+            const r = await fetch(c2cImageUrl(fn, "BI"), {
+              signal: AbortSignal.timeout(15000),
+            });
+            if (!r.ok) return null;
+            const processed = await processPhotoBuffer(Buffer.from(await r.arrayBuffer()), {
+              cover: position === 0,
+            });
+            return { position, processed };
+          } catch {
+            // One bad image shouldn't abort the whole entry.
+            return null;
+          }
+        })
+      );
+
+      // Renumbered so a failed download doesn't leave a hole — and so the
+      // first surviving photo is the cover.
       let position = 0;
-      for (const fn of o.images.slice(0, C2C_MAX_PHOTOS)) {
-        try {
-          const r = await fetch(c2cImageUrl(fn, "BI"), {
-            signal: AbortSignal.timeout(15000),
-          });
-          if (!r.ok) continue;
-          const processed = await processPhotoBuffer(Buffer.from(await r.arrayBuffer()), {
-            cover: position === 0,
-          });
-          await client.query(
-            `insert into photos (entry_id, content_type, data, thumb, position, size, width, height)
-             values ($1, $2, $3, $4, 'm', $5, $6)`,
-            [entryId, processed.data, processed.thumb, position, processed.width, processed.height]
-          );
-          position += 1;
-        } catch {
-          // One bad image shouldn't abort the whole entry.
-        }
+      for (const item of fetched) {
+        if (!item) continue;
+        await client.query(
+          `insert into photos (entry_id, content_type, data, thumb, position, size, width, height)
+           values ($1, $2, $3, $4, 'm', $5, $6)`,
+          [
+            entryId,
+            item.processed.data,
+            item.processed.thumb,
+            position,
+            item.processed.width,
+            item.processed.height,
+          ]
+        );
+        position += 1;
       }
     }
   } finally {
     client.release();
   }
 
+  if (revalidate) {
+    revalidatePath("/");
+    revalidatePath(`/u/${user.username}`);
+  }
+  return { ok: true, title: o.title };
+}
+
+// Called once when a batch finishes, since the imports themselves skip it.
+export async function refreshAfterImport(): Promise<void> {
+  const user = await currentUser();
+  if (!user) return;
   revalidatePath("/");
   revalidatePath(`/u/${user.username}`);
-  return { ok: true, title: o.title };
 }
 
 export async function updateEntry(formData: FormData): Promise<void> {

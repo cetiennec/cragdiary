@@ -13,6 +13,8 @@ type SettingsLabels = {
   settingsSave: string;
   emailLabel: string;
   emailHint: string;
+  c2cAccountFieldLabel: string;
+  c2cAccountFieldHint: string;
   coverLabel: string;
   coverRemove: string;
   exportLabel: string;
@@ -52,6 +54,7 @@ async function shrinkOnChange(
 export default function ProfileSettingsForm({
   bio,
   email,
+  c2cProfileId,
   hasAvatar,
   hasCover,
   pinSuggestions = [],
@@ -59,6 +62,7 @@ export default function ProfileSettingsForm({
 }: {
   bio: string;
   email: string;
+  c2cProfileId: number | null;
   hasAvatar: boolean;
   hasCover: boolean;
   pinSuggestions?: string[];
@@ -108,6 +112,17 @@ export default function ProfileSettingsForm({
           <input type="email" name="email" defaultValue={email} autoComplete="email" />
         </label>
         <p className="form-hint">{t.emailHint}</p>
+        <label>
+          {t.c2cAccountFieldLabel}
+          <input
+            type="text"
+            name="c2c_profile"
+            defaultValue={c2cProfileId ? `https://www.camptocamp.org/profiles/${c2cProfileId}` : ""}
+            placeholder="https://www.camptocamp.org/profiles/123456"
+            autoComplete="off"
+          />
+        </label>
+        <p className="form-hint">{t.c2cAccountFieldHint}</p>
         <label>
           {t.avatarLabel}
           <input type="file" name="avatar" accept="image/*" onChange={(e) => shrinkOnChange(e, 800)} />

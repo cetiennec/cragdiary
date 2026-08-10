@@ -64,6 +64,8 @@ export type User = {
   wishlist_public: boolean;
   /** When on, a new follower waits as a request until this user accepts. */
   approve_followers: boolean;
+  /** Linked camptocamp account, shown under the bio; null when not linked. */
+  c2c_profile_id: number | null;
   created_at: string;
 };
 

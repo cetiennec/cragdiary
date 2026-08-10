@@ -196,3 +196,7 @@ exception when duplicate_object then null;
 end $$;
 -- When on, a new follower waits as 'pending' until you accept.
 alter table users add column if not exists approve_followers boolean not null default false;
+
+-- Camptocamp account linked to the profile (migration 027): shown under the
+-- bio, and what "sync with c2c" imports from.
+alter table users add column if not exists c2c_profile_id integer;

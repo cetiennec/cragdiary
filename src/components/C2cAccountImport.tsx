@@ -2,8 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { importOneC2cOuting } from "@/app/actions";
+import { importOneC2cOuting, refreshAfterImport } from "@/app/actions";
+import { runPool } from "@/lib/pool";
 import type { Locale } from "@/lib/i18n";
+
+// Enough to keep the network busy without asking camptocamp for too much at
+// once, or running several photo re-encodes side by side in one function.
+const IMPORT_CONCURRENCY = 4;
 
 type C2cOutingSummary = {
   id: number;
@@ -49,7 +54,7 @@ export default function C2cAccountImport({
   const [outings, setOutings] = useState<C2cOutingSummary[] | null>(null);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [withPhotos, setWithPhotos] = useState(true);
-  const [visibility, setVisibility] = useState<"public" | "unlisted" | "private">("private");
+  const [visibility, setVisibility] = useState<"public" | "unlisted" | "private">("unlisted");
   // Import progress: null = idle, else {done,total}. done === total when finished.
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
 
@@ -87,29 +92,33 @@ export default function C2cAccountImport({
     });
   }
 
-  // Import one outing at a time so each request is short (avoids the serverless
-  // time limit) and we can show progress.
+  // One outing per request, so each stays short (the serverless time limit) and
+  // progress is real — but several in flight, since each spends its time
+  // waiting on camptocamp. Entries land in the journal as they arrive.
   async function runImport() {
     const ids = [...selected];
     if (ids.length === 0 || importing) return;
     setError(null);
     setProgress({ done: 0, total: ids.length });
     let ok = 0;
-    for (const id of ids) {
+    await runPool(ids, IMPORT_CONCURRENCY, async (id) => {
       try {
-        const r = await importOneC2cOuting(id, withPhotos, visibility);
+        // The batch revalidates once at the end: revalidating per outing made
+        // the browser re-render the whole page after every single one.
+        const r = await importOneC2cOuting(id, withPhotos, visibility, { revalidate: false });
         if (r?.ok) ok += 1;
       } catch {
         // Keep going; a single failure shouldn't stop the batch.
       }
       setProgress((p) => (p ? { ...p, done: p.done + 1 } : p));
-    }
+    });
     if (ok === 0) {
       // Nothing imported — surface it instead of navigating to an unchanged page.
       setError(t.c2cAccountError);
       setProgress(null);
       return;
     }
+    await refreshAfterImport();
     router.push(`/u/${username}`);
     router.refresh();
   }

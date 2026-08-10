@@ -29,6 +29,7 @@ import EntryCard from "@/components/EntryCard";
 import ProfileMap from "@/components/ProfileMap";
 import ProfileSettingsForm from "@/components/ProfileSettingsForm";
 import FollowersPanel from "@/components/FollowersPanel";
+import C2cSync from "@/components/C2cSync";
 import ProfileCover from "@/components/ProfileCover";
 import WelcomeTour from "@/components/WelcomeTour";
 
@@ -257,6 +258,22 @@ export default async function ProfilePage({
             <p className="form-hint profile-visibility-hint">{t.profile.unlistedHint}</p>
           )}
           {profile.bio && <p className="profile-bio">{profile.bio}</p>}
+          {/* The linked camptocamp account sits under the bio; syncing from it
+              is the owner's business only. */}
+          {profile.c2c_profile_id && (
+            <p className="profile-c2c">
+              <a
+                href={`https://www.camptocamp.org/profiles/${profile.c2c_profile_id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                🏔️ {t.profile.c2cAccountLink}
+              </a>
+            </p>
+          )}
+          {isSelf && profile.c2c_profile_id && (
+            <C2cSync profileId={profile.c2c_profile_id} locale={locale} t={t.profile.sync} />
+          )}
         </div>
         {user && !isSelf && (
           // One button, three states: asking, waiting, or following. Clicking
@@ -286,6 +303,7 @@ export default async function ProfilePage({
           <ProfileSettingsForm
             bio={profile.bio ?? ""}
             email={profile.email ?? ""}
+            c2cProfileId={profile.c2c_profile_id}
             hasAvatar={profile.has_avatar}
             hasCover={profile.has_cover}
             pinSuggestions={pinSuggestions}
@@ -297,6 +315,8 @@ export default async function ProfilePage({
               settingsSave: t.profile.settingsSave,
               emailLabel: t.profile.emailLabel,
               emailHint: t.profile.emailHint,
+              c2cAccountFieldLabel: t.profile.c2cAccountFieldLabel,
+              c2cAccountFieldHint: t.profile.c2cAccountFieldHint,
               coverLabel: t.profile.coverLabel,
               coverRemove: t.profile.coverRemove,
               dangerTitle: t.profile.dangerTitle,
