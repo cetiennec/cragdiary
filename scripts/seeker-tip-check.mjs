@@ -108,6 +108,16 @@ const link = page.locator(".seeker-tip-c2c").first();
 console.log("c2c link:", await link.getAttribute("href"), "— clickable:", await link.isVisible());
 console.log("tooltip:\n" + (await page.locator(".seeker-tip").first().innerText()));
 console.log("list card highlighted:", await page.locator(".seeker-result.active").count());
+
+// It closes again — but only once the pointer has left both the marker and the
+// card, so the link in it can actually be reached.
+const card = await page.locator(".seeker-tip").boundingBox();
+await page.mouse.move(card.x + card.width / 2, card.y + card.height / 2);
+await page.waitForTimeout(600);
+console.log("stays while the pointer is on it:", (await page.locator(".seeker-tip").count()) === 1);
+await page.mouse.move(60, 200);
+await page.waitForTimeout(600);
+console.log("closes once the pointer leaves:", (await page.locator(".seeker-tip").count()) === 0);
 await page.screenshot({ path: `${out}/seeker-tip.png` });
 console.log("screenshot:", `${out}/seeker-tip.png`);
 

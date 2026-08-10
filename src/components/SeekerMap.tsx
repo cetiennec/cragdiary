@@ -114,6 +114,9 @@ export default function SeekerMap({
   const [map, setMap] = useState<import("leaflet").Map | null>(null);
   const [L, setL] = useState<Leaflet | null>(null);
   const markerById = useRef(new Map<number, import("leaflet").CircleMarker>());
+  // Closing is delayed by a moment so the pointer can travel from the marker to
+  // the card without it vanishing on the way — the card holds a link.
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Callbacks live in a ref so the map is built exactly once — rebinding
   // handlers must never tear down the tiles the user is looking at.
@@ -220,8 +223,22 @@ export default function SeekerMap({
         // overview on the map and the full entry always agree. It stays open
         // until another marker is hovered, so the link can be reached.
         .on("mouseover", () => {
+          if (closeTimer.current) clearTimeout(closeTimer.current);
           marker.openPopup();
           handlers.current.onSelect(point.id);
+        })
+        .on("mouseout", () => {
+          if (closeTimer.current) clearTimeout(closeTimer.current);
+          closeTimer.current = setTimeout(() => marker.closePopup(), 260);
+        })
+        // Over the card itself, it stays; leaving it closes at once.
+        .on("popupopen", (e) => {
+          const el = e.popup.getElement();
+          if (!el) return;
+          el.onmouseenter = () => {
+            if (closeTimer.current) clearTimeout(closeTimer.current);
+          };
+          el.onmouseleave = () => marker.closePopup();
         })
         .on("click", (e) => {
           // Leaflet bubbles layer clicks up to the map: without this, picking a
@@ -235,6 +252,7 @@ export default function SeekerMap({
     markerById.current = byId;
 
     return () => {
+      if (closeTimer.current) clearTimeout(closeTimer.current);
       layer.remove();
     };
   }, [map, L, points]);
