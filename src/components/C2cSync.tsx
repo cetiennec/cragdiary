@@ -4,6 +4,10 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { importOneC2cOuting, refreshAfterImport } from "@/app/actions";
 import { runPool } from "@/lib/pool";
+import ImportOptionsDialog, {
+  type ImportOptionsLabels,
+  type Visibility,
+} from "./ImportOptionsDialog";
 import type { Locale } from "@/lib/i18n";
 
 // Same reasoning as the bulk import: enough in flight to keep the network busy,
@@ -21,9 +25,7 @@ export type SyncLabels = {
   syncImporting: string;
   syncDone: string; // "{n} imported"
   syncError: string;
-  syncPhotos: string;
-  syncVisibility: string;
-  visibilityOptions: { public: string; unlisted: string; private: string };
+  options: ImportOptionsLabels;
 };
 
 function fill(template: string, value: number): string {
@@ -47,8 +49,7 @@ export default function C2cSync({
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [imported, setImported] = useState<number | null>(null);
   const [error, setError] = useState(false);
-  const [withPhotos, setWithPhotos] = useState(true);
-  const [visibility, setVisibility] = useState<"public" | "unlisted" | "private">("unlisted");
+  const [asking, setAsking] = useState(false);
 
   const importing = progress !== null && progress.done < progress.total;
 
@@ -72,14 +73,15 @@ export default function C2cSync({
     }
   }
 
-  async function run() {
+  async function run(choice: { visibility: Visibility; withPhotos: boolean }) {
     if (!missing || missing.length === 0 || importing) return;
+    setAsking(false);
     setError(false);
     setProgress({ done: 0, total: missing.length });
     let ok = 0;
     await runPool(missing, IMPORT_CONCURRENCY, async (outing) => {
       try {
-        const r = await importOneC2cOuting(outing.id, withPhotos, visibility, {
+        const r = await importOneC2cOuting(outing.id, choice.withPhotos, choice.visibility, {
           revalidate: false,
         });
         if (r?.ok) ok += 1;
@@ -114,33 +116,26 @@ export default function C2cSync({
       {missing && missing.length > 0 && (
         <div className="c2c-sync-panel">
           <span className="c2c-sync-note">{fill(t.syncFound, missing.length)}</span>
-          <label>
-            <input
-              type="checkbox"
-              checked={withPhotos}
-              onChange={(e) => setWithPhotos(e.target.checked)}
-              disabled={importing}
-            />{" "}
-            {t.syncPhotos}
-          </label>
-          <label>
-            {t.syncVisibility}{" "}
-            <select
-              value={visibility}
-              onChange={(e) => setVisibility(e.target.value as typeof visibility)}
-              disabled={importing}
-            >
-              <option value="public">{t.visibilityOptions.public}</option>
-              <option value="unlisted">{t.visibilityOptions.unlisted}</option>
-              <option value="private">{t.visibilityOptions.private}</option>
-            </select>
-          </label>
-          <button type="button" className="btn-primary" onClick={() => void run()} disabled={importing}>
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={() => setAsking(true)}
+            disabled={importing}
+          >
             {importing
               ? `${t.syncImporting} ${progress!.done}/${progress!.total}…`
               : `${t.syncImport} (${missing.length})`}
           </button>
         </div>
+      )}
+
+      {asking && missing && (
+        <ImportOptionsDialog
+          count={missing.length}
+          t={t.options}
+          onCancel={() => setAsking(false)}
+          onConfirm={(choice) => void run(choice)}
+        />
       )}
     </div>
   );

@@ -19,6 +19,7 @@ import {
 import { clientIp, isRateLimited, recordAttempt, clearAttempts } from "@/lib/rate-limit";
 import { c2cImageUrl, importOuting, parseProfileId } from "@/lib/c2c";
 import { notify, extractMentions, userIdsByUsernames, markAllRead } from "@/lib/notifications";
+import { runPool } from "@/lib/pool";
 
 // 1600 px keeps photos crisp in the fullscreen lightbox (incl. high-DPI
 // screens); quality 86 is visibly cleaner than 82 at a modest size cost. The
@@ -503,6 +504,9 @@ export async function createEntry(formData: FormData): Promise<string | void> {
 // whole account would blow the serverless time limit. Import only your own
 // outings — the UI carries the ownership warning.
 const C2C_MAX_PHOTOS = 15;
+// Photos in flight per outing. Above this, the memory a function needs for
+// simultaneous decodes matters more than the time saved.
+const PHOTO_CONCURRENCY = 4;
 
 export async function importOneC2cOuting(
   id: number,
@@ -566,37 +570,38 @@ export async function importOneC2cOuting(
 
     if (withPhotos) {
       // Downloading and re-encoding a photo is mostly waiting on camptocamp, so
-      // fetch them together rather than one after another. Positions come from
-      // the original order, not from what finishes first.
+      // several at a time is far quicker than one after another — but only a
+      // few: each one holds a full-size bitmap plus its AVIF encode in memory,
+      // and fifteen at once is how a function runs out of it. Positions come
+      // from the original order, not from what finishes first.
       const wanted = o.images.slice(0, C2C_MAX_PHOTOS);
-      const fetched = await Promise.all(
-        wanted.map(async (fn, position) => {
-          try {
-            const r = await fetch(c2cImageUrl(fn, "BI"), {
-              signal: AbortSignal.timeout(15000),
-            });
-            if (!r.ok) return null;
-            const processed = await processPhotoBuffer(Buffer.from(await r.arrayBuffer()), {
-              cover: position === 0,
-            });
-            return { position, processed };
-          } catch {
-            // One bad image shouldn't abort the whole entry.
-            return null;
-          }
-        })
-      );
+      const fetched: ({ position: number; processed: ProcessedPhoto } | null)[] = [];
+      await runPool(wanted, PHOTO_CONCURRENCY, async (fn, position) => {
+        try {
+          const r = await fetch(c2cImageUrl(fn, "BI"), {
+            signal: AbortSignal.timeout(15000),
+          });
+          if (!r.ok) return;
+          const processed = await processPhotoBuffer(Buffer.from(await r.arrayBuffer()), {
+            cover: position === 0,
+          });
+          fetched[position] = { position, processed };
+        } catch {
+          // One bad image shouldn't abort the whole entry.
+        }
+      });
 
       // Renumbered so a failed download doesn't leave a hole — and so the
       // first surviving photo is the cover.
       let position = 0;
       for (const item of fetched) {
-        if (!item) continue;
+        if (!item) continue; // a hole left by a failed download
         await client.query(
           `insert into photos (entry_id, content_type, data, thumb, position, size, width, height)
-           values ($1, $2, $3, $4, 'm', $5, $6)`,
+           values ($1, $2, $3, $4, $5, 'm', $6, $7)`,
           [
             entryId,
+            PHOTO_MIME,
             item.processed.data,
             item.processed.thumb,
             position,

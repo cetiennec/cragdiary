@@ -29,7 +29,6 @@ export default async function ImportPage() {
           c2cAccountLoad: t.importer.c2cAccountLoad,
           c2cAccountLoading: t.importer.c2cAccountLoading,
           c2cAccountWarning: t.importer.c2cAccountWarning,
-          c2cAccountPhotos: t.importer.c2cAccountPhotos,
           c2cAccountSelectAll: t.importer.c2cAccountSelectAll,
           c2cAccountSelectNone: t.importer.c2cAccountSelectNone,
           c2cAccountFound: t.importer.c2cAccountFound,
@@ -39,8 +38,7 @@ export default async function ImportPage() {
           c2cAccountEmpty: t.importer.c2cAccountEmpty,
           c2cAccountError: t.importer.c2cAccountError,
           c2cAccountImported: t.importer.c2cAccountImported,
-          c2cAccountVisibility: t.importer.c2cAccountVisibility,
-          visibilityOptions: t.editor.visibilityOptions,
+          options: t.profile.sync.options,
         }}
       />
       <ImportTool t={t.importer} />

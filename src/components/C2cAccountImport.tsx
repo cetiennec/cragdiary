@@ -4,6 +4,10 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { importOneC2cOuting, refreshAfterImport } from "@/app/actions";
 import { runPool } from "@/lib/pool";
+import ImportOptionsDialog, {
+  type ImportOptionsLabels,
+  type Visibility,
+} from "./ImportOptionsDialog";
 import type { Locale } from "@/lib/i18n";
 
 // Enough to keep the network busy without asking camptocamp for too much at
@@ -24,7 +28,6 @@ type Labels = {
   c2cAccountLoad: string;
   c2cAccountLoading: string;
   c2cAccountWarning: string;
-  c2cAccountPhotos: string;
   c2cAccountSelectAll: string;
   c2cAccountSelectNone: string;
   c2cAccountFound: string;
@@ -34,8 +37,7 @@ type Labels = {
   c2cAccountEmpty: string;
   c2cAccountError: string;
   c2cAccountImported: string;
-  c2cAccountVisibility: string;
-  visibilityOptions: { public: string; unlisted: string; private: string };
+  options: ImportOptionsLabels;
 };
 
 export default function C2cAccountImport({
@@ -53,8 +55,7 @@ export default function C2cAccountImport({
   const [error, setError] = useState<string | null>(null);
   const [outings, setOutings] = useState<C2cOutingSummary[] | null>(null);
   const [selected, setSelected] = useState<Set<number>>(new Set());
-  const [withPhotos, setWithPhotos] = useState(true);
-  const [visibility, setVisibility] = useState<"public" | "unlisted" | "private">("unlisted");
+  const [asking, setAsking] = useState(false);
   // Import progress: null = idle, else {done,total}. done === total when finished.
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
 
@@ -95,9 +96,10 @@ export default function C2cAccountImport({
   // One outing per request, so each stays short (the serverless time limit) and
   // progress is real — but several in flight, since each spends its time
   // waiting on camptocamp. Entries land in the journal as they arrive.
-  async function runImport() {
+  async function runImport(choice: { visibility: Visibility; withPhotos: boolean }) {
     const ids = [...selected];
     if (ids.length === 0 || importing) return;
+    setAsking(false);
     setError(null);
     setProgress({ done: 0, total: ids.length });
     let ok = 0;
@@ -105,7 +107,9 @@ export default function C2cAccountImport({
       try {
         // The batch revalidates once at the end: revalidating per outing made
         // the browser re-render the whole page after every single one.
-        const r = await importOneC2cOuting(id, withPhotos, visibility, { revalidate: false });
+        const r = await importOneC2cOuting(id, choice.withPhotos, choice.visibility, {
+          revalidate: false,
+        });
         if (r?.ok) ok += 1;
       } catch {
         // Keep going; a single failure shouldn't stop the batch.
@@ -180,29 +184,6 @@ export default function C2cAccountImport({
             >
               {t.c2cAccountSelectNone}
             </button>
-            <label className="c2c-account-photos">
-              <input
-                type="checkbox"
-                checked={withPhotos}
-                onChange={(e) => setWithPhotos(e.target.checked)}
-                disabled={importing}
-              />{" "}
-              {t.c2cAccountPhotos}
-            </label>
-            <label className="c2c-account-visibility">
-              {t.c2cAccountVisibility}{" "}
-              <select
-                value={visibility}
-                onChange={(e) =>
-                  setVisibility(e.target.value as "public" | "unlisted" | "private")
-                }
-                disabled={importing}
-              >
-                <option value="public">{t.visibilityOptions.public}</option>
-                <option value="unlisted">{t.visibilityOptions.unlisted}</option>
-                <option value="private">{t.visibilityOptions.private}</option>
-              </select>
-            </label>
           </div>
 
           <ul className="c2c-account-list">
@@ -233,7 +214,7 @@ export default function C2cAccountImport({
             <button
               type="button"
               className="btn-primary"
-              onClick={() => void runImport()}
+              onClick={() => setAsking(true)}
               disabled={importing || selected.size === 0}
             >
               {importing
@@ -242,6 +223,15 @@ export default function C2cAccountImport({
             </button>
           )}
         </div>
+      )}
+
+      {asking && (
+        <ImportOptionsDialog
+          count={selected.size}
+          t={t.options}
+          onCancel={() => setAsking(false)}
+          onConfirm={(choice) => void runImport(choice)}
+        />
       )}
     </section>
   );
