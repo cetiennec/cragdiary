@@ -18,6 +18,9 @@ function target(n: Notification, selfUsername: string): string {
     case "wishlist_invite":
     case "wishlist_add":
       return `/u/${selfUsername}#wishlist`;
+    // The route sits on someone else's list — theirs is the page to open.
+    case "wish_tagged":
+      return n.actor_username ? `/u/${n.actor_username}#wishlist` : `/u/${selfUsername}#wishlist`;
     default:
       return "/";
   }
@@ -57,6 +60,7 @@ export default async function NotificationsPage() {
               message = `${tn.invited} « ${n.data?.list_name ?? ""} »`;
             else if (n.type === "wishlist_add")
               message = `${tn.added} « ${n.data?.list_name ?? ""} »`;
+            else if (n.type === "wish_tagged") message = tn.wishTagged;
             return (
               <li key={n.id} className={`notif-row${n.read ? "" : " unread"}`}>
                 <Link href={target(n, user.username)} className="notif-link">
@@ -70,7 +74,8 @@ export default async function NotificationsPage() {
                   </span>
                   <span className="notif-text">
                     <strong>{actor}</strong> {message}
-                    {n.type === "wishlist_add" && n.data?.wish_title ? (
+                    {(n.type === "wishlist_add" || n.type === "wish_tagged") &&
+                    n.data?.wish_title ? (
                       <span className="notif-sub"> — {n.data.wish_title}</span>
                     ) : null}
                     <span className="notif-date">{n.created_at}</span>

@@ -1258,6 +1258,7 @@ async function insertWish(
   const parkingLat = optionalCoord(formData.get("parking_lat"), -90, 90);
   const parkingLon = optionalCoord(formData.get("parking_lon"), -180, 180);
   const hasParking = parkingLat !== null && parkingLon !== null;
+  const partners = optionalText(formData.get("partners"));
   await pool.query(
     `insert into wishes (user_id, wishlist_id, title, location, grade_max, rating, pitches, height_m, c2c_url, note, partners, lat, lon, parking_lat, parking_lon, parking_name)
      values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
@@ -1272,7 +1273,7 @@ async function insertWish(
       optionalInt(formData.get("height_m")),
       optionalHttpUrl(formData.get("c2c_url")),
       optionalText(formData.get("note")),
-      optionalText(formData.get("partners")),
+      partners,
       coords.lat,
       coords.lon,
       hasParking ? parkingLat : null,
@@ -1291,6 +1292,7 @@ async function insertWish(
      where w.id = $1`,
     [wishlistId]
   );
+  const listName = recipients.rows[0]?.name ?? "";
   await Promise.all(
     recipients.rows
       .filter((r) => r.id !== user.id)
@@ -1300,6 +1302,24 @@ async function insertWish(
           actorId: user.id,
           type: "wishlist_add",
           data: { wishlist_id: wishlistId, list_name: r.name, wish_title: title },
+        })
+      )
+  );
+
+  // …and the climbers tagged on the route itself. An entry has always notified
+  // the people it mentions; a wish never did, so "@lea, this one's for us"
+  // reached nobody unless Léa happened to be on the list.
+  const onTheList = new Set(recipients.rows.map((r) => r.id));
+  const mentioned = await userIdsByUsernames(extractMentions(partners));
+  await Promise.all(
+    mentioned
+      .filter((m) => !onTheList.has(m.id))
+      .map((m) =>
+        notify({
+          userId: m.id,
+          actorId: user.id,
+          type: "wish_tagged",
+          data: { wishlist_id: wishlistId, list_name: listName, wish_title: title },
         })
       )
   );

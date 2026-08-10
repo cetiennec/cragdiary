@@ -6,7 +6,8 @@ export type NotificationType =
   | "follow_accepted"
   | "tagged"
   | "wishlist_invite"
-  | "wishlist_add";
+  | "wishlist_add"
+  | "wish_tagged";
 
 export type NotificationData = {
   entry_id?: string;
