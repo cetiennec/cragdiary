@@ -19,6 +19,9 @@ function target(n: Notification, selfUsername: string): string {
     case "wishlist_add":
       return `/u/${selfUsername}#wishlist`;
     // The route sits on someone else's list — theirs is the page to open.
+    // Straight to the profile, where the sync button lives.
+    case "c2c_new":
+      return `/u/${selfUsername}`;
     case "wish_tagged":
       return n.actor_username ? `/u/${n.actor_username}#wishlist` : `/u/${selfUsername}#wishlist`;
     default:
@@ -66,11 +69,15 @@ export default async function NotificationsPage() {
             else if (n.type === "wishlist_add")
               message = `${tn.added} « ${n.data?.list_name ?? ""} »`;
             else if (n.type === "wish_tagged") message = tn.wishTagged;
+            else if (n.type === "c2c_new")
+              message = tn.c2cNew.replace("{n}", String(n.data?.count ?? 0));
             return (
               <li key={n.id} className={`notif-row${n.read ? "" : " unread"}`}>
                 <Link href={target(n, user.username)} className="notif-link">
                   <span className="profile-avatar profile-avatar-sm" aria-hidden>
-                    {n.actor_has_avatar && n.actor_username ? (
+                    {n.type === "c2c_new" ? (
+                      "🏔️"
+                    ) : n.actor_has_avatar && n.actor_username ? (
                       // eslint-disable-next-line @next/next/no-img-element -- own DB-backed route, resized
                       <img src={`/api/avatars/${n.actor_username}`} alt="" loading="lazy" />
                     ) : (
@@ -78,7 +85,7 @@ export default async function NotificationsPage() {
                     )}
                   </span>
                   <span className="notif-text">
-                    <strong>{actor}</strong> {message}
+                    {n.actor_username ? <strong>{actor}</strong> : null} {message}
                     {(n.type === "wishlist_add" || n.type === "wish_tagged") &&
                     n.data?.wish_title ? (
                       <span className="notif-sub"> — {n.data.wish_title}</span>

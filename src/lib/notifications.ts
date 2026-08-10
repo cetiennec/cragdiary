@@ -7,13 +7,16 @@ export type NotificationType =
   | "tagged"
   | "wishlist_invite"
   | "wishlist_add"
-  | "wish_tagged";
+  | "wish_tagged"
+  /** From the site itself: camptocamp has outings this journal doesn't. */
+  | "c2c_new";
 
 export type NotificationData = {
   entry_id?: string;
   wishlist_id?: string;
   list_name?: string;
   wish_title?: string;
+  count?: number;
 };
 
 export type Notification = {
