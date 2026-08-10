@@ -32,10 +32,14 @@ function range(raw: string | null, scale: readonly string[]): [string, string] |
   return [scale[a], scale[b]];
 }
 
-function metres(min: string | null, max: string | null): [number, number] | undefined {
-  const lo = Math.max(0, Math.min(9999, parseInt(min ?? "", 10) || 0));
-  const hi = Math.max(0, Math.min(9999, parseInt(max ?? "", 10) || 0)) || 9999;
-  if (lo === 0 && hi === 9999) return undefined;
+function metres(
+  min: string | null,
+  max: string | null,
+  ceiling = 9999
+): [number, number] | undefined {
+  const lo = Math.max(0, Math.min(ceiling, parseInt(min ?? "", 10) || 0));
+  const hi = Math.max(0, Math.min(ceiling, parseInt(max ?? "", 10) || 0)) || ceiling;
+  if (lo === 0 && hi === ceiling) return undefined;
   return lo <= hi ? [lo, hi] : [hi, lo];
 }
 
@@ -85,6 +89,9 @@ export async function GET(req: Request) {
     bbox: near ? bboxAround(near.lat, near.lon, radius) : undefined,
     ranges,
     heightM: metres(sp.get("hmin"), sp.get("hmax")),
+    // Where the route sits, not how tall it is: Mont Blanc granite or a
+    // roadside crag. c2c calls it `ele`.
+    elevationM: metres(sp.get("emin"), sp.get("emax"), 9000),
     heightParam: ACTIVITY_HEIGHT_PARAM[activity],
     orientations,
     outdoorType,

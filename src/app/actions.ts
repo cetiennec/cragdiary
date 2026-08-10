@@ -633,6 +633,7 @@ export async function importOneC2cOuting(
            partners    = coalesce(partners, $8),
            notes       = coalesce(notes, $9),
            c2c_summary = coalesce(c2c_summary, $10),
+           c2c_route_url = coalesce(c2c_route_url, $14),
            country     = coalesce(country, $13),
            -- A coordinate only means something as a pair.
            lat = case when lat is null and lon is null then $11 else lat end,
@@ -652,6 +653,7 @@ export async function importOneC2cOuting(
           o.lat,
           o.lon,
           await entryCountry({ lat: o.lat, lon: o.lon }),
+          o.c2c_route_url,
         ]
       );
 
@@ -670,9 +672,9 @@ export async function importOneC2cOuting(
       const res = await client.query<{ id: string }>(
         `insert into entries
            (user_id, entry_date, crag, location, grade_max, rating, orientation,
-            equipment, height_m, partners, notes, c2c_url, c2c_summary, lat, lon,
-            country, visibility)
-         values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
+            equipment, height_m, partners, notes, c2c_url, c2c_route_url,
+            c2c_summary, lat, lon, country, visibility)
+         values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
          returning id`,
         [
           user.id,
@@ -687,6 +689,7 @@ export async function importOneC2cOuting(
           o.partners,
           o.notes,
           o.c2c_url,
+          o.c2c_route_url,
           o.c2c_summary,
           o.lat,
           o.lon,
@@ -1010,6 +1013,7 @@ export async function copyEntryToJournal(formData: FormData): Promise<void> {
     height_m: number | null;
     routes: string | null;
     notes: string | null;
+    c2c_route_url: string | null;
     pitch_notes: Record<string, string> | null;
     c2c_url: string | null;
     c2c_summary: string | null;
@@ -1020,7 +1024,7 @@ export async function copyEntryToJournal(formData: FormData): Promise<void> {
   }>(
     `select e.entry_date, e.month_only, e.crag, e.location, e.style, e.grade_max,
             e.rating, e.orientation, e.equipment, e.pitches, e.height_m, e.routes,
-            e.notes, e.pitch_notes, e.c2c_url, e.c2c_summary, e.lat, e.lon,
+            e.notes, e.pitch_notes, e.c2c_url, e.c2c_route_url, e.c2c_summary, e.lat, e.lon,
             e.country, u.username as author
      from entries e join users u on u.id = e.user_id
      where e.id = $1
@@ -1044,8 +1048,8 @@ export async function copyEntryToJournal(formData: FormData): Promise<void> {
     `insert into entries
        (user_id, entry_date, month_only, crag, location, style, grade_max, rating,
         orientation, equipment, pitches, height_m, routes, notes, pitch_notes,
-        partners, c2c_url, c2c_summary, lat, lon, country, visibility)
-     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,'unlisted')
+        partners, c2c_url, c2c_route_url, c2c_summary, lat, lon, country, visibility)
+     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,'unlisted')
      returning id`,
     [
       user.id,
@@ -1065,6 +1069,7 @@ export async function copyEntryToJournal(formData: FormData): Promise<void> {
       day.pitch_notes,
       `@${day.author}`,
       day.c2c_url,
+      day.c2c_route_url,
       day.c2c_summary,
       day.lat,
       day.lon,

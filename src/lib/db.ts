@@ -89,6 +89,8 @@ export type Entry = {
   partners: string | null;
   notes: string | null;
   c2c_url: string | null;
+  /** The topo page, when the day came from a camptocamp outing. */
+  c2c_route_url: string | null;
   c2c_summary: string | null;
   pitch_notes: Record<string, string> | null;
   lat: number | null;

@@ -208,3 +208,7 @@ alter table users add column if not exists c2c_profile_id integer;
 -- already-imported day adds only what's missing instead of duplicating the
 -- gallery. Null on photos uploaded by hand, and on anything imported before.
 alter table photos add column if not exists c2c_filename text;
+
+-- The topo the outing was climbed on (migration 030). `c2c_url` holds the
+-- outing — the story — and the route's own page was lost on import.
+alter table entries add column if not exists c2c_route_url text;

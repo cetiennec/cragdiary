@@ -279,11 +279,23 @@ export default async function EntryPage({
               <dd>{await renderMentions(entry.partners)}</dd>
             </div>
           )}
+          {/* Two different pages on camptocamp: the day someone climbed it,
+              and the route itself. An import knows both. */}
           {entry.c2c_url && (
+            <div className="notion-prop">
+              <dt>{t.entry.story}</dt>
+              <dd>
+                <a href={entry.c2c_url} target="_blank" rel="noopener noreferrer">
+                  {t.entry.topoLink} ↗
+                </a>
+              </dd>
+            </div>
+          )}
+          {entry.c2c_route_url && (
             <div className="notion-prop">
               <dt>{t.entry.topo}</dt>
               <dd>
-                <a href={entry.c2c_url} target="_blank" rel="noopener noreferrer">
+                <a href={entry.c2c_route_url} target="_blank" rel="noopener noreferrer">
                   {t.entry.topoLink} ↗
                 </a>
               </dd>

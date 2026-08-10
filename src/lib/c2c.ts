@@ -145,6 +145,8 @@ export type C2cOutingImport = {
   lat: number | null;
   lon: number | null;
   c2c_url: string | null;
+  /** The topo the day was climbed on, when the outing names one. */
+  c2c_route_url: string | null;
   c2c_summary: string | null;
   notes: string | null;
   partners: string | null;
@@ -229,8 +231,11 @@ export async function importOuting(id: number, lang: string): Promise<C2cOutingI
     height_m: route?.height_m ?? null,
     lat: route?.lat ?? outingCoords?.lat ?? null,
     lon: route?.lon ?? outingCoords?.lon ?? null,
-    // Remember the outing (récit) link the user imported, not the route topo.
+    // The outing (récit) the user imported…
     c2c_url: `${C2C_SITE}/outings/${id}`,
+    // …and the topo it was climbed on, kept as well: they answer different
+    // questions, and the route page was being thrown away.
+    c2c_route_url: routeId ? `${C2C_SITE}/routes/${routeId}` : null,
     c2c_summary: route?.summary ?? null,
     notes: locale?.description?.trim() || null,
     partners,
@@ -380,6 +385,8 @@ export type C2cRouteFilters = {
   /** Vertical range, under whichever param suits the activity. */
   heightM?: [number, number];
   heightParam?: "dhei" | "hdif";
+  /** Altitude of the route's high point, metres — camptocamp's `ele`. */
+  elevationM?: [number, number];
   orientations?: string[];
   outdoorType?: string;
   offset?: number;
@@ -401,6 +408,7 @@ export async function searchRoutes(
     if (pair) params.set(key, pair.join(","));
   }
   if (filters.heightM) params.set(filters.heightParam ?? "dhei", filters.heightM.join(","));
+  if (filters.elevationM) params.set("ele", filters.elevationM.join(","));
   if (filters.orientations?.length) params.set("fac", filters.orientations.join(","));
   if (filters.outdoorType) params.set("crtyp", filters.outdoorType);
   params.set("limit", String(filters.limit ?? 30));

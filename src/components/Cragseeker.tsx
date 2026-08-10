@@ -144,6 +144,12 @@ export default function Cragseeker({
     min: String(parseInt(params.hmin ?? "", 10) || ""),
     max: String(parseInt(params.hmax ?? "", 10) || ""),
   });
+  // Where the route is, as opposed to how tall it is: a roadside crag or a
+  // 3500 m granite spur is not the same day out.
+  const [elevation, setElevation] = useState({
+    min: String(parseInt(params.emin ?? "", 10) || ""),
+    max: String(parseInt(params.emax ?? "", 10) || ""),
+  });
   const [facing, setFacing] = useState<string[]>(() =>
     (params.fac ?? "").split(",").filter((o) => (C2C_ORIENTATIONS as readonly string[]).includes(o))
   );
@@ -211,10 +217,24 @@ export default function Cragseeker({
     }
     if (height.min) sp.set("hmin", height.min);
     if (height.max) sp.set("hmax", height.max);
+    if (elevation.min) sp.set("emin", elevation.min);
+    if (elevation.max) sp.set("emax", elevation.max);
     if (facing.length) sp.set("fac", facing.join(","));
     if (outdoorType && showOutdoorType) sp.set("crtyp", outdoorType);
     return sp.toString();
-  }, [activity, activeRanges, centre, radius, q, ranges, height, facing, outdoorType, showOutdoorType]);
+  }, [
+    activity,
+    activeRanges,
+    centre,
+    radius,
+    q,
+    ranges,
+    height,
+    elevation,
+    facing,
+    outdoorType,
+    showOutdoorType,
+  ]);
 
   const query = `${search}&lang=${locale}`;
 
@@ -397,6 +417,7 @@ export default function Cragseeker({
     setQ("");
     setRanges({});
     setHeight({ min: "", max: "" });
+    setElevation({ min: "", max: "" });
     setFacing([]);
     setOutdoorType("");
   }
@@ -642,6 +663,31 @@ export default function Cragseeker({
                 placeholder={t.max}
                 aria-label={`${heightLabel} ${t.max}`}
                 onChange={(e) => setHeight((h) => ({ ...h, max: e.target.value }))}
+              />
+            </span>
+          </label>
+
+          <label className="seeker-field">
+            <span className="seeker-field-label">{t.elevation}</span>
+            <span className="seeker-range">
+              <input
+                type="number"
+                min={0}
+                step={100}
+                value={elevation.min}
+                placeholder={t.min}
+                aria-label={`${t.elevation} ${t.min}`}
+                onChange={(e) => setElevation((v) => ({ ...v, min: e.target.value }))}
+              />
+              <span aria-hidden>→</span>
+              <input
+                type="number"
+                min={0}
+                step={100}
+                value={elevation.max}
+                placeholder={t.max}
+                aria-label={`${t.elevation} ${t.max}`}
+                onChange={(e) => setElevation((v) => ({ ...v, max: e.target.value }))}
               />
             </span>
           </label>
