@@ -4609,21 +4609,39 @@ a {
   text-align: right;
 }
 
+/* Built to match the round action buttons it sits with: same height, same
+   weight, same accent — a pill only because "C2C" needs the width. */
 .c2c-sync-btn {
   font: inherit;
-  font-size: 0.82rem;
-  font-weight: 600;
-  background: transparent;
-  color: var(--text-muted);
-  border: 1px solid var(--border);
+  font-size: 1rem;
+  font-weight: 700;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0 1.1rem;
   border-radius: 999px;
-  padding: 0.3rem 0.8rem;
+  color: var(--accent);
+  background: var(--bg-elevated);
+  border: 1.5px solid color-mix(in srgb, var(--accent) 45%, transparent);
   cursor: pointer;
+  transition: transform 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+
+.c2c-sync-btn span {
+  font-size: 1.25rem;
+  line-height: 1;
 }
 
 .c2c-sync-btn:hover:not(:disabled) {
-  color: var(--accent);
-  border-color: var(--accent);
+  transform: scale(1.08);
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+
+.c2c-sync-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
 
 .c2c-sync-note {
