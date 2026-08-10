@@ -71,6 +71,50 @@ function tooltipCard(point: SeekerPoint): HTMLElement {
   return card;
 }
 
+// The map clips its overflow, so a card opened near an edge would be cut off.
+// Leaflet never repositions tooltips, so once one is open, flip it below the
+// marker when there's no room above and slide it sideways to stay inside.
+const TIP_GAP = 12;
+const TIP_MARGIN = 8;
+
+function keepTooltipInside(
+  map: import("leaflet").Map,
+  marker: import("leaflet").CircleMarker
+): void {
+  const tip = marker.getTooltip();
+  const el = tip?.getElement();
+  if (!tip || !el) return;
+
+  // Above the marker unless the card is taller than the room left up there.
+  const at = map.latLngToContainerPoint(marker.getLatLng());
+  const above = at.y - el.offsetHeight - TIP_GAP >= TIP_MARGIN;
+  const dy = above ? -TIP_GAP : TIP_GAP;
+
+  tip.options.direction = above ? "top" : "bottom";
+  tip.options.offset = [0, dy];
+  tip.update();
+
+  // Then correct whatever still hangs over an edge from where Leaflet actually
+  // put it — measuring beats predicting, since the card's size depends on how
+  // much the route has to say.
+  const card = el.getBoundingClientRect();
+  const frame = map.getContainer().getBoundingClientRect();
+  const shift = (lo: number, hi: number, min: number, max: number) =>
+    lo < min + TIP_MARGIN ? min + TIP_MARGIN - lo : hi > max - TIP_MARGIN ? max - TIP_MARGIN - hi : 0;
+  const dx = shift(card.left, card.right, frame.left, frame.right);
+  const fix = shift(card.top, card.bottom, frame.top, frame.bottom);
+
+  if (dx || fix) {
+    // The arrow is drawn under the middle of the card, so it only points at the
+    // marker while the card is still centred on it.
+    el.classList.toggle("nudged", dx !== 0);
+    tip.options.offset = [dx, dy + fix];
+    tip.update();
+  } else {
+    el.classList.remove("nudged");
+  }
+}
+
 type Leaflet = typeof import("leaflet");
 
 // The Alps — a sensible "you are somewhere in climbing country" opening view.
@@ -196,13 +240,17 @@ export default function SeekerMap({
       })
         .bindTooltip(tooltipCard(point), {
           direction: "top",
-          offset: [0, -8],
+          offset: [0, -TIP_GAP],
           opacity: 1,
           className: "seeker-tip-wrap",
         })
         // Hovering a marker also lights up its card in the list below, so the
-        // overview on the map and the full entry always agree.
-        .on("mouseover", () => handlers.current.onSelect(point.id))
+        // overview on the map and the full entry always agree. Leaflet has
+        // opened the card by the time this runs, so it can be measured.
+        .on("mouseover", () => {
+          keepTooltipInside(map, marker);
+          handlers.current.onSelect(point.id);
+        })
         .on("click", (e) => {
           // Leaflet bubbles layer clicks up to the map: without this, picking a
           // route would also drop a new pin and restart the search.

@@ -1,4 +1,5 @@
-// Hovers a route marker on /cragseeker and screenshots the overview card.
+// Hovers every route marker on /cragseeker and checks the overview card stays
+// inside the map — including after panning, which brings markers to the edges.
 //   node scripts/seeker-tip-check.mjs [baseUrl] [outDir]
 import { chromium } from "playwright";
 
@@ -16,16 +17,101 @@ await page.waitForSelector(".seeker-map");
 await page.waitForSelector(".seeker-result", { timeout: 30000 });
 await page.waitForTimeout(1500);
 
-const markers = page.locator(".seeker-map path.leaflet-interactive");
-console.log("markers on map:", await markers.count());
+// Markers overlap, so a real hover can't reach the ones underneath; Leaflet
+// opens the card off the DOM event, which dispatching reaches directly. Each
+// marker is closed again before the next one, and the card is looked up by the
+// id the marker points at — otherwise a stale card gets measured.
+async function sweep(label) {
+  const rows = await page.evaluate(() => {
+    const map = document.querySelector(".seeker-map").getBoundingClientRect();
+    const results = [];
+    for (const el of document.querySelectorAll(".seeker-map path.leaflet-interactive")) {
+      const r = el.getBoundingClientRect();
+      const x = r.x + r.width / 2 - map.left;
+      const y = r.y + r.height / 2 - map.top;
+      // Only markers on screen can be hovered for real.
+      if (x < 0 || x > map.width || y < 0 || y > map.height) continue;
 
-await markers.first().hover();
-await page.waitForSelector(".seeker-tip", { timeout: 5000 });
-console.log("tooltip:\n" + (await page.locator(".seeker-tip").first().innerText()));
-console.log("list card highlighted:", await page.locator(".seeker-result.active").count());
+      el.dispatchEvent(new MouseEvent("mouseover", { bubbles: true }));
+      const tip = document.getElementById(el.getAttribute("aria-describedby"));
+      if (tip) {
+        const t = tip.getBoundingClientRect();
+        results.push({
+          x: Math.round(x),
+          y: Math.round(y),
+          below: tip.classList.contains("leaflet-tooltip-bottom"),
+          nudged: tip.classList.contains("nudged"),
+          over: [
+            t.top < map.top && "top",
+            t.bottom > map.bottom && "bottom",
+            t.left < map.left && "left",
+            t.right > map.right && "right",
+          ].filter(Boolean),
+        });
+      } else {
+        results.push({ x: Math.round(x), y: Math.round(y), over: ["no card"] });
+      }
+      el.dispatchEvent(new MouseEvent("mouseout", { bubbles: true }));
+    }
+    return results;
+  });
+
+  const bad = rows.filter((r) => r.over.length);
+  console.log(
+    `${label}: ${rows.length} markers on screen,`,
+    `${rows.filter((r) => r.below).length} flipped below,`,
+    `${rows.filter((r) => r.nudged).length} slid sideways,`,
+    `${bad.length} overflowing`
+  );
+  for (const r of bad.slice(0, 5)) console.error(`  at ${r.x},${r.y} → ${r.over.join(",")}`);
+  return bad.length;
+}
+
+const box = await page.locator(".seeker-map").boundingBox();
+const cx = box.x + box.width / 2;
+const cy = box.y + box.height / 2;
+async function pan(dx, dy) {
+  await page.mouse.move(cx, cy);
+  await page.mouse.down();
+  await page.mouse.move(cx + dx, cy + dy, { steps: 12 });
+  await page.mouse.up();
+  await page.waitForTimeout(800);
+}
+
+async function reset() {
+  await page.reload();
+  await page.waitForSelector(".seeker-result", { timeout: 30000 });
+  await page.waitForTimeout(1500);
+}
+
+// One pan per edge, each from the fitted view: panning twice in a row just
+// sends the cluster off screen, where there is nothing left to hover.
+let failures = await sweep("centred    ");
+for (const [label, dx, dy] of [
+  ["top   edge", 0, -150],
+  ["bottom edge", 0, 150],
+  ["left  edge", -300, 0],
+  ["right edge", 300, 0],
+]) {
+  await reset();
+  await pan(dx, dy);
+  failures += await sweep(`markers at the ${label}`);
+}
+
+await page.mouse.move(cx, cy);
+console.log(failures === 0 ? "OK — every card stayed inside the map" : `FAIL — ${failures} cards`);
 
 // The card is drawn by Leaflet inside the map pane, so screenshot the page:
 // an element shot of the tooltip alone hides how it sits over the tiles.
+await page.reload();
+await page.waitForSelector(".seeker-result", { timeout: 30000 });
+await page.waitForTimeout(1500);
+await page.locator(".seeker-map path.leaflet-interactive").first().hover();
+await page.waitForSelector(".seeker-tip");
+console.log("tooltip:\n" + (await page.locator(".seeker-tip").first().innerText()));
+console.log("list card highlighted:", await page.locator(".seeker-result.active").count());
 await page.screenshot({ path: `${out}/seeker-tip.png` });
 console.log("screenshot:", `${out}/seeker-tip.png`);
+
 await browser.close();
+process.exit(failures === 0 ? 0 : 1);

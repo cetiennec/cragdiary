@@ -3942,8 +3942,18 @@ a {
   max-width: 260px;
 }
 
-.leaflet-tooltip.seeker-tip-wrap::before {
+.leaflet-tooltip-top.seeker-tip-wrap::before {
   border-top-color: var(--border);
+}
+
+.leaflet-tooltip-bottom.seeker-tip-wrap::before {
+  border-bottom-color: var(--border);
+}
+
+/* Slid sideways to stay inside the map: the arrow would no longer line up
+   with its marker, so it's dropped rather than left pointing at nothing. */
+.leaflet-tooltip.seeker-tip-wrap.nudged::before {
+  display: none;
 }
 
 .seeker-tip {
