@@ -1480,9 +1480,31 @@ export default function EntryForm({
             onClose={() => setLinkOffer(null)}
             onLink={(day) => {
               // The mention is already in place; matching the date is what
-              // makes the two days find each other.
+              // makes the two days find each other — so the date is the one
+              // thing that overrides. Everything else only fills a blank:
+              // whatever you have already written about your own day stays.
               setDateValue(day.entry_date);
               dateTouched.current = true;
+              setMonthOnly(false);
+              const fill = (
+                current: string,
+                next: string | number | null,
+                set: (v: string) => void
+              ) => {
+                if (!current.trim() && next != null && String(next).trim()) set(String(next));
+              };
+              fill(title, day.crag, setTitle);
+              fill(location, day.location, setLocation);
+              fill(grade, day.grade_max, setGrade);
+              fill(rating, day.rating, setRating);
+              fill(orientation, day.orientation, setOrientation);
+              fill(equipment, day.equipment, setEquipment);
+              fill(pitches, day.pitches, setPitches);
+              fill(heightM, day.height_m, setHeightM);
+              // The routes field is uncontrolled, so it is filled in place.
+              const routesEl = document.getElementById("routes") as HTMLInputElement | null;
+              if (routesEl && !routesEl.value.trim() && day.routes) routesEl.value = day.routes;
+              fill(c2cUrl, day.c2c_url, setC2cUrl);
               setLinkOffer(null);
               setCordeeToast(t.linkDay.linked.replace("{user}", linkOffer.username));
             }}

@@ -438,6 +438,16 @@ export type LinkableDay = {
   entry_date: string;
   crag: string;
   location: string | null;
+  // Enough of their day to finish yours with, where yours is still blank.
+  style: string | null;
+  grade_max: string | null;
+  rating: string | null;
+  orientation: string | null;
+  equipment: string | null;
+  pitches: number | null;
+  height_m: number | null;
+  routes: string | null;
+  c2c_url: string | null;
   photo_id: string | null;
   /** Already mentions the viewer, so the two days are linked already. */
   already_linked: boolean;
@@ -475,6 +485,8 @@ export async function findLinkableDays(
 
   const result = await pool.query<LinkableDay>(
     `select e.id, to_char(e.entry_date, 'YYYY-MM-DD') as entry_date, e.crag, e.location,
+            e.style, e.grade_max, e.rating, e.orientation, e.equipment, e.pitches,
+            e.height_m, e.routes, e.c2c_url,
             (select p.id from photos p
              where p.entry_id = e.id and p.align is null
              order by p.position asc limit 1) as photo_id,
