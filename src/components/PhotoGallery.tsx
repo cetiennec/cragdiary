@@ -15,10 +15,13 @@ export default function PhotoGallery({
   photos,
   className,
   closeLabel,
+  banner,
 }: {
   photos: GalleryPhoto[];
   className: string;
   closeLabel: string;
+  /** Marks every photo in the grid as demo content. */
+  banner?: string;
 }) {
   const [open, setOpen] = useState<number | null>(null);
   const touchX = useRef<number | null>(null);
@@ -60,6 +63,7 @@ export default function PhotoGallery({
               className="gallery-zoomable"
               onClick={() => setOpen(i)}
             />
+            {banner && <span className="demo-banner">{banner}</span>}
             {photo.caption && <figcaption>{photo.caption}</figcaption>}
           </figure>
         ))}

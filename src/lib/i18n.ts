@@ -450,12 +450,18 @@ const en = {
       },
     ],
   },
+  demo: {
+    banner: "Demo — built from public data",
+    notice: "⚠️ Demo content — this outing is made up, written to show what Cragdiary looks like.",
+    noticePhoto:
+      "⚠️ Demo content — this outing is made up. The photo comes from Wikimedia Commons, credited at the end.",
+  },
   seeker: {
     navLabel: "CragSeeker",
     title: "CragSeeker",
     tagline:
       "Find your next route in the Camptocamp database: search around a place or drop a pin on the map, then narrow it down by activity, grade and orientation.",
-    beta: "Beta — feedback welcome",
+    beta: "Beta — click to send feedback",
     where: "Where",
     placePlaceholder: "A town, a crag, an address…",
     whereHint: "A place, a crag or a street address — anything OpenStreetMap knows.",
@@ -1000,12 +1006,18 @@ const fr: Dict = {
       },
     ],
   },
+  demo: {
+    banner: "Démo — contenu généré à partir de données publiques",
+    notice: "⚠️ Contenu démo — sortie fictive, écrite pour montrer à quoi ressemble Cragdiary.",
+    noticePhoto:
+      "⚠️ Contenu démo — sortie fictive. La photo vient de Wikimedia Commons, créditée en fin de texte.",
+  },
   seeker: {
     navLabel: "CragSeeker",
     title: "CragSeeker",
     tagline:
       "Trouvez votre prochaine voie dans la base Camptocamp : cherchez autour d'un lieu ou posez un point sur la carte, puis affinez par activité, cotation et orientation.",
-    beta: "Bêta — vos retours sont les bienvenus",
+    beta: "Bêta — cliquer pour faire des retours",
     where: "Où",
     placePlaceholder: "Une ville, une falaise, une adresse…",
     whereHint: "Un lieu, une falaise ou une adresse postale — tout ce que connaît OpenStreetMap.",

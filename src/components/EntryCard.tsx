@@ -3,6 +3,8 @@ import { formatDate, type Locale } from "@/lib/i18n";
 import type { EntryWithAuthor } from "@/lib/queries";
 import AutoCover, { CoverPins, CoverTag, CoverStars } from "@/components/AutoCover";
 import VisibilityPicker, { type VisibilityLabels } from "@/components/VisibilityPicker";
+import DemoBanner from "@/components/DemoBanner";
+import { isDemoAccount } from "@/lib/demo";
 import { setEntryVisibility } from "@/app/actions";
 
 export default function EntryCard({
@@ -10,12 +12,15 @@ export default function EntryCard({
   locale,
   showAuthor = true,
   visibilityLabels,
+  demoLabel,
 }: {
   entry: EntryWithAuthor;
   locale: Locale;
   showAuthor?: boolean;
   /** Owner-only: pass labels to show the visibility picker on the card. */
   visibilityLabels?: VisibilityLabels;
+  /** Marks a demo account's photos as such. */
+  demoLabel?: string;
 }) {
   const cover = entry.photos[0];
   const snippet =
@@ -41,6 +46,7 @@ export default function EntryCard({
               {entry.show_pins && <CoverPins entry={entry} locale={locale} />}
               <CoverTag entry={entry} />
               <CoverStars entry={entry} locale={locale} />
+              {demoLabel && isDemoAccount(entry.username) && <DemoBanner label={demoLabel} />}
             </div>
           ) : (
             <AutoCover entry={entry} locale={locale} showPins={entry.show_pins} />

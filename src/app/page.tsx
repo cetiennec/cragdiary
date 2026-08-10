@@ -28,11 +28,19 @@ function parseShow(params: SP, key: ShowKey): number {
   return Number.isFinite(n) ? Math.min(300, Math.max(PAGE_SIZE, n)) : PAGE_SIZE;
 }
 
-function Grid({ entries, locale }: { entries: EntryWithAuthor[]; locale: Locale }) {
+function Grid({
+  entries,
+  locale,
+  demoLabel,
+}: {
+  entries: EntryWithAuthor[];
+  locale: Locale;
+  demoLabel: string;
+}) {
   return (
     <div className="entry-grid">
       {entries.map((entry) => (
-        <EntryCard key={entry.id} entry={entry} locale={locale} />
+        <EntryCard key={entry.id} entry={entry} locale={locale} demoLabel={demoLabel} />
       ))}
     </div>
   );
@@ -113,7 +121,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<SP>
           </div>
         ) : (
           <>
-            <Grid entries={all.slice(0, show)} locale={locale} />
+            <Grid entries={all.slice(0, show)} locale={locale} demoLabel={t.demo.banner} />
             <ShowMore params={params} param="show" show={show} total={all.length} t={t.feed} />
           </>
         )}
@@ -140,7 +148,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<SP>
             <p className="form-hint">{t.feed.emptyCordees}</p>
           ) : (
             <>
-              <Grid entries={cordeesEntries.slice(0, showCordees)} locale={locale} />
+              <Grid entries={cordeesEntries.slice(0, showCordees)} locale={locale} demoLabel={t.demo.banner} />
               <ShowMore
                 params={params}
                 param="showc"
@@ -168,7 +176,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<SP>
           </div>
         ) : (
           <>
-            <Grid entries={publicAll.slice(0, show)} locale={locale} />
+            <Grid entries={publicAll.slice(0, show)} locale={locale} demoLabel={t.demo.banner} />
             <ShowMore params={params} param="show" show={show} total={publicAll.length} t={t.feed} />
           </>
         )}

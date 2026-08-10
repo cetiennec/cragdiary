@@ -374,6 +374,7 @@ export default async function ProfilePage({
               entry={entry}
               locale={locale}
               showAuthor={false}
+              demoLabel={t.demo.banner}
               visibilityLabels={
                 isSelf
                   ? { picker: t.entry.visibilityPicker, short: t.entry.visibilityShort }

@@ -446,7 +446,10 @@ export default function CragSeeker({
     <div className="page-container seeker">
       <header className="seeker-head">
         <h1 className="page-title">
-          {t.title} <span className="seeker-beta">{t.beta}</span>
+          {t.title}{" "}
+          <a href="/feedback" className="seeker-beta">
+            {t.beta}
+          </a>
         </h1>
         <p className="seeker-tagline">{t.tagline}</p>
       </header>

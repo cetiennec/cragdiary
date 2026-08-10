@@ -10,6 +10,8 @@ import DeleteEntryButton from "@/components/DeleteEntryButton";
 import AutoCover from "@/components/AutoCover";
 import ShareButton from "@/components/ShareButton";
 import PhotoGallery from "@/components/PhotoGallery";
+import DemoBanner from "@/components/DemoBanner";
+import { isDemoAccount } from "@/lib/demo";
 
 type InlinePhoto = {
   id: string;
@@ -142,6 +144,7 @@ export default async function EntryPage({
   );
   const galleryPhotos = entry.photos.filter((p) => !p.align);
   const [cover, ...gallery] = galleryPhotos;
+  const isDemo = isDemoAccount(entry.username);
 
   const pitchesAndHeight = [
     entry.pitches ? `${entry.pitches}L` : null,
@@ -156,6 +159,7 @@ export default async function EntryPage({
         <div className="notion-cover">
           {/* eslint-disable-next-line @next/next/no-img-element -- served from our own DB-backed route, already resized/compressed server-side */}
           <img src={`/api/photos/${cover.id}`} alt={cover.caption ?? ""} />
+          {isDemo && <DemoBanner label={t.demo.banner} />}
           {cover.caption && (
             <figcaption className="notion-cover-caption">{cover.caption}</figcaption>
           )}
@@ -326,6 +330,12 @@ export default async function EntryPage({
           </blockquote>
         )}
 
+        {isDemo && (
+          <p className="demo-notice">
+            {entry.photos.length > 0 ? t.demo.noticePhoto : t.demo.notice}
+          </p>
+        )}
+
         {(entry.notes || inlinePhotos.length > 0) && (
           <NotesFlow notes={entry.notes} photos={inlinePhotos} />
         )}
@@ -367,6 +377,7 @@ export default async function EntryPage({
             }))}
             className="photo-grid notion-gallery"
             closeLabel={t.entry.lightboxClose}
+            banner={isDemo ? t.demo.banner : undefined}
           />
           </>
         )}
