@@ -551,8 +551,10 @@ export default async function ProfilePage({
                       {/* The route itself points at its topo; getting to the
                           list it sits on is what the owner's name is for. */}
                       {wish.c2c_url ? (
+                        // ↗ as everywhere else here: it says the link leaves
+                        // the site before you click it.
                         <a href={wish.c2c_url} target="_blank" rel="noopener noreferrer">
-                          {wish.title}
+                          {wish.title} <span aria-hidden>↗</span>
                         </a>
                       ) : (
                         <strong>{wish.title}</strong>
