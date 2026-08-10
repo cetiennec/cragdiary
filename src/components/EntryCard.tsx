@@ -42,7 +42,7 @@ export default function EntryCard({
           {cover ? (
             <div className="entry-card-cover">
               {/* eslint-disable-next-line @next/next/no-img-element -- served from our own DB-backed route, already resized/compressed server-side */}
-              <img src={`/api/photos/${cover.id}`} alt="" loading="lazy" />
+              <img src={`/api/photos/${cover.id}?t=1`} alt="" loading="lazy" />
               {entry.show_pins && <CoverPins entry={entry} locale={locale} />}
               <CoverTag entry={entry} />
               <CoverStars entry={entry} locale={locale} />

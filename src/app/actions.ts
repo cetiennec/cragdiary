@@ -20,10 +20,23 @@ import { clientIp, isRateLimited, recordAttempt, clearAttempts } from "@/lib/rat
 import { c2cImageUrl, importOuting } from "@/lib/c2c";
 import { notify, extractMentions, userIdsByUsernames, markAllRead } from "@/lib/notifications";
 
-// 2048 px keeps photos crisp in the fullscreen lightbox (incl. high-DPI
-// screens); quality 86 is visibly cleaner than 82 at a modest size cost.
-const MAX_PHOTO_DIMENSION = 2048;
+// 1600 px keeps photos crisp in the fullscreen lightbox (incl. high-DPI
+// screens); quality 86 is visibly cleaner than 82 at a modest size cost. The
+// browser already resizes to the same bound before upload — keep the two in
+// step (see MAX_DIMENSION in lib/client-image.ts), since whichever is smaller
+// is the one that actually applies.
+const MAX_PHOTO_DIMENSION = 1600;
 const PHOTO_QUALITY = 86;
+
+// Card and profile grids render covers a few hundred pixels wide but used to
+// download the full image — ~540 kB each, several MB for one feed. A stored
+// thumbnail costs well under a tenth of that.
+//
+// Constrained by WIDTH only, not the long edge: the cover box is landscape and
+// crops with object-fit, so a portrait photo capped on its height would come
+// back too narrow to fill it. 640 px covers a ~310 px card on a 2x screen.
+const THUMB_WIDTH = 640;
+const THUMB_QUALITY = 72;
 const USERNAME_RE = /^[a-z0-9-]{3,20}$/;
 
 function parseVisibility(value: FormDataEntryValue | null): Visibility {
@@ -116,11 +129,20 @@ async function notifyTaggedPartners(
   );
 }
 
-async function processPhotoBuffer(
-  inputBuffer: Buffer
-): Promise<{ data: Buffer; width: number | null; height: number | null }> {
-  const { data, info } = await sharp(inputBuffer)
-    .rotate()
+type ProcessedPhoto = {
+  data: Buffer;
+  thumb: Buffer | null;
+  width: number | null;
+  height: number | null;
+};
+
+async function processPhotoBuffer(inputBuffer: Buffer): Promise<ProcessedPhoto> {
+  // `rotate()` bakes in the EXIF orientation; everything downstream, thumbnail
+  // included, works from the upright pixels.
+  const upright = sharp(inputBuffer).rotate();
+
+  const { data, info } = await upright
+    .clone()
     .resize({
       width: MAX_PHOTO_DIMENSION,
       height: MAX_PHOTO_DIMENSION,
@@ -129,12 +151,23 @@ async function processPhotoBuffer(
     })
     .webp({ quality: PHOTO_QUALITY, smartSubsample: true })
     .toBuffer({ resolveWithObject: true });
-  return { data, width: info.width ?? null, height: info.height ?? null };
+
+  let thumb: Buffer | null = null;
+  try {
+    thumb = await upright
+      .clone()
+      .resize({ width: THUMB_WIDTH, withoutEnlargement: true })
+      .webp({ quality: THUMB_QUALITY })
+      .toBuffer();
+  } catch {
+    // A missing thumbnail costs bandwidth, not correctness — the photo route
+    // falls back to the full image.
+  }
+
+  return { data, thumb, width: info.width ?? null, height: info.height ?? null };
 }
 
-async function processPhoto(
-  file: File
-): Promise<{ data: Buffer; width: number | null; height: number | null }> {
+async function processPhoto(file: File): Promise<ProcessedPhoto> {
   return processPhotoBuffer(Buffer.from(await file.arrayBuffer()));
 }
 
@@ -382,12 +415,13 @@ export async function createEntry(formData: FormData): Promise<string | void> {
       const processed = await processPhoto(file);
       const layout = parsePhotoLayout(formData, "new_photo", position);
       await client.query(
-        `insert into photos (entry_id, content_type, data, position, size, align, para, width, height, caption)
-         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+        `insert into photos (entry_id, content_type, data, thumb, position, size, align, para, width, height, caption)
+         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
         [
           entryId,
           "image/webp",
           processed.data,
+          processed.thumb,
           position,
           layout.size,
           layout.align,
@@ -482,9 +516,9 @@ export async function importOneC2cOuting(
           if (!r.ok) continue;
           const processed = await processPhotoBuffer(Buffer.from(await r.arrayBuffer()));
           await client.query(
-            `insert into photos (entry_id, content_type, data, position, size, width, height)
-             values ($1, 'image/webp', $2, $3, 'm', $4, $5)`,
-            [entryId, processed.data, position, processed.width, processed.height]
+            `insert into photos (entry_id, content_type, data, thumb, position, size, width, height)
+             values ($1, 'image/webp', $2, $3, $4, 'm', $5, $6)`,
+            [entryId, processed.data, processed.thumb, position, processed.width, processed.height]
           );
           position += 1;
         } catch {
@@ -601,12 +635,13 @@ export async function updateEntry(formData: FormData): Promise<void> {
         const processed = await processPhoto(file);
         const layout = parsePhotoLayout(formData, "new_photo", newIndex);
         await client.query(
-          `insert into photos (entry_id, content_type, data, position, size, align, para, width, height, caption)
-           values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+          `insert into photos (entry_id, content_type, data, thumb, position, size, align, para, width, height, caption)
+           values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
           [
             id,
             "image/webp",
             processed.data,
+            processed.thumb,
             position,
             layout.size,
             layout.align,
@@ -669,12 +704,13 @@ export async function addEntryPhoto(formData: FormData): Promise<void> {
           )
         ).rows[0].max ?? -1) + 1;
   await pool.query(
-    `insert into photos (entry_id, content_type, data, position, size, align, para, width, height, caption)
-     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+    `insert into photos (entry_id, content_type, data, thumb, position, size, align, para, width, height, caption)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
     [
       id,
       "image/webp",
       processed.data,
+      processed.thumb,
       position,
       layout.size,
       layout.align,

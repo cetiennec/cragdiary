@@ -20,7 +20,7 @@ function supportsWebp(): boolean {
 
 export async function compressImage(
   file: File,
-  maxDimension = 1800,
+  maxDimension = 1600,
   quality = 0.82
 ): Promise<File> {
   try {

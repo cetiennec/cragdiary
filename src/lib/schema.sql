@@ -73,6 +73,10 @@ create table if not exists photos (
   created_at timestamptz not null default now()
 );
 
+-- Small derivative served to card and profile grids; null on older rows, in
+-- which case the photo route falls back to the full image.
+alter table photos add column if not exists thumb bytea;
+
 create index if not exists photos_entry_id_idx on photos(entry_id);
 create index if not exists entries_entry_date_idx on entries(entry_date desc);
 create index if not exists entries_user_id_idx on entries(user_id);
