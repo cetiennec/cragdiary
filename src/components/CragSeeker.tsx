@@ -401,6 +401,7 @@ export default function CragSeeker({
       </header>
 
       <section className="seeker-controls" aria-label={t.filters}>
+        {/* 1. What you're looking for. */}
         <div className="seeker-row">
           <label className="seeker-field">
             <span className="seeker-field-label">{t.activity}</span>
@@ -412,24 +413,10 @@ export default function CragSeeker({
               ))}
             </select>
           </label>
+        </div>
 
-          {showOutdoorType && (
-            <fieldset className="seeker-facing seeker-styles">
-              <legend className="seeker-field-label">{t.routeStyle}</legend>
-              {["", ...C2C_OUTDOOR_TYPES].map((type) => (
-                <label key={type || "any"} className="seeker-chip">
-                  <input
-                    type="radio"
-                    name="crtyp"
-                    checked={outdoorType === type}
-                    onChange={() => setOutdoorType(type)}
-                  />
-                  <span>{type ? t.outdoorTypes[type] : t.anyStyle}</span>
-                </label>
-              ))}
-            </fieldset>
-          )}
-
+        {/* 2. Where to look. */}
+        <div className="seeker-row">
           <div className="seeker-field seeker-field-grow">
             <span className="seeker-field-label">{t.where}</span>
             <div className="combobox">
@@ -437,6 +424,7 @@ export default function CragSeeker({
                 type="text"
                 value={placeInput}
                 placeholder={centre && !centre.name ? t.droppedPin : t.placePlaceholder}
+                title={t.whereHint}
                 autoComplete="off"
                 onChange={(e) => {
                   placeArmed.current = true;
@@ -457,7 +445,10 @@ export default function CragSeeker({
                           pickPlace(p);
                         }}
                       >
-                        <span className="combobox-title">{p.name}</span>
+                        <span className="combobox-title">
+                          {p.name}
+                          {p.kind && <em className="seeker-place-kind">{p.kind}</em>}
+                        </span>
                         <span className="combobox-meta">{p.region}</span>
                       </button>
                     </li>
@@ -487,16 +478,24 @@ export default function CragSeeker({
           </label>
         </div>
 
-        <div className="seeker-row">
-          <label className="seeker-field seeker-field-grow">
-            <span className="seeker-field-label">{t.keyword}</span>
-            <input
-              type="search"
-              value={q}
-              placeholder={t.keywordPlaceholder}
-              onChange={(e) => setQ(e.target.value)}
-            />
-          </label>
+        {/* 3. The settings that belong to the chosen activity. */}
+        <div className="seeker-row seeker-row-settings">
+          {showOutdoorType && (
+            <fieldset className="seeker-facing seeker-styles">
+              <legend className="seeker-field-label">{t.routeStyle}</legend>
+              {["", ...C2C_OUTDOOR_TYPES].map((type) => (
+                <label key={type || "any"} className="seeker-chip">
+                  <input
+                    type="radio"
+                    name="crtyp"
+                    checked={outdoorType === type}
+                    onChange={() => setOutdoorType(type)}
+                  />
+                  <span>{type ? t.outdoorTypes[type] : t.anyStyle}</span>
+                </label>
+              ))}
+            </fieldset>
+          )}
 
           {activeRanges.map((key) => (
             <RangeSelect
@@ -538,7 +537,18 @@ export default function CragSeeker({
           </label>
         </div>
 
-        <div className="seeker-row seeker-row-end">
+        {/* 4. Free text and aspect, side by side. */}
+        <div className="seeker-row">
+          <label className="seeker-field seeker-field-grow">
+            <span className="seeker-field-label">{t.keyword}</span>
+            <input
+              type="search"
+              value={q}
+              placeholder={t.keywordPlaceholder}
+              onChange={(e) => setQ(e.target.value)}
+            />
+          </label>
+
           <fieldset className="seeker-facing">
             <legend className="seeker-field-label">{t.orientation}</legend>
             {C2C_ORIENTATIONS.map((o) => (
@@ -554,16 +564,29 @@ export default function CragSeeker({
               </label>
             ))}
           </fieldset>
+        </div>
+
+        {/* 5. Getting there — rough for now — with the search-wide actions
+            anchored bottom right. */}
+        <div className="seeker-row seeker-row-end">
+          <div className="seeker-transport">
+            <p className="seeker-transport-head">
+              {t.transport} <span className="seeker-wip">{t.wip}</span>
+            </p>
+            <div className="seeker-transport-body">
+              <button
+                type="button"
+                className={`seeker-locate${origin ? " on" : ""}`}
+                onClick={estimateTravel}
+                disabled={originPending}
+              >
+                {originPending ? t.locating : origin ? `⏱ ${t.travelOff}` : `⏱ ${t.travelTime}`}
+              </button>
+              <p className="seeker-note">{t.transportWip}</p>
+            </div>
+          </div>
+
           <div className="seeker-row-actions">
-            <button
-              type="button"
-              className={`seeker-locate${origin ? " on" : ""}`}
-              onClick={estimateTravel}
-              disabled={originPending}
-              title={t.travelHint}
-            >
-              {originPending ? t.locating : origin ? `⏱ ${t.travelOff}` : `⏱ ${t.travelTime}`}
-            </button>
             <button type="button" className="seeker-locate" onClick={shareSearch}>
               {copied ? `✓ ${t.copied}` : `🔗 ${t.share}`}
             </button>

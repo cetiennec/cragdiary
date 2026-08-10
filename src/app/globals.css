@@ -4118,3 +4118,71 @@ a {
 .seeker-styles legend {
   line-height: 1.6;
 }
+
+/* OSM's word for a suggestion ("village", "peak", "house") — the quickest way
+   to tell three places called Verdon apart. */
+.seeker-place-kind {
+  font-style: normal;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0 0.4rem;
+  margin-left: 0.4rem;
+}
+
+/* "Getting there" — its own small panel, since the estimate is rough enough
+   that it needs saying out loud. */
+.seeker-transport {
+  flex: 1 1 320px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  padding: 0.6rem 0.8rem;
+}
+
+.seeker-transport-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin: 0 0 0.45rem;
+}
+
+.seeker-wip {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  padding: 0.05rem 0.45rem;
+}
+
+.seeker-transport-body {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+}
+
+.seeker-transport-body .seeker-note {
+  flex: 1 1 200px;
+  line-height: 1.45;
+}
+
+/* The activity's own settings get a little air above them. */
+.seeker-row-settings {
+  padding-top: 0.2rem;
+}
+
+.seeker-row-end {
+  align-items: flex-end;
+}
+
+.seeker-row-actions {
+  align-self: flex-end;
+}
