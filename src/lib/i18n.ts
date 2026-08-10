@@ -108,6 +108,17 @@ const en = {
     partners: "👥 Partners",
     partnersPlaceholder: "Léo, @marine… (@ to tag a climber)",
     mentionAddedToCordee: "@{user} added to the rope party",
+    linkDay: {
+      title: "@{user} logged a day around then",
+      intro:
+        "Two days find each other when they share a date and a mention. You've just tagged them — linking sets your date to theirs.",
+      sameDate: "Same date already — tagging them was enough.",
+      willMoveDate: "Your day would move to {date}.",
+      link: "Link",
+      ignore: "Not the same day",
+      alreadyLinked: "Already linked to your journal.",
+      linked: "Linked to @{user}'s day",
+    },
     copiedFrom:
       "Taken from @{user}'s day: the place, the date, the routes and their story were copied here — edit or delete anything you like, nothing is saved until you press save. Their photos stay on their entry and appear on yours from there.",
     routes: "🧭 Routes",
@@ -756,6 +767,17 @@ const fr: Dict = {
     partners: "👥 Partenaires",
     partnersPlaceholder: "Léo, @marine… (@ pour taguer un grimpeur)",
     mentionAddedToCordee: "@{user} ajouté·e à la cordée",
+    linkDay: {
+      title: "@{user} a noté une sortie à cette période",
+      intro:
+        "Deux journées se retrouvent quand elles partagent une date et une mention. Vous venez de la taguer — lier alignera votre date sur la sienne.",
+      sameDate: "Déjà la même date — le tag a suffi.",
+      willMoveDate: "Votre journée passerait au {date}.",
+      link: "Lier",
+      ignore: "Pas la même journée",
+      alreadyLinked: "Déjà liée à votre carnet.",
+      linked: "Liée à la journée de @{user}",
+    },
     copiedFrom:
       "Repris de la sortie de @{user} : le lieu, la date, les voies et son récit ont été copiés ici — modifiez ou supprimez ce que vous voulez, rien n'est enregistré tant que vous ne validez pas. Ses photos restent sur sa sortie et s'affichent sur la vôtre depuis là.",
     routes: "🧭 Voies",

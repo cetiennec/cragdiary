@@ -433,6 +433,51 @@ export async function entriesAlreadyInJournal(
   return new Set(result.rows.map((r) => r.id));
 }
 
+export type LinkableDay = {
+  id: string;
+  entry_date: string;
+  crag: string;
+  location: string | null;
+  photo_id: string | null;
+  /** Already mentions the viewer, so the two days are linked already. */
+  already_linked: boolean;
+};
+
+// Days this climber logged around a date, among those the viewer may see: the
+// public ones, and — because accepting a follower is saying "you may read me" —
+// the link-only ones when they accepted the viewer's follow. Never the private
+// ones. Used to offer linking your day to theirs when you tag them.
+export async function findLinkableDays(
+  viewerId: string,
+  viewerUsername: string,
+  username: string,
+  date: string,
+  dayWindow = 2
+): Promise<LinkableDay[]> {
+  const result = await pool.query<LinkableDay>(
+    `select e.id, to_char(e.entry_date, 'YYYY-MM-DD') as entry_date, e.crag, e.location,
+            (select p.id from photos p
+             where p.entry_id = e.id and p.align is null
+             order by p.position asc limit 1) as photo_id,
+            e.partners ~* ('@' || $3 || '([^a-z0-9-]|$)') as already_linked
+     from entries e
+     join users u on u.id = e.user_id
+     where u.username = $1
+       and u.visibility <> 'private'
+       and u.id <> $2
+       and abs(e.entry_date - $4::date) <= $5
+       and (e.visibility = 'public'
+            or (e.visibility = 'unlisted'
+                and exists (select 1 from follows f
+                            where f.follower_id = $2 and f.followee_id = u.id
+                              and f.status = 'accepted')))
+     order by abs(e.entry_date - $4::date), e.entry_date desc
+     limit 5`,
+    [username, viewerId, viewerUsername, date, dayWindow]
+  );
+  return result.rows;
+}
+
 // The same day, written by someone who climbed it with you. Matched on the date
 // plus a partner mention in either direction, so two strangers at the same crag
 // on the same Saturday are never linked. Respects the viewer's visibility.

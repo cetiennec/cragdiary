@@ -5,6 +5,8 @@ import { useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
 import { addEntryPhoto, autosaveEntry, createEntry, updateEntry } from "@/app/actions";
 import Toast from "@/components/Toast";
+import LinkDayDialog from "@/components/LinkDayDialog";
+import type { LinkableDay } from "@/app/api/entries/linkable/route";
 import type { Dict, Locale } from "@/lib/i18n";
 import type { C2cSuggestion } from "@/app/api/c2c/search/route";
 import type { C2cOutingImport } from "@/lib/c2c";
@@ -208,6 +210,28 @@ export default function EntryForm({
   // Where to put the menu: under the caret, not under the whole eight-row box.
   const [noteMenuAt, setNoteMenuAt] = useState<{ top: number; left: number } | null>(null);
   const [cordeeToast, setCordeeToast] = useState<string | null>(null);
+  // Their days around this one, offered for linking after you tag them.
+  const [linkOffer, setLinkOffer] = useState<{ username: string; days: LinkableDay[] } | null>(
+    null
+  );
+
+  // Two days are linked by sharing a date and a mention. Tagging someone just
+  // supplied the mention, so all that can be missing is the date — hence the
+  // offer, rather than anything written to their day.
+  async function offerToLink(username: string) {
+    const date = dateValue.length === 7 ? `${dateValue}-01` : dateValue;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+    try {
+      const res = await fetch(
+        `/api/entries/linkable?user=${encodeURIComponent(username)}&date=${date}`
+      );
+      if (!res.ok) return;
+      const { days } = (await res.json()) as { days: LinkableDay[] };
+      if (days.length > 0) setLinkOffer({ username, days });
+    } catch {
+      // Not being offered the link is no worse than before it existed.
+    }
+  }
 
   function detectMention(value: string, caret: number) {
     const upToCaret = value.slice(0, caret);
@@ -242,6 +266,7 @@ export default function EntryForm({
     mentionToken.current = null;
     setMentionOpen(false);
     setMentionSuggestions([]);
+    void offerToLink(s.username);
   }
 
   // The caret's pixel position inside a textarea can only be had by measuring:
@@ -310,6 +335,7 @@ export default function EntryForm({
       setPartners((p) => (p.trim() ? `${p.replace(/[,\s]+$/, "")}, @${s.username}` : `@${s.username}`));
       setCordeeToast(t.mentionAddedToCordee.replace("{user}", s.username));
     }
+    void offerToLink(s.username);
   }
 
   useEffect(() => {
@@ -1442,6 +1468,24 @@ export default function EntryForm({
 
         {cordeeToast && (
           <Toast message={cordeeToast} onDone={() => setCordeeToast(null)} />
+        )}
+
+        {linkOffer && (
+          <LinkDayDialog
+            username={linkOffer.username}
+            days={linkOffer.days}
+            currentDate={dateValue.length === 7 ? `${dateValue}-01` : dateValue}
+            t={t.linkDay}
+            onClose={() => setLinkOffer(null)}
+            onLink={(day) => {
+              // The mention is already in place; matching the date is what
+              // makes the two days find each other.
+              setDateValue(day.entry_date);
+              dateTouched.current = true;
+              setLinkOffer(null);
+              setCordeeToast(t.linkDay.linked.replace("{user}", linkOffer.username));
+            }}
+          />
         )}
 
         {placerPhotos.length > 0 && (
