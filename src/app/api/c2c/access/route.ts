@@ -1,7 +1,7 @@
 import { limitPublicApi } from "@/lib/rate-limit";
-import { routeAccessPoint, type C2cAccessPoint } from "@/lib/c2c";
+import { routeDetail } from "@/lib/c2c";
 
-export type { C2cAccessPoint } from "@/lib/c2c";
+export type { C2cAccessPoint, C2cRouteDetail } from "@/lib/c2c";
 
 // One page of Cragseeker results at a time; each id costs an upstream request,
 // so the batch is capped and the answers are cached hard.
@@ -20,13 +20,12 @@ export async function GET(req: Request) {
     .filter((id) => Number.isFinite(id) && id > 0)
     .slice(0, MAX_IDS);
 
-  if (ids.length === 0) return Response.json({ access: [] });
+  if (ids.length === 0) return Response.json({ details: [] });
 
-  const settled = await Promise.all(ids.map((id) => routeAccessPoint(id, lang)));
-  const access = settled.filter((a): a is C2cAccessPoint => a !== null);
+  const details = await Promise.all(ids.map((id) => routeDetail(id, lang)));
 
   return Response.json(
-    { access },
+    { details },
     { headers: { "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=604800" } }
   );
 }

@@ -6,7 +6,7 @@ import ParkingLink from "./ParkingLink";
 import { saveWishFromSearch } from "@/app/actions";
 import { drivingMinutes, formatDuration } from "@/lib/travel";
 import type { C2cRouteResult } from "@/app/api/c2c/routes/route";
-import type { C2cAccessPoint } from "@/app/api/c2c/access/route";
+import type { C2cAccessPoint, C2cRouteDetail } from "@/app/api/c2c/access/route";
 import type { GeoSuggestion } from "@/app/api/geo/search/route";
 import {
   ACTIVITY_HEIGHT_PARAM,
@@ -175,9 +175,14 @@ export default function Cragseeker({
   const [origin, setOrigin] = useState<{ lat: number; lon: number } | null>(null);
   const [originPending, setOriginPending] = useState(false);
   const [copied, setCopied] = useState(false);
-  // Parking, keyed by route id. Only c2c's detail documents carry it, so it
-  // arrives after the results and simply appears when it does.
+  // Parking and the outing count, keyed by route id. Only c2c's detail
+  // documents carry them, so they arrive after the results and simply appear
+  // when they do.
   const [access, setAccess] = useState<Record<number, C2cAccessPoint>>({});
+  const [outings, setOutings] = useState<Record<number, number>>({});
+  // Which routes have been asked about — `access` alone can't say, since a
+  // route with no parking never lands there.
+  const asked = useRef(new Set<number>());
 
   // Place autocomplete
   const [placeInput, setPlaceInput] = useState(params.place?.slice(0, 80) ?? "");
@@ -245,33 +250,38 @@ export default function Cragseeker({
     [query]
   );
 
-  // Parking is one upstream request per route, so ask only for the results
-  // actually on screen, and only for ones not already known.
+  // The route's own document — parking, and how many outings it has seen — is
+  // one upstream request per route, so ask only for results actually on screen,
+  // and only for ones not asked about already.
   useEffect(() => {
-    const missing = results.map((r) => r.id).filter((id) => !(id in access));
+    const missing = results.map((r) => r.id).filter((id) => !asked.current.has(id));
     if (missing.length === 0) return;
+    for (const id of missing) asked.current.add(id);
 
     let cancelled = false;
     (async () => {
       try {
         const res = await fetch(`/api/c2c/access?ids=${missing.join(",")}&lang=${locale}`);
-        const data = (await res.json()) as { access: C2cAccessPoint[] };
+        const data = (await res.json()) as { details: C2cRouteDetail[] };
         if (cancelled) return;
         setAccess((prev) => {
           const next = { ...prev };
-          for (const point of data.access) next[point.route_id] = point;
+          for (const d of data.details) if (d.access) next[d.route_id] = d.access;
+          return next;
+        });
+        setOutings((prev) => {
+          const next = { ...prev };
+          for (const d of data.details) if (d.outings != null) next[d.route_id] = d.outings;
           return next;
         });
       } catch {
-        // No parking shown is a fine outcome; the search itself still works.
+        // Losing these is a fine outcome; the search itself still works.
+        for (const id of missing) asked.current.delete(id);
       }
     })();
     return () => {
       cancelled = true;
     };
-    // `access` is deliberately not a dependency: it changes as a result of this
-    // effect, and `missing` already guards against asking twice.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [results, locale]);
 
   // Filters apply themselves, the way the feed's filter bar does.
@@ -425,6 +435,17 @@ export default function Cragseeker({
       ? fill(t.resultCountCapped, "n", 5000)
       : fill(t.resultCountAbout, "n", estimatedTotal);
 
+  // How travelled the route is, once camptocamp has answered. Zero is worth
+  // saying — it means nobody has logged it.
+  const outingTag = useCallback(
+    (id: number): string | null => {
+      const n = outings[id];
+      if (n == null) return null;
+      return n === 1 ? t.outingOne : fill(t.outingCount, "n", n);
+    },
+    [outings, t]
+  );
+
   // A marker carries the same overview as its list card, so hovering a point on
   // the map answers "what is this route?" without hunting for it further down.
   const points: SeekerPoint[] = useMemo(
@@ -450,6 +471,7 @@ export default function Cragseeker({
               r.equipment,
               r.height_m ? `${r.height_m} m` : null,
               r.orientation,
+              outingTag(r.id),
             ].filter((tag): tag is string => Boolean(tag)),
             distance:
               travel ??
@@ -459,7 +481,7 @@ export default function Cragseeker({
           },
         ];
       }),
-    [results, origin, climbedIds, t]
+    [results, origin, climbedIds, outingTag, t]
   );
 
   return (
@@ -739,6 +761,7 @@ export default function Cragseeker({
                   route.equipment,
                   route.height_m ? `${route.height_m} m` : null,
                   route.orientation,
+                  outingTag(route.id),
                 ]
                   .filter(Boolean)
                   .map((tag) => (

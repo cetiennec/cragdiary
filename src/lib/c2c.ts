@@ -460,22 +460,41 @@ export type C2cAccessPoint = {
   lon: number;
 };
 
-export async function routeAccessPoint(
-  routeId: number,
-  lang: string
-): Promise<C2cAccessPoint | null> {
-  const doc = await fetchJson<{ associations?: { waypoints?: C2cWaypointAssoc[] } }>(
-    `${C2C_API}/routes/${routeId}`
-  );
-  const access = (doc?.associations?.waypoints ?? []).find((w) => w.waypoint_type === "access");
-  if (!access) return null;
-  const coords = mercatorToWgs84(access.geometry?.geom);
-  if (!coords) return null;
+/** What the route's own document adds to a search result. */
+export type C2cRouteDetail = {
+  route_id: number;
+  /** Parking, when camptocamp knows one. */
+  access: C2cAccessPoint | null;
+  /** How many outings have been logged on the route — how travelled it is. */
+  outings: number | null;
+};
+
+// One upstream document answers both questions, so they're fetched together.
+export async function routeDetail(routeId: number, lang: string): Promise<C2cRouteDetail> {
+  const doc = await fetchJson<{
+    associations?: {
+      waypoints?: C2cWaypointAssoc[];
+      recent_outings?: { total?: number };
+    };
+  }>(`${C2C_API}/routes/${routeId}`);
+
+  const point = (doc?.associations?.waypoints ?? []).find((w) => w.waypoint_type === "access");
+  const coords = point ? mercatorToWgs84(point.geometry?.geom) : null;
+
   return {
     route_id: routeId,
-    name: pickLocale(access.locales ?? [], lang)?.title ?? null,
-    lat: coords.lat,
-    lon: coords.lon,
+    access:
+      point && coords
+        ? {
+            route_id: routeId,
+            name: pickLocale(point.locales ?? [], lang)?.title ?? null,
+            lat: coords.lat,
+            lon: coords.lon,
+          }
+        : null,
+    // `recent_outings` carries only the last ten documents, but its `total` is
+    // the real count — the same number `/outings?r=<id>` reports.
+    outings: doc?.associations?.recent_outings?.total ?? null,
   };
 }
 
