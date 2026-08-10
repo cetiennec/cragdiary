@@ -4,7 +4,7 @@ import { currentUser } from "@/lib/auth";
 import { getDict } from "@/lib/i18n";
 import { getNotifications, type Notification } from "@/lib/notifications";
 import { getFollowRequests } from "@/lib/queries";
-import { answerFollowRequest } from "@/app/actions";
+import { answerFollowRequest, copyEntryToJournal } from "@/app/actions";
 import MarkNotificationsRead from "@/components/MarkNotificationsRead";
 
 function target(n: Notification, selfUsername: string): string {
@@ -81,6 +81,18 @@ export default async function NotificationsPage() {
                     <span className="notif-date">{n.created_at}</span>
                   </span>
                 </Link>
+                {/* Their day, in your journal: the facts copied, the story
+                    left to you. */}
+                {n.type === "tagged" && n.data?.entry_id && (
+                  <span className="follower-actions">
+                    <form action={copyEntryToJournal}>
+                      <input type="hidden" name="entry_id" value={n.data.entry_id} />
+                      <button type="submit" className="follower-accept">
+                        {tn.addToJournal}
+                      </button>
+                    </form>
+                  </span>
+                )}
                 {n.type === "follow_request" &&
                   n.actor_username &&
                   pending.has(n.actor_username) && (

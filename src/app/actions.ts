@@ -982,6 +982,93 @@ export async function autosaveEntry(formData: FormData): Promise<void> {
   revalidatePath(`/entries/${id}`);
 }
 
+// Someone tagged you on their day: start your own from it. Their facts are
+// copied (where, when, what was climbed) and their words are not — the story
+// and the photos are theirs. You are dropped into the editor to finish it.
+export async function copyEntryToJournal(formData: FormData): Promise<void> {
+  const user = await currentUser();
+  if (!user) throw new Error("Unauthorized");
+
+  const sourceId = String(formData.get("entry_id") ?? "");
+  if (!sourceId) return;
+
+  // Only a day you can actually see: a public one, or one you were tagged on.
+  const source = await pool.query<{
+    entry_date: string;
+    month_only: boolean;
+    crag: string;
+    location: string | null;
+    style: string | null;
+    grade_max: string | null;
+    rating: string | null;
+    orientation: string | null;
+    equipment: string | null;
+    pitches: number | null;
+    height_m: number | null;
+    routes: string | null;
+    c2c_url: string | null;
+    c2c_summary: string | null;
+    lat: number | null;
+    lon: number | null;
+    country: string | null;
+    author: string;
+  }>(
+    `select e.entry_date, e.month_only, e.crag, e.location, e.style, e.grade_max,
+            e.rating, e.orientation, e.equipment, e.pitches, e.height_m, e.routes,
+            e.c2c_url, e.c2c_summary, e.lat, e.lon, e.country, u.username as author
+     from entries e join users u on u.id = e.user_id
+     where e.id = $1
+       and e.user_id <> $2
+       and (e.visibility = 'public' or e.partners ~* ('@' || $3 || '([^a-z0-9-]|$)'))`,
+    [sourceId, user.id, user.username]
+  );
+  const day = source.rows[0];
+  if (!day) return;
+
+  // Copying twice would leave two versions of the same day to keep in step.
+  const existing = await pool.query<{ id: string }>(
+    "select id from entries where user_id = $1 and entry_date = $2 and crag = $3 limit 1",
+    [user.id, day.entry_date, day.crag]
+  );
+  if (existing.rowCount) redirect(`/entries/${existing.rows[0].id}/edit`);
+
+  // Tagging them back is what links the two days to each other.
+  const result = await pool.query<{ id: string }>(
+    `insert into entries
+       (user_id, entry_date, month_only, crag, location, style, grade_max, rating,
+        orientation, equipment, pitches, height_m, routes, partners, c2c_url,
+        c2c_summary, lat, lon, country, visibility)
+     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,'unlisted')
+     returning id`,
+    [
+      user.id,
+      day.entry_date,
+      day.month_only,
+      day.crag,
+      day.location,
+      day.style,
+      day.grade_max,
+      day.rating,
+      day.orientation,
+      day.equipment,
+      day.pitches,
+      day.height_m,
+      day.routes,
+      `@${day.author}`,
+      day.c2c_url,
+      day.c2c_summary,
+      day.lat,
+      day.lon,
+      day.country,
+    ]
+  );
+
+  await notifyTaggedPartners(user.id, `@${day.author}`, result.rows[0].id);
+  revalidatePath("/");
+  revalidatePath(`/u/${user.username}`);
+  redirect(`/entries/${result.rows[0].id}/edit`);
+}
+
 export async function deleteEntry(formData: FormData): Promise<void> {
   const user = await currentUser();
   if (!user) throw new Error("Unauthorized");
