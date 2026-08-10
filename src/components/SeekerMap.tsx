@@ -16,6 +16,8 @@ export type SeekerPoint = {
   distance: string | null;
   climbed: string | null;
   summary: string | null;
+  /** "Camptocamp ↗" — the card carries a real link, so it must be a popup. */
+  c2cLabel: string;
 };
 
 const TOOLTIP_SUMMARY_CHARS = 120;
@@ -58,6 +60,14 @@ function tooltipCard(point: SeekerPoint): HTMLElement {
     card.append(line);
   }
 
+  const link = document.createElement("a");
+  link.className = "seeker-tip-c2c";
+  link.href = point.url;
+  link.target = "_blank";
+  link.rel = "noopener noreferrer";
+  link.textContent = point.c2cLabel;
+  card.append(link);
+
   if (point.summary) {
     const summary = document.createElement("span");
     summary.className = "seeker-tip-summary";
@@ -69,50 +79,6 @@ function tooltipCard(point: SeekerPoint): HTMLElement {
   }
 
   return card;
-}
-
-// The map clips its overflow, so a card opened near an edge would be cut off.
-// Leaflet never repositions tooltips, so once one is open, flip it below the
-// marker when there's no room above and slide it sideways to stay inside.
-const TIP_GAP = 12;
-const TIP_MARGIN = 8;
-
-function keepTooltipInside(
-  map: import("leaflet").Map,
-  marker: import("leaflet").CircleMarker
-): void {
-  const tip = marker.getTooltip();
-  const el = tip?.getElement();
-  if (!tip || !el) return;
-
-  // Above the marker unless the card is taller than the room left up there.
-  const at = map.latLngToContainerPoint(marker.getLatLng());
-  const above = at.y - el.offsetHeight - TIP_GAP >= TIP_MARGIN;
-  const dy = above ? -TIP_GAP : TIP_GAP;
-
-  tip.options.direction = above ? "top" : "bottom";
-  tip.options.offset = [0, dy];
-  tip.update();
-
-  // Then correct whatever still hangs over an edge from where Leaflet actually
-  // put it — measuring beats predicting, since the card's size depends on how
-  // much the route has to say.
-  const card = el.getBoundingClientRect();
-  const frame = map.getContainer().getBoundingClientRect();
-  const shift = (lo: number, hi: number, min: number, max: number) =>
-    lo < min + TIP_MARGIN ? min + TIP_MARGIN - lo : hi > max - TIP_MARGIN ? max - TIP_MARGIN - hi : 0;
-  const dx = shift(card.left, card.right, frame.left, frame.right);
-  const fix = shift(card.top, card.bottom, frame.top, frame.bottom);
-
-  if (dx || fix) {
-    // The arrow is drawn under the middle of the card, so it only points at the
-    // marker while the card is still centred on it.
-    el.classList.toggle("nudged", dx !== 0);
-    tip.options.offset = [dx, dy + fix];
-    tip.update();
-  } else {
-    el.classList.remove("nudged");
-  }
 }
 
 type Leaflet = typeof import("leaflet");
@@ -238,17 +204,23 @@ export default function SeekerMap({
         fillColor: MARKER_COLOR,
         fillOpacity: 0.9,
       })
-        .bindTooltip(tooltipCard(point), {
-          direction: "top",
-          offset: [0, -TIP_GAP],
-          opacity: 1,
+        // A popup rather than a tooltip: the card holds a link to camptocamp,
+        // and a tooltip can't be clicked — it isn't even reachable, since it
+        // closes as soon as the pointer leaves the marker. Leaflet also nudges
+        // a popup back into view near an edge, which a tooltip never did.
+        .bindPopup(tooltipCard(point), {
           className: "seeker-tip-wrap",
+          closeButton: false,
+          autoPan: true,
+          autoPanPadding: [12, 12],
+          maxWidth: 260,
+          offset: [0, -6],
         })
-        // Hovering a marker also lights up its card in the list below, so the
-        // overview on the map and the full entry always agree. Leaflet has
-        // opened the card by the time this runs, so it can be measured.
+        // Hovering opens it and lights up its card in the list below, so the
+        // overview on the map and the full entry always agree. It stays open
+        // until another marker is hovered, so the link can be reached.
         .on("mouseover", () => {
-          keepTooltipInside(map, marker);
+          marker.openPopup();
           handlers.current.onSelect(point.id);
         })
         .on("click", (e) => {

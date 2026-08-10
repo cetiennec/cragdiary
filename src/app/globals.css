@@ -4071,40 +4071,33 @@ a {
 }
 
 /* The hover card on a map marker: the list card's overview, in miniature.
-   Leaflet paints its own tooltip chrome, so the wrapper is reset first. */
-.leaflet-tooltip.seeker-tip-wrap {
+   A Leaflet popup, not a tooltip — it carries a link you must be able to
+   click. Leaflet paints its own chrome, so the wrapper is reset first. */
+.leaflet-popup.seeker-tip-wrap .leaflet-popup-content-wrapper {
   padding: 0;
+  overflow: hidden;
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
   background: var(--bg-elevated);
   color: var(--text);
   box-shadow: var(--shadow-card);
-  /* Leaflet sizes tooltips shrink-to-fit and keeps them on one line; the card
-     wants the opposite — its natural width, capped so long titles wrap. */
-  white-space: normal;
-  width: max-content;
-  max-width: 260px;
 }
 
-.leaflet-tooltip-top.seeker-tip-wrap::before {
-  border-top-color: var(--border);
+.leaflet-popup.seeker-tip-wrap .leaflet-popup-content {
+  margin: 0;
+  width: auto !important;
 }
 
-.leaflet-tooltip-bottom.seeker-tip-wrap::before {
-  border-bottom-color: var(--border);
-}
-
-/* Slid sideways to stay inside the map: the arrow would no longer line up
-   with its marker, so it's dropped rather than left pointing at nothing. */
-.leaflet-tooltip.seeker-tip-wrap.nudged::before {
-  display: none;
+.leaflet-popup.seeker-tip-wrap .leaflet-popup-tip {
+  background: var(--bg-elevated);
 }
 
 .seeker-tip {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
-  padding: 0.5rem 0.6rem;
+  padding: 0.55rem 0.65rem;
+  width: 230px;
 }
 
 .seeker-tip-title {
@@ -4139,6 +4132,18 @@ a {
   font-size: 0.75rem;
   font-weight: 600;
   color: var(--accent);
+}
+
+/* Leaflet colours every <a> inside a map itself, so this has to win. */
+.leaflet-popup.seeker-tip-wrap .seeker-tip-c2c {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.leaflet-popup.seeker-tip-wrap .seeker-tip-c2c:hover {
+  text-decoration: underline;
 }
 
 .seeker-map-hint,

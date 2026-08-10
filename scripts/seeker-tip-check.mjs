@@ -19,50 +19,45 @@ await page.waitForTimeout(1500);
 
 // Markers overlap, so a real hover can't reach the ones underneath; Leaflet
 // opens the card off the DOM event, which dispatching reaches directly. Each
-// marker is closed again before the next one, and the card is looked up by the
-// id the marker points at — otherwise a stale card gets measured.
+// card is measured after a pause, because Leaflet nudges the map to fit a card
+// near an edge and that nudge is animated.
 async function sweep(label) {
-  const rows = await page.evaluate(() => {
-    const map = document.querySelector(".seeker-map").getBoundingClientRect();
-    const results = [];
-    for (const el of document.querySelectorAll(".seeker-map path.leaflet-interactive")) {
+  const count = await page.evaluate(
+    () => document.querySelectorAll(".seeker-map path.leaflet-interactive").length
+  );
+  const rows = [];
+  for (let i = 0; i < count; i++) {
+    const opened = await page.evaluate((i) => {
+      const el = document.querySelectorAll(".seeker-map path.leaflet-interactive")[i];
+      const map = document.querySelector(".seeker-map").getBoundingClientRect();
       const r = el.getBoundingClientRect();
       const x = r.x + r.width / 2 - map.left;
       const y = r.y + r.height / 2 - map.top;
       // Only markers on screen can be hovered for real.
-      if (x < 0 || x > map.width || y < 0 || y > map.height) continue;
-
+      if (x < 0 || x > map.width || y < 0 || y > map.height) return null;
       el.dispatchEvent(new MouseEvent("mouseover", { bubbles: true }));
-      const tip = document.getElementById(el.getAttribute("aria-describedby"));
-      if (tip) {
-        const t = tip.getBoundingClientRect();
-        results.push({
-          x: Math.round(x),
-          y: Math.round(y),
-          below: tip.classList.contains("leaflet-tooltip-bottom"),
-          nudged: tip.classList.contains("nudged"),
-          over: [
-            t.top < map.top && "top",
-            t.bottom > map.bottom && "bottom",
-            t.left < map.left && "left",
-            t.right > map.right && "right",
-          ].filter(Boolean),
-        });
-      } else {
-        results.push({ x: Math.round(x), y: Math.round(y), over: ["no card"] });
-      }
-      el.dispatchEvent(new MouseEvent("mouseout", { bubbles: true }));
-    }
-    return results;
-  });
+      return { x: Math.round(x), y: Math.round(y) };
+    }, i);
+    if (!opened) continue;
+
+    await page.waitForTimeout(350);
+    const over = await page.evaluate(() => {
+      const map = document.querySelector(".seeker-map").getBoundingClientRect();
+      const tip = document.querySelector(".leaflet-popup.seeker-tip-wrap");
+      if (!tip) return ["no card"];
+      const t = tip.getBoundingClientRect();
+      return [
+        t.top < map.top && "top",
+        t.bottom > map.bottom && "bottom",
+        t.left < map.left && "left",
+        t.right > map.right && "right",
+      ].filter(Boolean);
+    });
+    rows.push({ ...opened, over });
+  }
 
   const bad = rows.filter((r) => r.over.length);
-  console.log(
-    `${label}: ${rows.length} markers on screen,`,
-    `${rows.filter((r) => r.below).length} flipped below,`,
-    `${rows.filter((r) => r.nudged).length} slid sideways,`,
-    `${bad.length} overflowing`
-  );
+  console.log(`${label}: ${rows.length} markers on screen, ${bad.length} overflowing`);
   for (const r of bad.slice(0, 5)) console.error(`  at ${r.x},${r.y} → ${r.over.join(",")}`);
   return bad.length;
 }
@@ -108,6 +103,9 @@ await page.waitForSelector(".seeker-result", { timeout: 30000 });
 await page.waitForTimeout(1500);
 await page.locator(".seeker-map path.leaflet-interactive").first().hover();
 await page.waitForSelector(".seeker-tip");
+// The card carries a link to camptocamp, which has to be reachable.
+const link = page.locator(".seeker-tip-c2c").first();
+console.log("c2c link:", await link.getAttribute("href"), "— clickable:", await link.isVisible());
 console.log("tooltip:\n" + (await page.locator(".seeker-tip").first().innerText()));
 console.log("list card highlighted:", await page.locator(".seeker-result.active").count());
 await page.screenshot({ path: `${out}/seeker-tip.png` });

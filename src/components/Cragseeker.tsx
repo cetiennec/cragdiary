@@ -513,6 +513,7 @@ export default function Cragseeker({
               (r.distance_km != null ? fill(t.away, "km", Math.round(r.distance_km)) : null),
             climbed: climbedIds.has(r.id) ? `✓ ${t.climbed}` : null,
             summary: r.summary,
+            c2cLabel: t.openOnC2c,
           },
         ];
       }),
