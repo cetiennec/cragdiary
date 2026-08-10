@@ -129,3 +129,38 @@ jobs:
         run: node scripts/c2c-import-check.mjs http://localhost:3111 "$DATABASE_URL"
       - name: The Cragseeker hover card stays inside the map
         run: node scripts/seeker-tip-check.mjs http://localhost:3111 /tmp
+
+  # Is the live database ready for what is about to be deployed? Three times
+  # this week a deploy went out ahead of its migration and the only warning was
+  # the site answering 500. Read-only, and skipped until the secret exists:
+  #   gh secret set DATABASE_URL
+  deploy-guard:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready --health-interval 5s
+          --health-timeout 5s --health-retries 10
+        ports: ["5432:5432"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Compare the live schema with this commit's
+        env:
+          ADMIN_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "No DATABASE_URL secret — nothing to compare against."
+            echo "Set one with: gh secret set DATABASE_URL"
+            exit 0
+          fi
+          node scripts/check-live-schema.mjs
