@@ -28,15 +28,24 @@ import { notify, extractMentions, userIdsByUsernames, markAllRead } from "@/lib/
 const MAX_PHOTO_DIMENSION = 1600;
 const PHOTO_QUALITY = 86;
 
+// The cover carries the entry — it's the card, the share preview and the first
+// thing anyone sees — so it keeps full treatment. The rest of a day's photos
+// live in the gallery and lightbox, where a slightly smaller, slightly cheaper
+// encode is invisible; they're also the bulk of the bytes (roughly 3 photos per
+// entry, so two thirds of the storage sits behind the cover).
+const GALLERY_DIMENSION = 1400;
+const GALLERY_QUALITY = 80;
+
 // Card and profile grids render covers a few hundred pixels wide but used to
 // download the full image — ~540 kB each, several MB for one feed. A stored
 // thumbnail costs well under a tenth of that.
 //
 // Constrained by WIDTH only, not the long edge: the cover box is landscape and
 // crops with object-fit, so a portrait photo capped on its height would come
-// back too narrow to fill it. 640 px covers a ~310 px card on a 2x screen.
-const THUMB_WIDTH = 640;
-const THUMB_QUALITY = 72;
+// back too narrow to fill it. 900 px keeps a ~310 px card sharp on a 2x screen
+// with room to spare, and it is encoded at the same quality as the full image —
+// a cheaper setting was visibly softer on textured rock.
+const THUMB_WIDTH = 900;
 const USERNAME_RE = /^[a-z0-9-]{3,20}$/;
 
 function parseVisibility(value: FormDataEntryValue | null): Visibility {
@@ -136,7 +145,10 @@ type ProcessedPhoto = {
   height: number | null;
 };
 
-async function processPhotoBuffer(inputBuffer: Buffer): Promise<ProcessedPhoto> {
+async function processPhotoBuffer(
+  inputBuffer: Buffer,
+  { cover = false }: { cover?: boolean } = {}
+): Promise<ProcessedPhoto> {
   // `rotate()` bakes in the EXIF orientation; everything downstream, thumbnail
   // included, works from the upright pixels.
   const upright = sharp(inputBuffer).rotate();
@@ -144,31 +156,38 @@ async function processPhotoBuffer(inputBuffer: Buffer): Promise<ProcessedPhoto> 
   const { data, info } = await upright
     .clone()
     .resize({
-      width: MAX_PHOTO_DIMENSION,
-      height: MAX_PHOTO_DIMENSION,
+      width: cover ? MAX_PHOTO_DIMENSION : GALLERY_DIMENSION,
+      height: cover ? MAX_PHOTO_DIMENSION : GALLERY_DIMENSION,
       fit: "inside",
       withoutEnlargement: true,
     })
-    .webp({ quality: PHOTO_QUALITY, smartSubsample: true })
+    .webp({ quality: cover ? PHOTO_QUALITY : GALLERY_QUALITY, smartSubsample: true })
     .toBuffer({ resolveWithObject: true });
 
+  // Only the cover is ever served as a thumbnail, so only the cover carries
+  // one; anything else would be stored and never read.
   let thumb: Buffer | null = null;
-  try {
-    thumb = await upright
-      .clone()
-      .resize({ width: THUMB_WIDTH, withoutEnlargement: true })
-      .webp({ quality: THUMB_QUALITY })
-      .toBuffer();
-  } catch {
-    // A missing thumbnail costs bandwidth, not correctness — the photo route
-    // falls back to the full image.
+  if (cover) {
+    try {
+      thumb = await upright
+        .clone()
+        .resize({ width: THUMB_WIDTH, withoutEnlargement: true })
+        .webp({ quality: PHOTO_QUALITY, smartSubsample: true })
+        .toBuffer();
+    } catch {
+      // A missing thumbnail costs bandwidth, not correctness — the photo route
+      // falls back to the full image.
+    }
   }
 
   return { data, thumb, width: info.width ?? null, height: info.height ?? null };
 }
 
-async function processPhoto(file: File): Promise<ProcessedPhoto> {
-  return processPhotoBuffer(Buffer.from(await file.arrayBuffer()));
+async function processPhoto(
+  file: File,
+  opts?: { cover?: boolean }
+): Promise<ProcessedPhoto> {
+  return processPhotoBuffer(Buffer.from(await file.arrayBuffer()), opts);
 }
 
 function parsePhotoLayout(
@@ -412,7 +431,7 @@ export async function createEntry(formData: FormData): Promise<string | void> {
 
     let position = 0;
     for (const file of photoFiles(formData)) {
-      const processed = await processPhoto(file);
+      const processed = await processPhoto(file, { cover: position === 0 });
       const layout = parsePhotoLayout(formData, "new_photo", position);
       await client.query(
         `insert into photos (entry_id, content_type, data, thumb, position, size, align, para, width, height, caption)
@@ -514,7 +533,9 @@ export async function importOneC2cOuting(
             signal: AbortSignal.timeout(15000),
           });
           if (!r.ok) continue;
-          const processed = await processPhotoBuffer(Buffer.from(await r.arrayBuffer()));
+          const processed = await processPhotoBuffer(Buffer.from(await r.arrayBuffer()), {
+            cover: position === 0,
+          });
           await client.query(
             `insert into photos (entry_id, content_type, data, thumb, position, size, width, height)
              values ($1, 'image/webp', $2, $3, $4, 'm', $5, $6)`,
@@ -632,7 +653,7 @@ export async function updateEntry(formData: FormData): Promise<void> {
       let position = (maxPos.rows[0].max ?? -1) + 1;
       let newIndex = 0;
       for (const file of newFiles) {
-        const processed = await processPhoto(file);
+        const processed = await processPhoto(file, { cover: position === 0 });
         const layout = parsePhotoLayout(formData, "new_photo", newIndex);
         await client.query(
           `insert into photos (entry_id, content_type, data, thumb, position, size, align, para, width, height, caption)
@@ -689,20 +710,22 @@ export async function addEntryPhoto(formData: FormData): Promise<void> {
   ]);
   if (owned.rows.length === 0) throw new Error("Not found");
 
-  const processed = await processPhoto(file);
   const layout = parsePhotoLayout(formData, "new_photo", 0);
   // The client uploads photos concurrently, so it sends an explicit position to
   // keep order deterministic; fall back to max+1 when it isn't provided.
   const rawPos = formData.get("position");
-  const position =
-    rawPos != null && String(rawPos).trim() !== ""
-      ? parseInt(String(rawPos), 10)
-      : ((
-          await pool.query<{ max: number | null }>(
-            "select max(position)::int as max from photos where entry_id = $1",
-            [id]
-          )
-        ).rows[0].max ?? -1) + 1;
+  const position = /^\d+$/.test(String(rawPos ?? ""))
+    ? parseInt(String(rawPos), 10)
+    : ((
+        await pool.query<{ max: number | null }>(
+          "select max(position)::int as max from photos where entry_id = $1",
+          [id]
+        )
+      ).rows[0].max ?? -1) + 1;
+
+  // Position decides the treatment, so it has to be known before encoding.
+  const processed = await processPhoto(file, { cover: position === 0 });
+
   await pool.query(
     `insert into photos (entry_id, content_type, data, thumb, position, size, align, para, width, height, caption)
      values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
