@@ -982,9 +982,11 @@ export async function autosaveEntry(formData: FormData): Promise<void> {
   revalidatePath(`/entries/${id}`);
 }
 
-// Someone tagged you on their day: start your own from it. Their facts are
-// copied (where, when, what was climbed) and their words are not — the story
-// and the photos are theirs. You are dropped into the editor to finish it.
+// Someone tagged you on their day: start your own from it. Everything written
+// down comes across — where, when, what was climbed, and their account of it —
+// because you land in the editor before anything is published, and it's easier
+// to cut someone else's words than to retype the day from memory. The photos
+// don't: they stay on their entry and are shown from there.
 export async function copyEntryToJournal(formData: FormData): Promise<void> {
   const user = await currentUser();
   if (!user) throw new Error("Unauthorized");
@@ -1006,6 +1008,8 @@ export async function copyEntryToJournal(formData: FormData): Promise<void> {
     pitches: number | null;
     height_m: number | null;
     routes: string | null;
+    notes: string | null;
+    pitch_notes: Record<string, string> | null;
     c2c_url: string | null;
     c2c_summary: string | null;
     lat: number | null;
@@ -1015,7 +1019,8 @@ export async function copyEntryToJournal(formData: FormData): Promise<void> {
   }>(
     `select e.entry_date, e.month_only, e.crag, e.location, e.style, e.grade_max,
             e.rating, e.orientation, e.equipment, e.pitches, e.height_m, e.routes,
-            e.c2c_url, e.c2c_summary, e.lat, e.lon, e.country, u.username as author
+            e.notes, e.pitch_notes, e.c2c_url, e.c2c_summary, e.lat, e.lon,
+            e.country, u.username as author
      from entries e join users u on u.id = e.user_id
      where e.id = $1
        and e.user_id <> $2
@@ -1032,13 +1037,14 @@ export async function copyEntryToJournal(formData: FormData): Promise<void> {
   );
   if (existing.rowCount) redirect(`/entries/${existing.rows[0].id}/edit`);
 
+
   // Tagging them back is what links the two days to each other.
   const result = await pool.query<{ id: string }>(
     `insert into entries
        (user_id, entry_date, month_only, crag, location, style, grade_max, rating,
-        orientation, equipment, pitches, height_m, routes, partners, c2c_url,
-        c2c_summary, lat, lon, country, visibility)
-     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,'unlisted')
+        orientation, equipment, pitches, height_m, routes, notes, pitch_notes,
+        partners, c2c_url, c2c_summary, lat, lon, country, visibility)
+     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,'unlisted')
      returning id`,
     [
       user.id,
@@ -1054,6 +1060,8 @@ export async function copyEntryToJournal(formData: FormData): Promise<void> {
       day.pitches,
       day.height_m,
       day.routes,
+      day.notes,
+      day.pitch_notes,
       `@${day.author}`,
       day.c2c_url,
       day.c2c_summary,
@@ -1066,7 +1074,7 @@ export async function copyEntryToJournal(formData: FormData): Promise<void> {
   await notifyTaggedPartners(user.id, `@${day.author}`, result.rows[0].id);
   revalidatePath("/");
   revalidatePath(`/u/${user.username}`);
-  redirect(`/entries/${result.rows[0].id}/edit`);
+  redirect(`/entries/${result.rows[0].id}/edit?from=${encodeURIComponent(day.author)}`);
 }
 
 export async function deleteEntry(formData: FormData): Promise<void> {

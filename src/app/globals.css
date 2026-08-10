@@ -4896,3 +4896,15 @@ a {
 .borrowed-photo:hover img {
   transform: scale(1.05);
 }
+
+/* Shown once, above an editor pre-filled from someone else's day. */
+.copied-banner {
+  margin: 0 0 1rem;
+  padding: 0.8rem 1rem;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 8%, var(--bg-elevated));
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: var(--radius-card);
+}
