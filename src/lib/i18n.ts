@@ -261,7 +261,7 @@ const en = {
   },
   filters: {
     q: "Search",
-    qPlaceholder: "route, place, partner…",
+    qPlaceholder: "route, partner, notes…",
     year: "Year",
     allYears: "All years",
     location: "Place",
@@ -815,7 +815,7 @@ const fr: Dict = {
   },
   filters: {
     q: "Recherche",
-    qPlaceholder: "voie, lieu, partenaire…",
+    qPlaceholder: "voie, partenaire, récit…",
     year: "Année",
     allYears: "Toutes les années",
     location: "Lieu",
