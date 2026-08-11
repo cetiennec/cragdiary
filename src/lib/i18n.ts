@@ -528,8 +528,9 @@ const en = {
         { name: "Neon — privacy", url: "https://neon.com/privacy-policy" },
         { name: "Resend — privacy", url: "https://resend.com/legal/privacy-policy" },
       ] },
-      { name: "Third-party searches", text: "Route and place searches — in the editor and in Cragseeker — are relayed to Camptocamp and Photon/OpenStreetMap (your search text, and for Cragseeker the map area you are looking at). Map tiles load from OpenStreetMap. These see the search, never your account.", links: [
+      { name: "Third-party searches", text: "Route and place searches — in the editor and in Cragseeker — are relayed to Camptocamp, OpenBeta and Photon/OpenStreetMap (your search text, and for Cragseeker the map area you are looking at). Which databases Cragseeker asks is yours to choose, next to the activity. Map tiles load from OpenStreetMap. These see the search, never your account.", links: [
         { name: "Camptocamp — privacy", url: "https://www.camptocamp.org/privacy_policy" },
+        { name: "OpenBeta — about", url: "https://openbeta.io/about" },
         { name: "OpenStreetMap — privacy", url: "https://osmfoundation.org/wiki/Privacy_Policy" },
       ] },
       { name: "Visibility", text: "You choose per entry (public, link-only, private) and per profile (public, link-only, private) what others can see." },
@@ -551,6 +552,11 @@ const en = {
         name: "Camptocamp.org",
         url: "https://www.camptocamp.org",
         text: "Route information suggested in the editor and searched in Cragseeker (names, grades, heights, orientations, summaries) comes from the Camptocamp community database, licensed CC BY-SA.",
+      },
+      {
+        name: "OpenBeta",
+        url: "https://openbeta.io",
+        text: "Cragseeker's United States crags — their names, how many climbs they hold and of what kind — come from the OpenBeta community database, released into the public domain (CC0).",
       },
       {
         name: "OpenStreetMap",
@@ -579,7 +585,7 @@ const en = {
     navLabel: "Cragseeker",
     title: "Cragseeker",
     tagline:
-      "Find your next route in the Camptocamp database: search around a place or drop a pin on the map, then narrow it down by activity, grade and orientation.",
+      "Find your next route around a place or a pin on the map, then narrow it down by activity, grade and orientation. Camptocamp covers the Alps and beyond; OpenBeta covers the United States.",
     beta: "Beta — click to send feedback",
     where: "Where",
     placePlaceholder: "A town, a crag, an address…",
@@ -641,13 +647,19 @@ const en = {
     filters: "Filters",
     clear: "Clear filters",
     noLocation: "Pick a place or drop a pin to search a region — or search by name alone.",
-    searching: "Searching camptocamp…",
-    error: "Camptocamp didn't answer — try again in a moment.",
+    searching: "Searching…",
+    error: "No answer from the databases — try again in a moment.",
     empty: "No route matches these criteria. Try a wider radius or an easier grade.",
     resultCount: "{n} routes found",
     resultCountOne: "1 route found",
     resultCountAbout: "about {n} routes",
     resultCountCapped: "{n}+ routes found",
+    // OpenBeta answers with crags rather than single routes, so as soon as it
+    // is in the mix the count has to stop calling everything a route.
+    mixedCount: "{n} results found",
+    mixedCountOne: "1 result found",
+    mixedCountAbout: "about {n} results",
+    mixedCountCapped: "{n}+ results found",
     share: "Share this search",
     shareText: "A route search on CragDiary",
     copied: "Link copied",
@@ -665,6 +677,33 @@ const en = {
     climbedHint: "This route already appears in your journal",
     parkingHint: "Access point from camptocamp — opens the parking on a map",
     openOnC2c: "Camptocamp ↗",
+    // Which databases to search, and what to call a result from each. The two
+    // barely overlap: camptocamp is the Alps, OpenBeta is the United States.
+    databases: "Databases",
+    sources: {
+      c2c: "Camptocamp",
+      openbeta: "OpenBeta (US)",
+    } as Record<string, string>,
+    sourceHints: {
+      c2c: "Routes across the Alps and beyond — the camptocamp community database.",
+      openbeta: "Crags in the United States — the OpenBeta community database.",
+    } as Record<string, string>,
+    sourceUnavailable: "This database only catalogues rock climbing.",
+    openOn: {
+      c2c: "Camptocamp ↗",
+      openbeta: "OpenBeta ↗",
+    } as Record<string, string>,
+    openbetaNeedsPin: "OpenBeta searches around a point — pick a place or drop a pin to include it.",
+    // OpenBeta catalogues crags rather than single routes, so its results count
+    // the climbs inside one.
+    climbCount: "{n} climbs",
+    climbOne: "1 climb",
+    disciplines: {
+      sport: "sport",
+      trad: "trad",
+      boulder: "bouldering",
+      tr: "top rope",
+    } as Record<string, string>,
     logIt: "Log an outing",
     addToList: "Add to a list",
     add: "Add",
@@ -672,7 +711,7 @@ const en = {
     added: "Added ✓",
     addFailed: "Couldn't add — try again.",
     loginToSave: "Log in to save routes to a wishlist.",
-    attribution: "Route data from camptocamp.org (CC BY-SA)",
+    attribution: "Route data from camptocamp.org (CC BY-SA) and openbeta.io (CC0)",
     outdoorTypes: {
       single: "single pitch",
       multi: "multi-pitch",
@@ -1211,8 +1250,9 @@ const fr: Dict = {
         { name: "Neon — confidentialité", url: "https://neon.com/privacy-policy" },
         { name: "Resend — confidentialité", url: "https://resend.com/legal/privacy-policy" },
       ] },
-      { name: "Recherches externes", text: "Les recherches de voies et de lieux — dans l'éditeur et dans Cragseeker — sont relayées à Camptocamp et Photon/OpenStreetMap (le texte cherché, et pour Cragseeker la zone de carte consultée). Les tuiles de carte viennent d'OpenStreetMap. Ces services voient la recherche, jamais votre compte.", links: [
+      { name: "Recherches externes", text: "Les recherches de voies et de lieux — dans l'éditeur et dans Cragseeker — sont relayées à Camptocamp, OpenBeta et Photon/OpenStreetMap (le texte cherché, et pour Cragseeker la zone de carte consultée). Les bases interrogées par Cragseeker se choisissent à côté de l'activité. Les tuiles de carte viennent d'OpenStreetMap. Ces services voient la recherche, jamais votre compte.", links: [
         { name: "Camptocamp — confidentialité", url: "https://www.camptocamp.org/privacy_policy" },
+        { name: "OpenBeta — à propos", url: "https://openbeta.io/about" },
         { name: "OpenStreetMap — confidentialité", url: "https://osmfoundation.org/wiki/Privacy_Policy" },
       ] },
       { name: "Visibilité", text: "Vous choisissez pour chaque entrée (publique, par lien, privée) et pour votre profil (public, par lien, privé) ce que les autres peuvent voir." },
@@ -1234,6 +1274,11 @@ const fr: Dict = {
         name: "Camptocamp.org",
         url: "https://www.camptocamp.org",
         text: "Les informations de voies proposées dans l'éditeur et cherchées dans Cragseeker (noms, cotations, hauteurs, orientations, résumés) proviennent de la base communautaire Camptocamp, sous licence CC BY-SA.",
+      },
+      {
+        name: "OpenBeta",
+        url: "https://openbeta.io",
+        text: "Les falaises états-uniennes de Cragseeker — leur nom, le nombre de voies qu'elles abritent et de quel type — proviennent de la base communautaire OpenBeta, versée au domaine public (CC0).",
       },
       {
         name: "OpenStreetMap",
@@ -1262,7 +1307,7 @@ const fr: Dict = {
     navLabel: "Cragseeker",
     title: "Cragseeker",
     tagline:
-      "Trouvez votre prochaine voie dans la base Camptocamp : cherchez autour d'un lieu ou posez un point sur la carte, puis affinez par activité, cotation et orientation.",
+      "Trouvez votre prochaine voie autour d'un lieu ou d'un point posé sur la carte, puis affinez par activité, cotation et orientation. Camptocamp couvre les Alpes et au-delà, OpenBeta les États-Unis.",
     beta: "Bêta — cliquer pour faire des retours",
     where: "Où",
     placePlaceholder: "Une ville, une falaise, une adresse…",
@@ -1323,13 +1368,19 @@ const fr: Dict = {
     clear: "Effacer les filtres",
     noLocation:
       "Choisissez un lieu ou posez un point pour chercher dans une région — ou cherchez par nom.",
-    searching: "Recherche sur camptocamp…",
-    error: "Camptocamp n'a pas répondu — réessayez dans un instant.",
+    searching: "Recherche en cours…",
+    error: "Pas de réponse des bases — réessayez dans un instant.",
     empty: "Aucune voie ne correspond. Élargissez le rayon ou baissez la cotation.",
     resultCount: "{n} voies trouvées",
     resultCountOne: "1 voie trouvée",
     resultCountAbout: "environ {n} voies",
     resultCountCapped: "{n}+ voies trouvées",
+    // OpenBeta répond par des falaises et non des voies isolées : dès qu'elle
+    // est interrogée, le décompte ne peut plus tout appeler « voie ».
+    mixedCount: "{n} résultats trouvés",
+    mixedCountOne: "1 résultat trouvé",
+    mixedCountAbout: "environ {n} résultats",
+    mixedCountCapped: "{n}+ résultats trouvés",
     share: "Partager cette recherche",
     shareText: "Une recherche de voies sur CragDiary",
     copied: "Lien copié",
@@ -1347,6 +1398,35 @@ const fr: Dict = {
     climbedHint: "Cette voie figure déjà dans votre carnet",
     parkingHint: "Point d'accès camptocamp — ouvre le parking sur une carte",
     openOnC2c: "Camptocamp ↗",
+    // Quelles bases interroger, et comment nommer un résultat de chacune. Elles
+    // ne se recouvrent guère : camptocamp couvre les Alpes, OpenBeta les
+    // États-Unis.
+    databases: "Bases de données",
+    sources: {
+      c2c: "Camptocamp",
+      openbeta: "OpenBeta (US)",
+    } as Record<string, string>,
+    sourceHints: {
+      c2c: "Les voies des Alpes et d'ailleurs — la base communautaire camptocamp.",
+      openbeta: "Les falaises des États-Unis — la base communautaire OpenBeta.",
+    } as Record<string, string>,
+    sourceUnavailable: "Cette base ne recense que l'escalade rocheuse.",
+    openOn: {
+      c2c: "Camptocamp ↗",
+      openbeta: "OpenBeta ↗",
+    } as Record<string, string>,
+    openbetaNeedsPin:
+      "OpenBeta cherche autour d'un point — choisissez un lieu ou posez un point pour l'inclure.",
+    // OpenBeta recense des falaises plutôt que des voies isolées : ses
+    // résultats comptent les voies qu'elles contiennent.
+    climbCount: "{n} voies",
+    climbOne: "1 voie",
+    disciplines: {
+      sport: "sportive",
+      trad: "traditionnelle",
+      boulder: "bloc",
+      tr: "moulinette",
+    } as Record<string, string>,
     logIt: "Raconter une sortie",
     addToList: "Ajouter à une liste",
     add: "Ajouter",
@@ -1354,7 +1434,7 @@ const fr: Dict = {
     added: "Ajoutée ✓",
     addFailed: "Échec de l'ajout — réessayez.",
     loginToSave: "Connectez-vous pour enregistrer des voies dans une liste.",
-    attribution: "Données de voies : camptocamp.org (CC BY-SA)",
+    attribution: "Données de voies : camptocamp.org (CC BY-SA) et openbeta.io (CC0)",
     outdoorTypes: {
       single: "couenne",
       multi: "grande voie",

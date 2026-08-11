@@ -6,7 +6,7 @@ import ParkingLink from "./ParkingLink";
 import Toast from "./Toast";
 import { saveWishFromSearch } from "@/app/actions";
 import { drivingMinutes, formatDuration } from "@/lib/travel";
-import type { C2cRouteResult } from "@/app/api/c2c/routes/route";
+import type { SeekerResult } from "@/app/api/seeker/route";
 import type { C2cAccessPoint, C2cRouteDetail } from "@/app/api/c2c/access/route";
 import type { GeoSuggestion } from "@/app/api/geo/search/route";
 import {
@@ -19,6 +19,12 @@ import {
   type C2cActivity,
   type C2cRangeKey,
 } from "@/lib/c2c";
+import {
+  DEFAULT_SOURCES,
+  SEEKER_SOURCES,
+  sourceHandles,
+  type SeekerSource,
+} from "@/lib/seeker/types";
 import type { Dict, Locale } from "@/lib/i18n";
 
 const RADII = [10, 25, 50, 100, 200];
@@ -104,6 +110,15 @@ function initialRanges(params: SeekerParams): Ranges {
   return out;
 }
 
+// Which databases to ask. Unknown names are dropped rather than trusted, and
+// an empty list falls back to the default rather than searching nothing.
+function initialSources(params: SeekerParams): SeekerSource[] {
+  const asked = (params.src ?? "")
+    .split(",")
+    .filter((s): s is SeekerSource => (SEEKER_SOURCES as readonly string[]).includes(s));
+  return asked.length ? asked : DEFAULT_SOURCES;
+}
+
 function initialCentre(params: SeekerParams): Centre | null {
   const lat = Number(params.lat);
   const lon = Number(params.lon);
@@ -132,6 +147,7 @@ export default function Cragseeker({
       ? (params.act as C2cActivity)
       : "rock_climbing"
   );
+  const [sources, setSources] = useState<SeekerSource[]>(() => initialSources(params));
   const [centre, setCentre] = useState<Centre | null>(() => initialCentre(params));
   const [radius, setRadius] = useState(() =>
     RADII.includes(Number(params.radius)) ? Number(params.radius) : 50
@@ -157,6 +173,14 @@ export default function Cragseeker({
     (C2C_OUTDOOR_TYPES as readonly string[]).includes(params.crtyp ?? "") ? params.crtyp! : ""
   );
 
+  // A source that can't answer for this activity is greyed out rather than
+  // silently returning nothing, and is dropped from the search behind the
+  // scenes — switching to ski touring must not leave OpenBeta ticked and mute.
+  const activeSources = useMemo(() => {
+    const kept = sources.filter((s) => sourceHandles(s, activity));
+    return kept.length ? kept : DEFAULT_SOURCES;
+  }, [sources, activity]);
+
   const activeRanges = ACTIVITY_RANGE_FILTERS[activity];
   const heightLabel = ACTIVITY_HEIGHT_PARAM[activity] === "hdif" ? t.heightGain : t.height;
 
@@ -164,11 +188,12 @@ export default function Cragseeker({
   // record it for mountaineering or ski touring.
   const showOutdoorType = activity === "rock_climbing";
 
-  const [results, setResults] = useState<C2cRouteResult[]>([]);
+  const [results, setResults] = useState<SeekerResult[]>([]);
   // c2c counts its bounding box; the circle keeps only ~π/4 of it, so this is an
-  // estimate until every page is in and `allLoaded` makes the count exact.
+  // estimate until every page is in and the count becomes exact.
   const [estimatedTotal, setEstimatedTotal] = useState(0);
-  const [boxTotal, setBoxTotal] = useState(0);
+  // Whether any source still has pages left — what "load more" listens to.
+  const [more, setMore] = useState(false);
   // Where the next page starts upstream. Not `results.length`: c2c documents
   // without a usable title are dropped, and the list is re-sorted by distance.
   const [nextOffset, setNextOffset] = useState(0);
@@ -176,8 +201,10 @@ export default function Cragseeker({
   const [failed, setFailed] = useState(false);
   const [geoError, setGeoError] = useState(false);
   const [locating, setLocating] = useState(false);
-  const [activeId, setActiveId] = useState<number | null>(null);
-  const [saved, setSaved] = useState<Record<number, SaveState>>({});
+  const [activeId, setActiveId] = useState<string | null>(null);
+  // Keyed by the cross-database key, never a native id: camptocamp route 1234
+  // and an OpenBeta crag can otherwise collide in the same map.
+  const [saved, setSaved] = useState<Record<string, SaveState>>({});
   const [listId, setListId] = useState(wishlists[0]?.id ?? "");
   const [origin, setOrigin] = useState<{ lat: number; lon: number } | null>(null);
   const [originPending, setOriginPending] = useState(false);
@@ -203,7 +230,7 @@ export default function Cragseeker({
   // One description of the search, used both to call the API and to write the
   // address bar — so any link a visitor copies reproduces exactly what they see.
   const search = useMemo(() => {
-    const sp = new URLSearchParams({ act: activity });
+    const sp = new URLSearchParams({ act: activity, src: activeSources.join(",") });
     if (centre) {
       sp.set("lat", centre.lat.toFixed(5));
       sp.set("lon", centre.lon.toFixed(5));
@@ -224,6 +251,7 @@ export default function Cragseeker({
     return sp.toString();
   }, [
     activity,
+    activeSources,
     activeRanges,
     centre,
     radius,
@@ -254,16 +282,16 @@ export default function Cragseeker({
       setLoading(true);
       setFailed(false);
       try {
-        const res = await fetch(`/api/c2c/routes?${query}&offset=${offset}`);
+        const res = await fetch(`/api/seeker?${query}&offset=${offset}`);
         const data = (await res.json()) as {
-          boxTotal: number;
           estimatedTotal: number;
-          results: C2cRouteResult[];
+          more: boolean;
+          results: SeekerResult[];
         };
         if (id !== requestId.current) return;
         setResults((prev) => (offset === 0 ? data.results : [...prev, ...data.results]));
         setEstimatedTotal(data.estimatedTotal);
-        setBoxTotal(data.boxTotal);
+        setMore(data.more);
         setNextOffset(offset + PAGE_SIZE);
       } catch {
         if (id === requestId.current) setFailed(true);
@@ -278,7 +306,11 @@ export default function Cragseeker({
   // one upstream request per route, so ask only for results actually on screen,
   // and only for ones not asked about already.
   useEffect(() => {
-    const missing = results.map((r) => r.id).filter((id) => !asked.current.has(id));
+    // Camptocamp's own documents — an OpenBeta crag has no c2c id to ask about.
+    const missing = results
+      .filter((r) => r.source === "c2c")
+      .map((r) => Number(r.id))
+      .filter((id) => !asked.current.has(id));
     if (missing.length === 0) return;
     for (const id of missing) asked.current.add(id);
 
@@ -422,9 +454,9 @@ export default function Cragseeker({
     setOutdoorType("");
   }
 
-  async function save(route: C2cRouteResult) {
+  async function save(route: SeekerResult) {
     if (!listId) return;
-    setSaved((s) => ({ ...s, [route.id]: "saving" }));
+    setSaved((s) => ({ ...s, [route.key]: "saving" }));
     const form = new FormData();
     form.set("wishlist_id", listId);
     form.set("title", route.title);
@@ -432,10 +464,12 @@ export default function Cragseeker({
     if (route.grade) form.set("grade_max", route.grade);
     if (route.rating) form.set("rating", route.rating);
     if (route.height_m != null) form.set("height_m", String(route.height_m));
+    // The column is named for camptocamp, but it holds "where this came from"
+    // — an OpenBeta crag page is the same kind of link.
     form.set("c2c_url", route.url);
     if (route.lat != null) form.set("lat", String(route.lat));
     if (route.lon != null) form.set("lon", String(route.lon));
-    const parking = access[route.id];
+    const parking = route.source === "c2c" ? access[Number(route.id)] : undefined;
     if (parking) {
       form.set("parking_lat", String(parking.lat));
       form.set("parking_lon", String(parking.lon));
@@ -444,7 +478,7 @@ export default function Cragseeker({
     const listName = wishlists.find((w) => w.id === listId)?.name ?? "";
     try {
       const res = await saveWishFromSearch(form);
-      setSaved((s) => ({ ...s, [route.id]: res.ok ? "done" : "error" }));
+      setSaved((s) => ({ ...s, [route.key]: res.ok ? "done" : "error" }));
       setToast(
         res.ok
           ? {
@@ -454,31 +488,84 @@ export default function Cragseeker({
           : { text: t.addFailed, tone: "error" }
       );
     } catch {
-      setSaved((s) => ({ ...s, [route.id]: "error" }));
+      setSaved((s) => ({ ...s, [route.key]: "error" }));
       setToast({ text: t.addFailed, tone: "error" });
     }
   }
 
   // Once every upstream page is in, `results.length` is the real number of
   // routes inside the circle; before that only an estimate can be honest.
-  const allLoaded = nextOffset >= boxTotal;
+  const allLoaded = !more;
+  // OpenBeta counts crags, camptocamp counts routes; the moment both are in the
+  // list, only the vaguer word is true of everything in it.
+  const counts = activeSources.includes("openbeta")
+    ? {
+        one: t.mixedCountOne,
+        many: t.mixedCount,
+        about: t.mixedCountAbout,
+        capped: t.mixedCountCapped,
+      }
+    : {
+        one: t.resultCountOne,
+        many: t.resultCount,
+        about: t.resultCountAbout,
+        capped: t.resultCountCapped,
+      };
   const countLabel = allLoaded
     ? results.length === 1
-      ? t.resultCountOne
-      : fill(t.resultCount, "n", results.length)
+      ? counts.one
+      : fill(counts.many, "n", results.length)
     : estimatedTotal > 5000
-      ? fill(t.resultCountCapped, "n", 5000)
-      : fill(t.resultCountAbout, "n", estimatedTotal);
+      ? fill(counts.capped, "n", 5000)
+      : fill(counts.about, "n", estimatedTotal);
 
   // How travelled the route is, once camptocamp has answered. Zero is worth
   // saying — it means nobody has logged it.
   const outingTag = useCallback(
-    (id: number): string | null => {
-      const n = outings[id];
+    (id: string): string | null => {
+      const n = outings[Number(id)];
       if (n == null) return null;
       return n === 1 ? t.outingOne : fill(t.outingCount, "n", n);
     },
     [outings, t]
+  );
+
+  // The two databases describe different things — camptocamp a route, OpenBeta
+  // a whole crag — so each gets the chips that mean something for it.
+  const tagsFor = useCallback(
+    (r: SeekerResult): string[] => {
+      const source = activeSources.length > 1 ? t.sources[r.source] : null;
+      if (r.source === "openbeta") {
+        return [
+          source,
+          r.climb_count != null
+            ? r.climb_count === 1
+              ? t.climbOne
+              : fill(t.climbCount, "n", r.climb_count)
+            : null,
+          ...r.disciplines.map((d) => t.disciplines[d] ?? d),
+        ].filter((tag): tag is string => Boolean(tag));
+      }
+      return [
+        source,
+        r.outdoor_type ? t.outdoorTypes[r.outdoor_type] : null,
+        r.grade,
+        r.required_grade ? `${t.mandatoryTag} ${r.required_grade}` : null,
+        r.rating,
+        r.equipment,
+        r.height_m ? `${r.height_m} m` : null,
+        r.orientation,
+        outingTag(r.id),
+      ].filter((tag): tag is string => Boolean(tag));
+    },
+    [activeSources, outingTag, t]
+  );
+
+  // Only camptocamp numbers its routes the way the journal does, so "you have
+  // climbed this" is a question only c2c results can answer.
+  const isClimbed = useCallback(
+    (r: SeekerResult) => r.source === "c2c" && climbedIds.has(Number(r.id)),
+    [climbedIds]
   );
 
   // A marker carries the same overview as its list card, so hovering a point on
@@ -492,32 +579,23 @@ export default function Cragseeker({
           : null;
         return [
           {
-            id: r.id,
+            id: r.key,
             title: r.title,
             lat: r.lat,
             lon: r.lon,
             url: r.url,
             area: r.area,
-            tags: [
-              r.outdoor_type ? t.outdoorTypes[r.outdoor_type] : null,
-              r.grade,
-              r.required_grade ? `${t.mandatoryTag} ${r.required_grade}` : null,
-              r.rating,
-              r.equipment,
-              r.height_m ? `${r.height_m} m` : null,
-              r.orientation,
-              outingTag(r.id),
-            ].filter((tag): tag is string => Boolean(tag)),
+            tags: tagsFor(r),
             distance:
               travel ??
               (r.distance_km != null ? fill(t.away, "km", Math.round(r.distance_km)) : null),
-            climbed: climbedIds.has(r.id) ? `✓ ${t.climbed}` : null,
+            climbed: isClimbed(r) ? `✓ ${t.climbed}` : null,
             summary: r.summary,
-            c2cLabel: t.openOnC2c,
+            sourceLabel: t.openOn[r.source],
           },
         ];
       }),
-    [results, origin, climbedIds, outingTag, t]
+    [results, origin, isClimbed, tagsFor, t]
   );
 
   return (
@@ -545,6 +623,36 @@ export default function Cragseeker({
               ))}
             </select>
           </label>
+
+          <fieldset className="seeker-facing seeker-sources">
+            <legend className="seeker-field-label">{t.databases}</legend>
+            {SEEKER_SOURCES.map((source) => {
+              const handled = sourceHandles(source, activity);
+              return (
+                <label
+                  key={source}
+                  className={`seeker-chip${handled ? "" : " seeker-chip-off"}`}
+                  title={handled ? t.sourceHints[source] : t.sourceUnavailable}
+                >
+                  <input
+                    type="checkbox"
+                    checked={handled && activeSources.includes(source)}
+                    disabled={!handled}
+                    onChange={(e) =>
+                      setSources((prev) =>
+                        e.target.checked
+                          ? [...prev.filter((s) => s !== source), source]
+                          : // Unticking the last one would search nothing, so the
+                            // other database takes over rather than leaving a blank page.
+                            prev.filter((s) => s !== source)
+                      )
+                    }
+                  />
+                  <span>{t.sources[source]}</span>
+                </label>
+              );
+            })}
+          </fieldset>
 
           {showOutdoorType && (
             <fieldset className="seeker-facing seeker-styles">
@@ -773,6 +881,9 @@ export default function Cragseeker({
           <span>{countLabel}</span>
         )}
         {!centre && <span className="seeker-note">{t.noLocation}</span>}
+        {!centre && activeSources.includes("openbeta") && (
+          <span className="seeker-note">{t.openbetaNeedsPin}</span>
+        )}
         {wishlists.length === 0 && <span className="seeker-note">{t.loginToSave}</span>}
       </div>
 
@@ -780,12 +891,13 @@ export default function Cragseeker({
 
       <ul className="seeker-results">
         {results.map((route) => {
-          const state = saved[route.id] ?? "idle";
+          const state = saved[route.key] ?? "idle";
+          const parking = route.source === "c2c" ? access[Number(route.id)] : undefined;
           return (
             <li
-              key={route.id}
-              className={`seeker-result${activeId === route.id ? " active" : ""}`}
-              onMouseEnter={() => setActiveId(route.id)}
+              key={route.key}
+              className={`seeker-result${activeId === route.key ? " active" : ""}`}
+              onMouseEnter={() => setActiveId(route.key)}
             >
               <div className="seeker-result-head">
                 <a href={route.url} target="_blank" rel="noopener noreferrer">
@@ -808,28 +920,17 @@ export default function Cragseeker({
                 )}
               </div>
               {route.area && <p className="seeker-area">{route.area}</p>}
-              {climbedIds.has(route.id) && (
+              {isClimbed(route) && (
                 <p className="seeker-climbed" title={t.climbedHint}>
                   ✓ {t.climbed}
                 </p>
               )}
               <p className="seeker-tags">
-                {[
-                  route.outdoor_type ? t.outdoorTypes[route.outdoor_type] : null,
-                  route.grade,
-                  route.required_grade ? `${t.mandatoryTag} ${route.required_grade}` : null,
-                  route.rating,
-                  route.equipment,
-                  route.height_m ? `${route.height_m} m` : null,
-                  route.orientation,
-                  outingTag(route.id),
-                ]
-                  .filter(Boolean)
-                  .map((tag) => (
-                    <span key={tag as string} className="seeker-tag">
-                      {tag}
-                    </span>
-                  ))}
+                {tagsFor(route).map((tag) => (
+                  <span key={tag} className="seeker-tag">
+                    {tag}
+                  </span>
+                ))}
               </p>
               {route.summary && (
                 <p className="seeker-summary">
@@ -838,9 +939,9 @@ export default function Cragseeker({
                     : route.summary}
                 </p>
               )}
-              {access[route.id] && (
+              {parking && (
                 <ParkingLink
-                  parking={access[route.id]}
+                  parking={parking}
                   label={t.parking}
                   openIn={t.openIn}
                   hint={t.parkingHint}
@@ -848,7 +949,7 @@ export default function Cragseeker({
               )}
               <div className="seeker-actions">
                 <a href={route.url} target="_blank" rel="noopener noreferrer">
-                  {t.openOnC2c}
+                  {t.openOn[route.source]}
                 </a>
                 {wishlists.length > 0 && (
                   /* Which list, then add — the pair sits together at the foot

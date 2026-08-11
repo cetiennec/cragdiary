@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import "leaflet/dist/leaflet.css";
 
 export type SeekerPoint = {
-  id: number;
+  /** Unique across databases — "c2c:1234", "openbeta:<uuid>". */
+  id: string;
   title: string;
   lat: number;
   lon: number;
@@ -16,8 +17,9 @@ export type SeekerPoint = {
   distance: string | null;
   climbed: string | null;
   summary: string | null;
-  /** "Camptocamp ↗" — the card carries a real link, so it must be a popup. */
-  c2cLabel: string;
+  /** "Camptocamp ↗" / "OpenBeta ↗" — the card carries a real link, so it
+      must be a popup. */
+  sourceLabel: string;
 };
 
 const TOOLTIP_SUMMARY_CHARS = 120;
@@ -65,7 +67,7 @@ function tooltipCard(point: SeekerPoint): HTMLElement {
   link.href = point.url;
   link.target = "_blank";
   link.rel = "noopener noreferrer";
-  link.textContent = point.c2cLabel;
+  link.textContent = point.sourceLabel;
   card.append(link);
 
   if (point.summary) {
@@ -102,9 +104,9 @@ export default function SeekerMap({
   centre: { lat: number; lon: number } | null;
   radiusKm: number;
   points: SeekerPoint[];
-  activeId: number | null;
+  activeId: string | null;
   onPick: (lat: number, lon: number) => void;
-  onSelect: (id: number) => void;
+  onSelect: (id: string) => void;
   hint: string;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -113,7 +115,7 @@ export default function SeekerMap({
   // second map, the layers are redrawn onto it and not onto the discarded one.
   const [map, setMap] = useState<import("leaflet").Map | null>(null);
   const [L, setL] = useState<Leaflet | null>(null);
-  const markerById = useRef(new Map<number, import("leaflet").CircleMarker>());
+  const markerById = useRef(new Map<string, import("leaflet").CircleMarker>());
   // Closing is delayed by a moment so the pointer can travel from the marker to
   // the card without it vanishing on the way — the card holds a link.
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -197,7 +199,7 @@ export default function SeekerMap({
     if (!map || !L) return;
 
     const layer = L.layerGroup().addTo(map);
-    const byId = new Map<number, import("leaflet").CircleMarker>();
+    const byId = new Map<string, import("leaflet").CircleMarker>();
 
     for (const point of points) {
       const marker = L.circleMarker([point.lat, point.lon], {

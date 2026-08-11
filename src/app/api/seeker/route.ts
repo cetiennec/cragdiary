@@ -1,3 +1,8 @@
+// Cragseeker's search endpoint. It fans the one set of filters out to every
+// database the user ticked, then merges the answers into a single list —
+// nearest first — so the page below doesn't have to know how many upstreams
+// there were. Camptocamp covers the Alps, OpenBeta the United States.
+
 import { limitPublicApi } from "@/lib/rate-limit";
 import {
   bboxAround,
@@ -13,8 +18,16 @@ import {
   type C2cRangeKey,
   type C2cRouteFilters,
 } from "@/lib/c2c";
+import { searchOpenBeta } from "@/lib/seeker/openbeta";
+import {
+  DEFAULT_SOURCES,
+  fromC2c,
+  parseSources,
+  sourceHandles,
+  type SeekerResult,
+} from "@/lib/seeker/types";
 
-export type { C2cRouteResult } from "@/lib/c2c";
+export type { SeekerResult } from "@/lib/seeker/types";
 
 const MAX_RADIUS_KM = 300;
 const PAGE_SIZE = 30;
@@ -49,7 +62,7 @@ function coord(value: string | null, limit: number): number | null {
 }
 
 export async function GET(req: Request) {
-  const limited = await limitPublicApi("c2c-routes");
+  const limited = await limitPublicApi("seeker");
   if (limited) return limited;
 
   const { searchParams: sp } = new URL(req.url);
@@ -60,10 +73,20 @@ export async function GET(req: Request) {
     ? (act as C2cActivity)
     : "rock_climbing";
 
+  // A source that can't answer for this activity is dropped rather than asked:
+  // OpenBeta knows nothing about ski touring, and a stale link may still say so.
+  // Dropping every source would answer an honest question with an empty page,
+  // so what remains is whichever default *can* hear it.
+  const asked = parseSources(sp.get("src")).filter((s) => sourceHandles(s, activity));
+  const sources = asked.length ? asked : DEFAULT_SOURCES.filter((s) => sourceHandles(s, activity));
+
   const lat = coord(sp.get("lat"), 90);
   const lon = coord(sp.get("lon"), 180);
   const radius = Math.min(MAX_RADIUS_KM, Math.max(1, Number(sp.get("radius")) || 50));
   const near = lat != null && lon != null ? { lat, lon, radiusKm: radius } : undefined;
+
+  const offset = Math.max(0, Math.min(5000, parseInt(sp.get("offset") ?? "0", 10) || 0));
+  const q = (sp.get("q") ?? "").trim().slice(0, 80) || undefined;
 
   // Only the ranges that mean something for this activity are honoured, so a
   // stale link can't ask for a free-climbing grade on a hiking route.
@@ -85,7 +108,7 @@ export async function GET(req: Request) {
 
   const filters: C2cRouteFilters = {
     activity,
-    q: (sp.get("q") ?? "").trim().slice(0, 80) || undefined,
+    q,
     bbox: near ? bboxAround(near.lat, near.lon, radius) : undefined,
     ranges,
     heightM: metres(sp.get("hmin"), sp.get("hmax")),
@@ -96,18 +119,45 @@ export async function GET(req: Request) {
     orientations,
     outdoorType,
     limit: PAGE_SIZE,
-    offset: Math.max(0, Math.min(5000, parseInt(sp.get("offset") ?? "0", 10) || 0)),
+    offset,
   };
 
-  const { boxTotal, results } = await searchRoutes(filters, lang, near);
+  // Both upstreams at once: one slow database shouldn't hold up the other.
+  const [c2c, openbeta] = await Promise.all([
+    sources.includes("c2c")
+      ? searchRoutes(filters, lang, near)
+      : Promise.resolve({ boxTotal: 0, results: [] }),
+    // OpenBeta's only geographic question is "what is near this point", so
+    // without a pin it has nothing to answer — a name search alone can't reach
+    // it. The UI says so rather than quietly returning less than it looks like.
+    sources.includes("openbeta") && near
+      ? searchOpenBeta(near, { q, outdoorType })
+      : Promise.resolve([] as SeekerResult[]),
+  ]);
+
+  // Each source is paged by the same offset, and the page is sorted within
+  // itself — as it always was with c2c alone, whose own pages arrive in
+  // upstream order. A page is therefore nearest-first, but page 2 restarts the
+  // distance ladder; "load more" appends, it doesn't re-sort what's on screen.
+  const page = [
+    ...c2c.results.map(fromC2c),
+    ...openbeta.slice(offset, offset + PAGE_SIZE),
+  ].sort((a, b) => (a.distance_km ?? Infinity) - (b.distance_km ?? Infinity));
+
+  // c2c counts its bounding box; inside a circle only ~π/4 of those survive, so
+  // its share is an estimate until every page is in. OpenBeta answered with the
+  // whole neighbourhood at once, so its share is already exact.
+  const c2cEstimate = near ? Math.round(c2c.boxTotal * CIRCLE_OF_BOX) : c2c.boxTotal;
+  const more = offset + PAGE_SIZE < Math.max(c2c.boxTotal, openbeta.length);
 
   return Response.json(
-    // `boxTotal` counts c2c's bounding box; inside a circle only ~π/4 of those
-    // survive, so the client shows "about N" until it has loaded every page.
     {
-      boxTotal,
-      estimatedTotal: near ? Math.round(boxTotal * CIRCLE_OF_BOX) : boxTotal,
-      results,
+      results: page,
+      estimatedTotal: c2cEstimate + openbeta.length,
+      /** Whether any source still has pages left — what "load more" listens to. */
+      more,
+      /** Only c2c's share is a guess; with it exhausted the count is exact. */
+      exact: !more,
       radius,
     },
     { headers: { "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400" } }
