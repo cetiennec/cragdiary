@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import "leaflet/dist/leaflet.css";
 import type { SeekerSource } from "@/lib/seeker/types";
+import type { MountainHut } from "@/lib/seeker/refuges";
 
 export type SeekerPoint = {
   /** Unique across databases — "c2c:1234", "openbeta:<uuid>". */
@@ -86,6 +87,44 @@ function tooltipCard(point: SeekerPoint): HTMLElement {
   return card;
 }
 
+// Same rule as the result cards: built from DOM nodes, because the names and
+// altitudes come from refuges.info and `textContent` cannot become markup.
+function hutCard(
+  hut: MountainHut,
+  labels: { beds: string; noBeds: string; open: string }
+): HTMLElement {
+  const card = document.createElement("div");
+  card.className = "seeker-tip";
+
+  const title = document.createElement("strong");
+  title.className = "seeker-tip-title";
+  title.textContent = hut.name;
+  card.append(title);
+
+  const facts = [
+    hut.altitude_m != null ? `${hut.altitude_m} m` : null,
+    // Zero is an answer — an unguarded cabin with nowhere to sleep is worth
+    // knowing before walking to it.
+    hut.beds != null ? (hut.beds > 0 ? `${hut.beds} ${labels.beds}` : labels.noBeds) : null,
+  ].filter(Boolean);
+  if (facts.length) {
+    const meta = document.createElement("span");
+    meta.className = "seeker-tip-meta";
+    meta.textContent = facts.join(" · ");
+    card.append(meta);
+  }
+
+  const link = document.createElement("a");
+  link.className = "seeker-tip-c2c";
+  link.href = hut.url;
+  link.target = "_blank";
+  link.rel = "noopener noreferrer";
+  link.textContent = labels.open;
+  card.append(link);
+
+  return card;
+}
+
 type Leaflet = typeof import("leaflet");
 
 // The Alps — a sensible "you are somewhere in climbing country" opening view.
@@ -99,6 +138,11 @@ export const SOURCE_COLORS: Record<SeekerSource, string> = {
   c2c: "#4a7fa5",
   openbeta: "#2f8f6f",
 };
+
+// Shelters are not results and must not read as one: their own colour, and a
+// square instead of a circle, so the difference survives a colour-blind eye and
+// a black-and-white print alike.
+export const HUT_COLOR = "#7d5ba6";
 
 // Selection is shown by size and a dark rim rather than a colour of its own:
 // the fill has a meaning now, and a hovered marker must not look like it comes
@@ -114,6 +158,8 @@ export default function SeekerMap({
   onSelect,
   hint,
   legend,
+  huts,
+  hutLabels,
 }: {
   centre: { lat: number; lon: number } | null;
   radiusKm: number;
@@ -124,6 +170,10 @@ export default function SeekerMap({
   hint: string;
   /** The databases being searched, in the order they should be listed. */
   legend: { source: SeekerSource; label: string }[];
+  /** Shelters to draw beside the results, empty when the layer is off. */
+  huts: MountainHut[];
+  /** How to label the shelters in the legend and their popups. */
+  hutLabels: { legend: string; beds: string; noBeds: string; open: string };
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   // The map lives in state, not a ref: every drawing effect below depends on
@@ -275,6 +325,38 @@ export default function SeekerMap({
     };
   }, [map, L, points]);
 
+  // Shelters, on their own layer so switching them off never disturbs the
+  // results underneath.
+  useEffect(() => {
+    if (!map || !L || huts.length === 0) return;
+
+    const layer = L.layerGroup().addTo(map);
+    for (const hut of huts) {
+      L.marker([hut.lat, hut.lon], {
+        icon: L.divIcon({
+          className: "seeker-hut-pin",
+          html: "",
+          iconSize: [11, 11],
+          iconAnchor: [5, 5],
+        }),
+        // Results come first: a shelter must never sit over a route marker.
+        zIndexOffset: -500,
+        keyboard: false,
+      })
+        .bindPopup(hutCard(hut, hutLabels), {
+          className: "seeker-tip-wrap",
+          closeButton: false,
+          maxWidth: 240,
+          offset: [0, -4],
+        })
+        .addTo(layer);
+    }
+
+    return () => {
+      layer.remove();
+    };
+  }, [map, L, huts, hutLabels]);
+
   // Selecting a result — from either side — makes its marker stand out, while
   // keeping the fill that says which database it came from.
   useEffect(() => {
@@ -297,7 +379,7 @@ export default function SeekerMap({
       <div ref={containerRef} className="seeker-map" />
       <div className="seeker-map-foot">
         <p className="seeker-map-hint">{hint}</p>
-        {legend.length > 0 && (
+        {(legend.length > 0 || huts.length > 0) && (
           <ul className="seeker-legend">
             {legend.map(({ source, label }) => (
               <li key={source}>
@@ -309,6 +391,16 @@ export default function SeekerMap({
                 {label}
               </li>
             ))}
+            {huts.length > 0 && (
+              <li>
+                <span
+                  className="seeker-legend-dot seeker-legend-square"
+                  style={{ background: HUT_COLOR }}
+                  aria-hidden
+                />
+                {hutLabels.legend}
+              </li>
+            )}
           </ul>
         )}
       </div>

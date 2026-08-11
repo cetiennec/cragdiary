@@ -4411,6 +4411,31 @@ a {
   color: #ffffff;
 }
 
+/* Shelters on the map: a square, where every result is a circle. Colour alone
+   would not survive a colour-blind eye, and the two mean quite different
+   things — one you climb, the other you sleep in. */
+.seeker-hut-pin {
+  width: 9px;
+  height: 9px;
+  background: #7d5ba6;
+  border: 1.5px solid #ffffff;
+  border-radius: 2px;
+  box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.35);
+  /* A valley holds far more shelters than routes — 172 against 29 around
+     Chamonix — so they stay deliberately quieter than the results they
+     surround, and darken under the pointer when actually wanted. */
+  opacity: 0.75;
+  transition: opacity 0.12s ease;
+}
+
+.seeker-hut-pin:hover {
+  opacity: 1;
+}
+
+.seeker-legend-square {
+  border-radius: 2px;
+}
+
 /* What is inside an OpenBeta crag, once someone opens it. The list stays
    plainly subordinate to the card: it explains the result, it is not a second
    set of results. */

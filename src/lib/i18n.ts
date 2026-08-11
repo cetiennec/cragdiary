@@ -528,9 +528,10 @@ const en = {
         { name: "Neon — privacy", url: "https://neon.com/privacy-policy" },
         { name: "Resend — privacy", url: "https://resend.com/legal/privacy-policy" },
       ] },
-      { name: "Third-party searches", text: "Route and place searches — in the editor and in Cragseeker — are relayed to Camptocamp, OpenBeta and Photon/OpenStreetMap (your search text, and for Cragseeker the map area you are looking at). Which databases Cragseeker asks is yours to choose, next to the activity. Map tiles load from OpenStreetMap. These see the search, never your account.", links: [
+      { name: "Third-party searches", text: "Route and place searches — in the editor and in Cragseeker — are relayed to Camptocamp, OpenBeta and Photon/OpenStreetMap (your search text, and for Cragseeker the map area you are looking at). Which databases Cragseeker asks is yours to choose, next to the activity. Switching on the shelters layer sends that same map area to refuges.info. Map tiles load from OpenStreetMap. These see the search, never your account.", links: [
         { name: "Camptocamp — privacy", url: "https://www.camptocamp.org/privacy_policy" },
         { name: "OpenBeta — about", url: "https://openbeta.io/about" },
+        { name: "refuges.info", url: "https://www.refuges.info/" },
         { name: "OpenStreetMap — privacy", url: "https://osmfoundation.org/wiki/Privacy_Policy" },
       ] },
       { name: "Visibility", text: "You choose per entry (public, link-only, private) and per profile (public, link-only, private) what others can see." },
@@ -557,6 +558,11 @@ const en = {
         name: "OpenBeta",
         url: "https://openbeta.io",
         text: "Cragseeker's United States crags — their names, how many climbs they hold and of what kind — come from the OpenBeta community database, released into the public domain (CC0).",
+      },
+      {
+        name: "refuges.info",
+        url: "https://www.refuges.info",
+        text: "Guarded refuges, unguarded cabins and gîtes on the Cragseeker map come from refuges.info, a community inventory of mountain shelters, licensed CC BY-SA.",
       },
       {
         name: "OpenStreetMap",
@@ -672,6 +678,15 @@ const en = {
     loadMore: "Load more",
     away: "{km} km away",
     parking: "Parking",
+    // refuges.info's shelters, a map layer beside the results rather than
+    // results of their own.
+    hutsOn: "Show shelters",
+    hutsOff: "Hide shelters",
+    hutsHint: "Guarded refuges, unguarded cabins and gîtes around the pin, from refuges.info.",
+    hutsLegend: "Refuges & cabins",
+    hutBeds: "places",
+    hutNoBeds: "nowhere to sleep",
+    hutOpen: "refuges.info ↗",
     openIn: "Open in…",
     climbed: "You've climbed this",
     climbedHint: "This route already appears in your journal",
@@ -1257,9 +1272,10 @@ const fr: Dict = {
         { name: "Neon — confidentialité", url: "https://neon.com/privacy-policy" },
         { name: "Resend — confidentialité", url: "https://resend.com/legal/privacy-policy" },
       ] },
-      { name: "Recherches externes", text: "Les recherches de voies et de lieux — dans l'éditeur et dans Cragseeker — sont relayées à Camptocamp, OpenBeta et Photon/OpenStreetMap (le texte cherché, et pour Cragseeker la zone de carte consultée). Les bases interrogées par Cragseeker se choisissent à côté de l'activité. Les tuiles de carte viennent d'OpenStreetMap. Ces services voient la recherche, jamais votre compte.", links: [
+      { name: "Recherches externes", text: "Les recherches de voies et de lieux — dans l'éditeur et dans Cragseeker — sont relayées à Camptocamp, OpenBeta et Photon/OpenStreetMap (le texte cherché, et pour Cragseeker la zone de carte consultée). Les bases interrogées par Cragseeker se choisissent à côté de l'activité. Activer la couche des refuges envoie cette même zone à refuges.info. Les tuiles de carte viennent d'OpenStreetMap. Ces services voient la recherche, jamais votre compte.", links: [
         { name: "Camptocamp — confidentialité", url: "https://www.camptocamp.org/privacy_policy" },
         { name: "OpenBeta — à propos", url: "https://openbeta.io/about" },
+        { name: "refuges.info", url: "https://www.refuges.info/" },
         { name: "OpenStreetMap — confidentialité", url: "https://osmfoundation.org/wiki/Privacy_Policy" },
       ] },
       { name: "Visibilité", text: "Vous choisissez pour chaque entrée (publique, par lien, privée) et pour votre profil (public, par lien, privé) ce que les autres peuvent voir." },
@@ -1286,6 +1302,11 @@ const fr: Dict = {
         name: "OpenBeta",
         url: "https://openbeta.io",
         text: "Les falaises états-uniennes de Cragseeker — leur nom, le nombre de voies qu'elles abritent et de quel type — proviennent de la base communautaire OpenBeta, versée au domaine public (CC0).",
+      },
+      {
+        name: "refuges.info",
+        url: "https://www.refuges.info",
+        text: "Les refuges gardés, cabanes non gardées et gîtes affichés sur la carte de Cragseeker proviennent de refuges.info, inventaire communautaire des abris de montagne, sous licence CC BY-SA.",
       },
       {
         name: "OpenStreetMap",
@@ -1400,6 +1421,15 @@ const fr: Dict = {
     loadMore: "Voir plus",
     away: "à {km} km",
     parking: "Parking",
+    // Les points de refuges.info : une couche sur la carte à côté des
+    // résultats, et non des résultats à part entière.
+    hutsOn: "Afficher les refuges",
+    hutsOff: "Masquer les refuges",
+    hutsHint: "Refuges gardés, cabanes non gardées et gîtes autour du point, d'après refuges.info.",
+    hutsLegend: "Refuges & cabanes",
+    hutBeds: "places",
+    hutNoBeds: "aucun couchage",
+    hutOpen: "refuges.info ↗",
     openIn: "Ouvrir dans…",
     climbed: "Déjà grimpée",
     climbedHint: "Cette voie figure déjà dans votre carnet",

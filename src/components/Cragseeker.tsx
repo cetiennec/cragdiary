@@ -8,6 +8,7 @@ import { saveWishFromSearch } from "@/app/actions";
 import { drivingMinutes, formatDuration } from "@/lib/travel";
 import type { SeekerResult } from "@/app/api/seeker/route";
 import type { OpenBetaClimb } from "@/app/api/seeker/climbs/route";
+import type { MountainHut } from "@/app/api/seeker/huts/route";
 import type { C2cAccessPoint, C2cRouteDetail } from "@/app/api/c2c/access/route";
 import type { GeoSuggestion } from "@/app/api/geo/search/route";
 import {
@@ -210,6 +211,12 @@ export default function Cragseeker({
   const [origin, setOrigin] = useState<{ lat: number; lon: number } | null>(null);
   const [originPending, setOriginPending] = useState(false);
   const [copied, setCopied] = useState(false);
+  // Mountain shelters, a map layer rather than a source of results: they answer
+  // "where could I sleep", not "what could I climb". Off unless asked for.
+  const [showHuts, setShowHuts] = useState(params.huts === "1");
+  // Stamped with the circle they were fetched for, so moving the pin can never
+  // leave the previous neighbourhood's shelters on the map.
+  const [huts, setHuts] = useState<{ at: string; list: MountainHut[] } | null>(null);
   // Confirms the add, which otherwise happens at the foot of a card the eye
   // may already have left.
   const [toast, setToast] = useState<{ text: string; tone: "ok" | "error" } | null>(null);
@@ -253,6 +260,7 @@ export default function Cragseeker({
     if (elevation.max) sp.set("emax", elevation.max);
     if (facing.length) sp.set("fac", facing.join(","));
     if (outdoorType && showOutdoorType) sp.set("crtyp", outdoorType);
+    if (showHuts) sp.set("huts", "1");
     return sp.toString();
   }, [
     activity,
@@ -267,6 +275,7 @@ export default function Cragseeker({
     facing,
     outdoorType,
     showOutdoorType,
+    showHuts,
   ]);
 
   const query = `${search}&lang=${locale}`;
@@ -372,6 +381,35 @@ export default function Cragseeker({
     const timer = setTimeout(() => run(0), 350);
     return () => clearTimeout(timer);
   }, [run]);
+
+  // Shelters follow the pin, not the filters: a grade range says nothing about
+  // where you can sleep, so this doesn't re-run when the filters change.
+  const hutCircle = centre ? `${centre.lat.toFixed(5)},${centre.lon.toFixed(5)},${radius}` : null;
+
+  useEffect(() => {
+    if (!showHuts || !hutCircle) return;
+    let cancelled = false;
+    (async () => {
+      const [lat, lon, km] = hutCircle.split(",");
+      try {
+        const res = await fetch(`/api/seeker/huts?lat=${lat}&lon=${lon}&radius=${km}`);
+        const data = (await res.json()) as { huts: MountainHut[] };
+        if (!cancelled) setHuts({ at: hutCircle, list: data.huts });
+      } catch {
+        // A missing shelter layer is a far smaller loss than a broken search.
+        if (!cancelled) setHuts({ at: hutCircle, list: [] });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [showHuts, hutCircle]);
+
+  // Only shelters belonging to the circle on screen, and only while asked for.
+  const visibleHuts = useMemo(
+    () => (showHuts && hutCircle && huts?.at === hutCircle ? huts.list : []),
+    [showHuts, hutCircle, huts]
+  );
 
   useEffect(() => {
     if (!placeArmed.current || placeInput.trim().length < 3) {
@@ -597,6 +635,18 @@ export default function Cragseeker({
   const isClimbed = useCallback(
     (r: SeekerResult) => r.source === "c2c" && climbedIds.has(Number(r.id)),
     [climbedIds]
+  );
+
+  // Held steady across renders: the map rebuilds its shelter layer whenever
+  // these change, and a fresh object every render would rebuild it constantly.
+  const hutLabels = useMemo(
+    () => ({
+      legend: t.hutsLegend,
+      beds: t.hutBeds,
+      noBeds: t.hutNoBeds,
+      open: t.hutOpen,
+    }),
+    [t]
   );
 
   // A marker carries the same overview as its list card, so hovering a point on
@@ -885,6 +935,15 @@ export default function Cragseeker({
               >
                 {originPending ? t.locating : origin ? `⏱ ${t.travelOff}` : `⏱ ${t.travelTime}`}
               </button>
+              <button
+                type="button"
+                className={`seeker-locate${showHuts ? " on" : ""}`}
+                onClick={() => setShowHuts((on) => !on)}
+                title={t.hutsHint}
+                disabled={!centre}
+              >
+                {showHuts ? `🏠 ${t.hutsOff}` : `🏠 ${t.hutsOn}`}
+              </button>
             </div>
           </div>
 
@@ -911,6 +970,8 @@ export default function Cragseeker({
         // Only the databases actually being searched belong in the legend —
         // a colour with nothing on the map to match it explains nothing.
         legend={activeSources.map((source) => ({ source, label: t.sources[source] }))}
+        huts={visibleHuts}
+        hutLabels={hutLabels}
       />
 
       <div className="seeker-status">
