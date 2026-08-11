@@ -1345,6 +1345,22 @@ export async function removeFollower(formData: FormData): Promise<void> {
   revalidatePath("/");
 }
 
+// Link a camptocamp account from wherever it was first typed. The profile
+// settings hold the same field; this exists so pasting a profile into the
+// importer isn't a dead end for someone who hasn't linked one yet.
+export async function rememberC2cProfile(formData: FormData): Promise<{ ok: boolean }> {
+  const user = await currentUser();
+  if (!user) return { ok: false };
+
+  const id = parseProfileId(String(formData.get("c2c_profile") ?? ""));
+  if (id === null) return { ok: false };
+
+  await pool.query("update users set c2c_profile_id = $1 where id = $2", [id, user.id]);
+  revalidatePath(`/u/${user.username}`);
+  revalidatePath("/import");
+  return { ok: true };
+}
+
 // Turning approval on doesn't retract the followers you already have — it only
 // decides what happens to the next one.
 export async function setFollowApproval(formData: FormData): Promise<void> {

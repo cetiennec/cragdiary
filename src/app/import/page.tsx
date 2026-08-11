@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
+import { getUserByUsername } from "@/lib/queries";
 import { getDict } from "@/lib/i18n";
 import ImportTool from "@/components/ImportTool";
 import C2cAccountImport from "@/components/C2cAccountImport";
@@ -14,7 +15,10 @@ export default async function ImportPage() {
     redirect("/login");
   }
 
-  const { locale, t } = await getDict();
+  const [{ locale, t }, profile] = await Promise.all([
+    getDict(),
+    getUserByUsername(user.username),
+  ]);
   return (
     <div className="page-container">
       <h1 className="page-title">{t.importer.title}</h1>
@@ -22,10 +26,14 @@ export default async function ImportPage() {
       <C2cAccountImport
         locale={locale}
         username={user.username}
+        linkedProfileId={profile?.c2c_profile_id ?? null}
         t={{
           c2cAccountTitle: t.importer.c2cAccountTitle,
           c2cAccountHint: t.importer.c2cAccountHint,
           c2cAccountPlaceholder: t.importer.c2cAccountPlaceholder,
+          c2cAccountLinked: t.importer.c2cAccountLinked,
+          c2cAccountRemember: t.importer.c2cAccountRemember,
+          c2cAccountRemembered: t.importer.c2cAccountRemembered,
           c2cAccountLoad: t.importer.c2cAccountLoad,
           c2cAccountLoading: t.importer.c2cAccountLoading,
           c2cAccountWarning: t.importer.c2cAccountWarning,

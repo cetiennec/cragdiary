@@ -457,6 +457,10 @@ const en = {
     c2cAccountTitle: "🏔️ A camptocamp account",
     c2cAccountHint: "Paste your camptocamp profile link to list your outings, then pick which to import.",
     c2cAccountPlaceholder: "https://www.camptocamp.org/profiles/…",
+    c2cAccountLinked:
+      "Your linked account, ready to go — replace the link to import from another one instead.",
+    c2cAccountRemember: "Remember this account on my profile",
+    c2cAccountRemembered: "Linked — the ⟳ C2C button on your profile syncs from it now.",
     c2cAccountLoad: "List outings",
     c2cAccountLoading: "Loading…",
     c2cAccountWarning:
@@ -1127,6 +1131,10 @@ const fr: Dict = {
     c2cAccountTitle: "🏔️ Un compte camptocamp",
     c2cAccountHint: "Collez le lien de votre profil camptocamp pour lister vos sorties, puis choisissez celles à importer.",
     c2cAccountPlaceholder: "https://www.camptocamp.org/profiles/…",
+    c2cAccountLinked:
+      "Votre compte lié, prêt à l'emploi — remplacez le lien pour importer depuis un autre compte.",
+    c2cAccountRemember: "Retenir ce compte sur mon profil",
+    c2cAccountRemembered: "Compte lié — le bouton ⟳ C2C de votre profil s'en sert désormais.",
     c2cAccountLoad: "Lister les sorties",
     c2cAccountLoading: "Chargement…",
     c2cAccountWarning:

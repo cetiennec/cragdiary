@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { importOneC2cOuting, refreshAfterImport } from "@/app/actions";
+import { importOneC2cOuting, refreshAfterImport, rememberC2cProfile } from "@/app/actions";
 import { runPool } from "@/lib/pool";
 import ImportOptionsDialog, {
   type ImportOptionsLabels,
@@ -25,6 +25,9 @@ type Labels = {
   c2cAccountTitle: string;
   c2cAccountHint: string;
   c2cAccountPlaceholder: string;
+  c2cAccountLinked: string;
+  c2cAccountRemember: string;
+  c2cAccountRemembered: string;
   c2cAccountLoad: string;
   c2cAccountLoading: string;
   c2cAccountWarning: string;
@@ -43,14 +46,24 @@ type Labels = {
 export default function C2cAccountImport({
   locale,
   username,
+  linkedProfileId,
   t,
 }: {
   locale: Locale;
   username: string;
+  /** The camptocamp account on the profile, when there is one. */
+  linkedProfileId: number | null;
   t: Labels;
 }) {
   const router = useRouter();
-  const [url, setUrl] = useState("");
+  // Prefilled with the linked account, and still editable: importing someone
+  // else's public account — a partner's, a club's — is a fair thing to want.
+  const [url, setUrl] = useState(
+    linkedProfileId ? `https://www.camptocamp.org/profiles/${linkedProfileId}` : ""
+  );
+  // Offered once a list has loaded from an account we don't know yet, so that
+  // pasting a profile here isn't a dead end.
+  const [remembered, setRemembered] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [outings, setOutings] = useState<C2cOutingSummary[] | null>(null);
@@ -75,6 +88,7 @@ export default function C2cAccountImport({
       if (!res.ok) throw new Error("load");
       const { outings: list } = (await res.json()) as { outings: C2cOutingSummary[] };
       setOutings(list);
+      setRemembered(false);
       // Pre-select everything except outings already imported (duplicates).
       setSelected(new Set(list.filter((o) => !o.imported).map((o) => o.id)));
     } catch {
@@ -163,6 +177,27 @@ export default function C2cAccountImport({
           {loading ? t.c2cAccountLoading : t.c2cAccountLoad}
         </button>
       </div>
+
+      {linkedProfileId ? (
+        <p className="form-hint">{t.c2cAccountLinked}</p>
+      ) : (
+        outings !== null &&
+        !remembered && (
+          <form
+            className="c2c-account-remember"
+            action={async (formData: FormData) => {
+              const res = await rememberC2cProfile(formData);
+              if (res.ok) setRemembered(true);
+            }}
+          >
+            <input type="hidden" name="c2c_profile" value={url} />
+            <button type="submit" className="link-btn">
+              {t.c2cAccountRemember}
+            </button>
+          </form>
+        )
+      )}
+      {remembered && <p className="form-hint">{t.c2cAccountRemembered}</p>}
 
       <p className="c2c-import-note">⚠️ {t.c2cAccountWarning}</p>
       {error && <p className="form-error">{error}</p>}
