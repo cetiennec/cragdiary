@@ -4411,6 +4411,55 @@ a {
   color: #ffffff;
 }
 
+/* What is inside an OpenBeta crag, once someone opens it. The list stays
+   plainly subordinate to the card: it explains the result, it is not a second
+   set of results. */
+.seeker-climbs {
+  margin: 0.5rem 0 0;
+}
+
+.seeker-climbs-toggle {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.seeker-climbs-toggle:hover {
+  color: var(--accent);
+}
+
+.seeker-climb-list {
+  list-style: none;
+  margin: 0.4rem 0 0;
+  padding: 0 0 0 0.7rem;
+  border-left: 2px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+  /* A big crag runs to hundreds of climbs; the card must not become the page. */
+  max-height: 15rem;
+  overflow-y: auto;
+}
+
+.seeker-climb-list li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.6rem;
+  font-size: 0.82rem;
+}
+
+.seeker-climb-meta {
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  text-align: right;
+  white-space: nowrap;
+}
+
 /* A database that can't answer for the chosen activity stays visible but
    plainly out of reach, rather than disappearing and leaving the row
    rearranging itself every time the activity changes. */

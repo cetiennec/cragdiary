@@ -7,6 +7,7 @@ import Toast from "./Toast";
 import { saveWishFromSearch } from "@/app/actions";
 import { drivingMinutes, formatDuration } from "@/lib/travel";
 import type { SeekerResult } from "@/app/api/seeker/route";
+import type { OpenBetaClimb } from "@/app/api/seeker/climbs/route";
 import type { C2cAccessPoint, C2cRouteDetail } from "@/app/api/c2c/access/route";
 import type { GeoSuggestion } from "@/app/api/geo/search/route";
 import {
@@ -220,6 +221,10 @@ export default function Cragseeker({
   // Which routes have been asked about — `access` alone can't say, since a
   // route with no parking never lands there.
   const asked = useRef(new Set<number>());
+  // The climbs inside an OpenBeta crag, fetched only for a crag someone opens:
+  // the search answers with crags, and going inside costs one request each.
+  const [openCrags, setOpenCrags] = useState<Set<string>>(new Set());
+  const [climbs, setClimbs] = useState<Record<string, OpenBetaClimb[] | "loading" | "error">>({});
 
   // Place autocomplete
   const [placeInput, setPlaceInput] = useState(params.place?.slice(0, 80) ?? "");
@@ -339,6 +344,28 @@ export default function Cragseeker({
       cancelled = true;
     };
   }, [results, locale]);
+
+  async function toggleCrag(route: SeekerResult) {
+    const open = openCrags.has(route.key);
+    setOpenCrags((prev) => {
+      const next = new Set(prev);
+      if (open) next.delete(route.key);
+      else next.add(route.key);
+      return next;
+    });
+    // Asked once and kept: a crag's climbs don't change while the page is open,
+    // and closing then reopening a card shouldn't cost another request.
+    if (open || climbs[route.key]) return;
+
+    setClimbs((prev) => ({ ...prev, [route.key]: "loading" }));
+    try {
+      const res = await fetch(`/api/seeker/climbs?crag=${encodeURIComponent(route.id)}`);
+      const data = (await res.json()) as { climbs: OpenBetaClimb[] };
+      setClimbs((prev) => ({ ...prev, [route.key]: data.climbs }));
+    } catch {
+      setClimbs((prev) => ({ ...prev, [route.key]: "error" }));
+    }
+  }
 
   // Filters apply themselves, the way the feed's filter bar does.
   useEffect(() => {
@@ -543,6 +570,10 @@ export default function Cragseeker({
               ? t.climbOne
               : fill(t.climbCount, "n", r.climb_count)
             : null,
+          // "5.6 → 5.12b", and a second chip when the crag has boulders too.
+          ...r.grade_spans.map((span) =>
+            span.min === span.max ? span.min : `${span.min} → ${span.max}`
+          ),
           ...r.disciplines.map((d) => t.disciplines[d] ?? d),
         ].filter((tag): tag is string => Boolean(tag));
       }
@@ -948,6 +979,53 @@ export default function Cragseeker({
                     ? `${route.summary.slice(0, SUMMARY_CHARS).trimEnd()}…`
                     : route.summary}
                 </p>
+              )}
+              {route.source === "openbeta" && (route.climb_count ?? 0) > 0 && (
+                <div className="seeker-climbs">
+                  <button
+                    type="button"
+                    className="seeker-climbs-toggle"
+                    aria-expanded={openCrags.has(route.key)}
+                    onClick={() => toggleCrag(route)}
+                  >
+                    {openCrags.has(route.key)
+                      ? `▾ ${t.hideClimbs}`
+                      : `▸ ${
+                          route.climb_count === 1
+                            ? t.showClimbOne
+                            : fill(t.showClimbs, "n", route.climb_count ?? 0)
+                        }`}
+                  </button>
+
+                  {openCrags.has(route.key) &&
+                    (climbs[route.key] === "loading" ? (
+                      <p className="seeker-note">{t.searching}</p>
+                    ) : climbs[route.key] === "error" ? (
+                      <p className="seeker-note">{t.climbsFailed}</p>
+                    ) : (climbs[route.key] as OpenBetaClimb[])?.length ? (
+                      <ul className="seeker-climb-list">
+                        {(climbs[route.key] as OpenBetaClimb[]).map((climb) => (
+                          <li key={climb.uuid}>
+                            <a href={climb.url} target="_blank" rel="noopener noreferrer">
+                              {climb.name}
+                            </a>
+                            <span className="seeker-climb-meta">
+                              {[
+                                climb.grade,
+                                ...climb.disciplines.map((d) => t.disciplines[d] ?? d),
+                                climb.length_m ? `${climb.length_m} m` : null,
+                              ]
+                                .filter(Boolean)
+                                .join(" · ")}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      // A crag can count climbs it has no documents for.
+                      <p className="seeker-note">{t.climbsEmpty}</p>
+                    ))}
+                </div>
               )}
               {parking && (
                 <ParkingLink

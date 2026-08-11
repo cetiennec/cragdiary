@@ -10,6 +10,7 @@
 // crag itself: what it is called, how many climbs it holds and of what kind.
 
 import { distanceKm } from "@/lib/c2c";
+import { gradeRank, gradeSpans } from "./grades";
 import { seekerKey, type SeekerResult } from "./types";
 
 const OPENBETA_API = "https://api.openbeta.io/";
@@ -25,6 +26,7 @@ const MIN_CLIMBS = 1;
 
 type ObMetadata = { lat?: number | null; lng?: number | null; leaf?: boolean | null };
 type ObDisciplineCount = { total?: number | null } | null;
+type ObGradeCount = { label?: string | null; count?: number | null };
 type ObCrag = {
   uuid?: string;
   area_name?: string | null;
@@ -33,6 +35,7 @@ type ObCrag = {
   metadata?: ObMetadata | null;
   content?: { description?: string | null } | null;
   aggregate?: {
+    byGrade?: ObGradeCount[] | null;
     byDiscipline?: {
       sport?: ObDisciplineCount;
       trad?: ObDisciplineCount;
@@ -56,6 +59,7 @@ query CragsNear($lnglat: Point!, $maxDistance: Int!) {
       metadata { lat lng leaf }
       content { description }
       aggregate {
+        byGrade { label }
         byDiscipline {
           sport { total }
           trad { total }
@@ -104,9 +108,15 @@ function toResult(crag: ObCrag, near: { lat: number; lon: number }): SeekerResul
     lon: lng,
     summary: crag.content?.description?.trim() || null,
     distance_km: distanceKm(near, { lat, lon: lng }),
-    // Everything camptocamp records per route — grade, aspect, equipment — is a
-    // property of a single climb, and this result is a whole crag. The grade
-    // *range* lives on the climbs below it, one request deeper.
+    // How hard the crag climbs, from easiest to hardest. `byGrade` rides along
+    // with the search itself, so the span costs no extra request — and it is
+    // the one thing a crag result was missing next to a camptocamp route.
+    grade_spans: gradeSpans(
+      (crag.aggregate?.byGrade ?? []).flatMap((g) => (g?.label ? [g.label] : []))
+    ),
+    // Everything else camptocamp records per route — a single grade, the
+    // aspect, the equipment — is a property of one climb, and this result is a
+    // whole crag. Those live on the climbs below it, one request deeper.
     grade: null,
     required_grade: null,
     rating: null,
@@ -120,9 +130,10 @@ function toResult(crag: ObCrag, near: { lat: number; lon: number }): SeekerResul
   };
 }
 
-// Only the filters OpenBeta can honour. There is no grade filter here on
-// purpose: `cragsNear` returns crags, and a crag has a spread of grades rather
-// than one, so filtering by grade would need every climb of every crag.
+// Only the filters OpenBeta can honour. Still no grade filter: a crag reports
+// the span of its climbs, so filtering on it would drop a crag with one 5.13
+// from a 5.13 search only if nothing easier stood beside it — an answer worse
+// than no answer. The span is shown instead, and the eye does the filtering.
 export type OpenBetaFilters = {
   /** Name contains — matched locally, the API offers no text filter on crags. */
   q?: string;
@@ -195,4 +206,111 @@ function matchesStyle(result: SeekerResult, outdoorType: string | undefined): bo
     return has("sport") || has("trad") || has("tr");
   }
   return true;
+}
+
+
+// ---- The climbs at one crag ------------------------------------------------
+
+// A card shows the crag; this is what is inside it, fetched only when someone
+// asks. One request per crag, the same bargain camptocamp's parking lookup
+// already makes, and only ever for a crag on screen that was clicked.
+
+export type OpenBetaClimb = {
+  uuid: string;
+  name: string;
+  /** As written by its contributors — YDS for routes, V-scale for boulders. */
+  grade: string | null;
+  /** "sport", "trad", "boulder"… — what it is climbed as. */
+  disciplines: string[];
+  /** Metres, when known. OpenBeta writes -1 for "nobody has said". */
+  length_m: number | null;
+  url: string;
+};
+
+type ObClimbDoc = {
+  uuid?: string;
+  name?: string | null;
+  length?: number | null;
+  grades?: { yds?: string | null; vscale?: string | null } | null;
+  type?: Record<string, boolean | null> | null;
+};
+
+const CLIMBS_QUERY = `
+query ClimbsAtCrag($uuid: ID) {
+  area(uuid: $uuid) {
+    area_name
+    climbs {
+      uuid
+      name
+      length
+      grades { yds vscale }
+      type { sport trad bouldering tr aid alpine ice mixed }
+    }
+  }
+}`;
+
+// OpenBeta identifies everything by UUID; anything else is not worth a request.
+export function isOpenBetaId(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+}
+
+const DISCIPLINE_NAMES: Record<string, string> = {
+  sport: "sport",
+  trad: "trad",
+  bouldering: "boulder",
+  tr: "tr",
+  aid: "aid",
+  alpine: "alpine",
+  ice: "ice",
+  mixed: "mixed",
+};
+
+export async function climbsAtCrag(uuid: string): Promise<OpenBetaClimb[]> {
+  if (!isOpenBetaId(uuid)) return [];
+
+  let data: { data?: { area?: { climbs?: ObClimbDoc[] | null } | null } } | null = null;
+  try {
+    const res = await fetch(OPENBETA_API, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query: CLIMBS_QUERY, variables: { uuid } }),
+      signal: AbortSignal.timeout(8000),
+      next: { revalidate: 86400 },
+    });
+    if (!res.ok) return [];
+    data = await res.json();
+  } catch {
+    // The crag card is already on screen and still useful without this.
+    return [];
+  }
+
+  const climbs = (data?.data?.area?.climbs ?? []).flatMap<OpenBetaClimb>((climb) => {
+    if (!climb?.uuid || !climb.name) return [];
+    return [
+      {
+        uuid: climb.uuid,
+        name: climb.name,
+        // `yds` carries the V-scale for boulders too, so it is the one field
+        // that always says something; vscale is the fallback, not the reverse.
+        grade: climb.grades?.yds ?? climb.grades?.vscale ?? null,
+        disciplines: Object.entries(climb.type ?? {})
+          .filter(([, on]) => on)
+          .map(([name]) => DISCIPLINE_NAMES[name] ?? name),
+        // -1 is OpenBeta's "unknown", and so is 0.
+        length_m: climb.length != null && climb.length > 0 ? climb.length : null,
+        url: `${OPENBETA_SITE}/climb/${climb.uuid}`,
+      },
+    ];
+  });
+
+  // Easiest first, unknown grades last: a list of climbs is read as a ladder.
+  return climbs.sort((a, b) => {
+    const ra = a.grade ? gradeRank(a.grade) : null;
+    const rb = b.grade ? gradeRank(b.grade) : null;
+    if (!ra && !rb) return a.name.localeCompare(b.name);
+    if (!ra) return 1;
+    if (!rb) return -1;
+    if (ra.scale !== rb.scale) return ra.scale === "yds" ? -1 : 1;
+    return ra.value - rb.value;
+  });
 }

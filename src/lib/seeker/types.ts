@@ -2,6 +2,7 @@
 // own shape and speaks its own subset of activities; this is the common ground.
 
 import type { C2cRouteResult, C2cActivity } from "@/lib/c2c";
+import type { GradeSpan } from "./grades";
 
 export const SEEKER_SOURCES = ["c2c", "openbeta"] as const;
 export type SeekerSource = (typeof SEEKER_SOURCES)[number];
@@ -80,6 +81,8 @@ export type SeekerResult = {
   climb_count: number | null;
   /** "sport", "trad", "boulder", "tr" — what the crag is made of. */
   disciplines: string[];
+  /** Easiest to hardest, one span per scale in use — "5.6 → 5.12b". */
+  grade_spans: GradeSpan[];
 };
 
 export function fromC2c(route: C2cRouteResult): SeekerResult {
@@ -104,5 +107,6 @@ export function fromC2c(route: C2cRouteResult): SeekerResult {
     elevation_max: route.elevation_max,
     climb_count: null,
     disciplines: [],
+    grade_spans: [],
   };
 }

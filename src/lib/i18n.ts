@@ -698,6 +698,13 @@ const en = {
     // the climbs inside one.
     climbCount: "{n} climbs",
     climbOne: "1 climb",
+    // A crag result can be opened to see what is inside it — one request to
+    // OpenBeta, made only when asked.
+    showClimbs: "See the {n} climbs",
+    showClimbOne: "See the climb",
+    hideClimbs: "Hide the climbs",
+    climbsFailed: "Couldn't load the climbs — try again in a moment.",
+    climbsEmpty: "OpenBeta counts climbs here but has no details for them yet.",
     disciplines: {
       sport: "sport",
       trad: "trad",
@@ -1421,6 +1428,13 @@ const fr: Dict = {
     // résultats comptent les voies qu'elles contiennent.
     climbCount: "{n} voies",
     climbOne: "1 voie",
+    // Une falaise s'ouvre pour montrer ce qu'elle contient — une requête à
+    // OpenBeta, faite seulement si on la demande.
+    showClimbs: "Voir les {n} voies",
+    showClimbOne: "Voir la voie",
+    hideClimbs: "Masquer les voies",
+    climbsFailed: "Impossible de charger les voies — réessayez dans un instant.",
+    climbsEmpty: "OpenBeta compte des voies ici mais n'en a pas encore le détail.",
     disciplines: {
       sport: "sportive",
       trad: "traditionnelle",
