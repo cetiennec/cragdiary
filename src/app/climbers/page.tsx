@@ -42,15 +42,21 @@ export default async function ClimbersPage() {
           ) : (
             <div className="climber-list">
               {cordeeList.map((c) => (
-                <Link key={c.username} href={`/u/${c.username}`} className="climber-row">
-                  <Avatar user={c} />
-                  <span className="climber-name">{c.display_name}</span>
-                  <span className="climber-meta">
-                    @{c.username}
-                    {c.climbed_count > 0 && ` · 🧗 ${t.climbers.climbedTimes(c.climbed_count)}`}
-                    {c.i_follow && ` · 👤 ${t.climbers.following}`}
-                  </span>
-                </Link>
+                <div key={c.username} className="climber-row">
+                  <Link href={`/u/${c.username}`} className="climber-row-main">
+                    <Avatar user={c} />
+                    <span className="climber-name">{c.display_name}</span>
+                    <span className="climber-meta">
+                      @{c.username}
+                      {c.climbed_count > 0 && ` · 🧗 ${t.climbers.climbedTimes(c.climbed_count)}`}
+                      {c.i_follow && ` · 👤 ${t.climbers.following}`}
+                    </span>
+                  </Link>
+                  {/* Every day the two of you wrote up together, in one place. */}
+                  <Link href={`/cordees/${c.username}`} className="climber-days">
+                    {t.cordees.linkLabel}
+                  </Link>
+                </div>
               ))}
             </div>
           )}

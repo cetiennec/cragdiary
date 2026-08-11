@@ -5072,3 +5072,44 @@ a {
 .lightbox-zoom:hover {
   background: rgba(0, 0, 0, 0.7);
 }
+
+/* A rope-party row: the climber on the left, their shared days on the right. */
+
+.climber-row-main {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  flex: 1;
+  min-width: 0;
+  text-decoration: none;
+  color: inherit;
+}
+
+.climber-days {
+  flex-shrink: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-decoration: none;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.25rem 0.7rem;
+}
+
+.climber-days:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* One block per day, your version beside theirs. */
+
+.days-with-day {
+  margin-bottom: 2rem;
+}
+
+.days-with-date {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin: 0 0 0.6rem;
+}

@@ -299,6 +299,14 @@ const en = {
       thisMonth: "This month",
     },
   },
+  cordees: {
+    title: "Days climbed with",
+    linkLabel: "Our days together",
+    count: (n: number) => (n === 1 ? "1 day together" : `${n} days together`),
+    empty: "No day in common yet — tag each other with @ on an entry and they show up here.",
+    onlyMine: "Only your version of this day. Theirs is private, or unwritten.",
+    onlyTheirs: "Only their version of this day — you haven't written yours.",
+  },
   climbers: {
     title: "Climbers",
     cordeesTitle: "My rope parties",
@@ -971,6 +979,14 @@ const fr: Dict = {
       thisYear: "Cette année",
       thisMonth: "Ce mois-ci",
     },
+  },
+  cordees: {
+    title: "Sorties communes avec",
+    linkLabel: "Nos sorties communes",
+    count: (n: number) => (n === 1 ? "1 journée commune" : `${n} journées communes`),
+    empty: "Aucune journée en commun pour l'instant — taguez-vous avec @ sur une sortie et elles apparaîtront ici.",
+    onlyMine: "Seulement votre version de cette journée. La sienne est privée, ou pas écrite.",
+    onlyTheirs: "Seulement sa version de cette journée — vous n'avez pas écrit la vôtre.",
   },
   climbers: {
     title: "Grimpeurs",
