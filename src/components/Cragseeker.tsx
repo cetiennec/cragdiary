@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import SeekerMap, { type SeekerPoint } from "./SeekerMap";
+import SeekerMap, { HUT_COLOR, SOURCE_COLORS, type MapLayer, type SeekerPoint } from "./SeekerMap";
 import ParkingLink from "./ParkingLink";
 import Toast from "./Toast";
 import { saveWishFromSearch } from "@/app/actions";
@@ -640,13 +640,47 @@ export default function Cragseeker({
   // Held steady across renders: the map rebuilds its shelter layer whenever
   // these change, and a fresh object every render would rebuild it constantly.
   const hutLabels = useMemo(
-    () => ({
-      legend: t.hutsLegend,
-      beds: t.hutBeds,
-      noBeds: t.hutNoBeds,
-      open: t.hutOpen,
-    }),
+    () => ({ beds: t.hutBeds, noBeds: t.hutNoBeds, open: t.hutOpen }),
     [t]
+  );
+
+  // The map's key doubles as its switchboard: every colour on it can be turned
+  // off, so explaining a colour and offering its switch is the same gesture.
+  // The database rows drive the search itself, not merely what is drawn — they
+  // are the same state as the chips at the top of the page.
+  const mapLayers: MapLayer[] = useMemo(
+    () => [
+      ...SEEKER_SOURCES.map((source) => {
+        const handled = sourceHandles(source, activity);
+        return {
+          id: source,
+          label: t.sources[source],
+          color: SOURCE_COLORS[source],
+          checked: handled && activeSources.includes(source),
+          disabled: !handled,
+          title: handled ? t.sourceHints[source] : t.sourceUnavailable,
+          onToggle: () =>
+            setSources((prev) =>
+              prev.includes(source)
+                ? prev.filter((s) => s !== source)
+                : [...prev.filter((s) => s !== source), source]
+            ),
+        };
+      }),
+      {
+        id: "huts",
+        label: t.hutsLegend,
+        color: HUT_COLOR,
+        square: true,
+        checked: showHuts,
+        // Shelters are fetched around the pin; without one there is nothing to
+        // ask for, which the greyed row says more plainly than an empty map.
+        disabled: !centre,
+        title: t.hutsHint,
+        onToggle: () => setShowHuts((on) => !on),
+      },
+    ],
+    [activity, activeSources, centre, showHuts, t]
   );
 
   // A marker carries the same overview as its list card, so hovering a point on
@@ -935,15 +969,6 @@ export default function Cragseeker({
               >
                 {originPending ? t.locating : origin ? `⏱ ${t.travelOff}` : `⏱ ${t.travelTime}`}
               </button>
-              <button
-                type="button"
-                className={`seeker-locate${showHuts ? " on" : ""}`}
-                onClick={() => setShowHuts((on) => !on)}
-                title={t.hutsHint}
-                disabled={!centre}
-              >
-                {showHuts ? `🏠 ${t.hutsOff}` : `🏠 ${t.hutsOn}`}
-              </button>
             </div>
           </div>
 
@@ -969,7 +994,8 @@ export default function Cragseeker({
         hint={t.mapHint}
         // Only the databases actually being searched belong in the legend —
         // a colour with nothing on the map to match it explains nothing.
-        legend={activeSources.map((source) => ({ source, label: t.sources[source] }))}
+        layers={mapLayers}
+        layersLabel={t.mapLayers}
         huts={visibleHuts}
         hutLabels={hutLabels}
       />

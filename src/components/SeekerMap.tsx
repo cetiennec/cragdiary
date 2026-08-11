@@ -125,6 +125,20 @@ function hutCard(
   return card;
 }
 
+/** One line of the map menu: a colour, what it means, and its switch. */
+export type MapLayer = {
+  id: string;
+  label: string;
+  color: string;
+  /** Shelters are square; results are round. */
+  square?: boolean;
+  checked: boolean;
+  /** A database that cannot answer the current activity stays listed, greyed. */
+  disabled?: boolean;
+  title?: string;
+  onToggle: () => void;
+};
+
 type Leaflet = typeof import("leaflet");
 
 // The Alps — a sensible "you are somewhere in climbing country" opening view.
@@ -157,7 +171,8 @@ export default function SeekerMap({
   onPick,
   onSelect,
   hint,
-  legend,
+  layers,
+  layersLabel,
   huts,
   hutLabels,
 }: {
@@ -168,12 +183,17 @@ export default function SeekerMap({
   onPick: (lat: number, lon: number) => void;
   onSelect: (id: string) => void;
   hint: string;
-  /** The databases being searched, in the order they should be listed. */
-  legend: { source: SeekerSource; label: string }[];
+  /**
+   * The map's own menu: what each colour means and, since the answer is always
+   * "a layer you can switch", the switch itself. Order is the drawing order.
+   */
+  layers: MapLayer[];
+  /** Title above the menu. */
+  layersLabel: string;
   /** Shelters to draw beside the results, empty when the layer is off. */
   huts: MountainHut[];
-  /** How to label the shelters in the legend and their popups. */
-  hutLabels: { legend: string; beds: string; noBeds: string; open: string };
+  /** How to label a shelter's popup. */
+  hutLabels: { beds: string; noBeds: string; open: string };
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   // The map lives in state, not a ref: every drawing effect below depends on
@@ -377,33 +397,38 @@ export default function SeekerMap({
   return (
     <div className="seeker-map-wrap">
       <div ref={containerRef} className="seeker-map" />
-      <div className="seeker-map-foot">
-        <p className="seeker-map-hint">{hint}</p>
-        {(legend.length > 0 || huts.length > 0) && (
-          <ul className="seeker-legend">
-            {legend.map(({ source, label }) => (
-              <li key={source}>
-                <span
-                  className="seeker-legend-dot"
-                  style={{ background: SOURCE_COLORS[source] }}
-                  aria-hidden
-                />
-                {label}
+      {/* Sits over the map rather than under it, the way a map's own key does.
+          It is a plain overlay and not a Leaflet control: clicks land on it and
+          never reach the map, so ticking a layer cannot also drop the pin. */}
+      {layers.length > 0 && (
+        <div className="seeker-map-menu">
+          <p className="seeker-map-menu-head">{layersLabel}</p>
+          <ul>
+            {layers.map((layer) => (
+              <li key={layer.id}>
+                <label
+                  className={layer.disabled ? "is-disabled" : undefined}
+                  title={layer.title}
+                >
+                  <input
+                    type="checkbox"
+                    checked={layer.checked}
+                    disabled={layer.disabled}
+                    onChange={layer.onToggle}
+                  />
+                  <span
+                    className={`seeker-legend-dot${layer.square ? " seeker-legend-square" : ""}`}
+                    style={{ background: layer.color }}
+                    aria-hidden
+                  />
+                  {layer.label}
+                </label>
               </li>
             ))}
-            {huts.length > 0 && (
-              <li>
-                <span
-                  className="seeker-legend-dot seeker-legend-square"
-                  style={{ background: HUT_COLOR }}
-                  aria-hidden
-                />
-                {hutLabels.legend}
-              </li>
-            )}
           </ul>
-        )}
-      </div>
+        </div>
+      )}
+      <p className="seeker-map-hint">{hint}</p>
     </div>
   );
 }
