@@ -279,11 +279,13 @@ export default async function EntryPage({
               <dd>{await renderMentions(entry.partners)}</dd>
             </div>
           )}
-          {/* Two different pages on camptocamp: the day someone climbed it,
-              and the route itself. An import knows both. */}
+          {/* Two different pages on camptocamp: the day someone climbed it and
+              the route itself. An import knows both; an entry written by hand
+              usually carries only the topo it was looked up from — so the label
+              follows what the link actually points at, not where it is stored. */}
           {entry.c2c_url && (
             <div className="notion-prop">
-              <dt>{t.entry.story}</dt>
+              <dt>{entry.c2c_url.includes("/outings/") ? t.entry.story : t.entry.topo}</dt>
               <dd>
                 <a href={entry.c2c_url} target="_blank" rel="noopener noreferrer">
                   {t.entry.topoLink} ↗
