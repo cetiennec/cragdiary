@@ -667,6 +667,60 @@ export async function getSharedDay(
   return result.rows.map((r) => ({ ...r, photos: byEntry.get(r.id) ?? [] }));
 }
 
+export type SharedDayPair = {
+  date: string;
+  /** Your entry for that day, when you wrote one. */
+  mine: EntryWithAuthor | null;
+  /** Theirs, when they wrote one you may see. */
+  theirs: EntryWithAuthor | null;
+};
+
+// Every day two climbers spent together: a day one of them logged naming the
+// other. Their private and link-only days are none of your business, so only
+// their public ones appear — yours all do, since this is your page.
+export async function getDaysWith(
+  viewerId: string,
+  viewerUsername: string,
+  otherUsername: string
+): Promise<SharedDayPair[]> {
+  const result = await pool.query<
+    Entry & { username: string; display_name: string; author_visibility: Visibility; side: string }
+  >(
+    `with them as (select id, username, display_name, visibility from users where username = $3)
+     select e.*, u.username, u.display_name, u.visibility as author_visibility,
+            case when e.user_id = $1 then 'mine' else 'theirs' end as side
+     from entries e
+     join users u on u.id = e.user_id
+     where u.visibility <> 'private'
+       and (
+         -- your day, naming them
+         (e.user_id = $1 and e.partners ~* ('@' || $3 || '([^a-z0-9-]|$)'))
+         -- or their public day, naming you
+         or (e.user_id = (select id from them)
+             and e.visibility = 'public'
+             and e.partners ~* ('@' || $2 || '([^a-z0-9-]|$)'))
+       )
+     order by e.entry_date desc, e.created_at desc`,
+    [viewerId, viewerUsername, otherUsername]
+  );
+
+  const withPhotos = await attachPhotos(result.rows);
+  const byDate = new Map<string, SharedDayPair>();
+  for (const entry of withPhotos) {
+    const day = byDate.get(entry.entry_date) ?? {
+      date: entry.entry_date,
+      mine: null,
+      theirs: null,
+    };
+    // A day is shared once either side mentions the other; both sides show
+    // when both wrote it up.
+    if ((entry as typeof entry & { side: string }).side === "mine") day.mine = entry;
+    else day.theirs = entry;
+    byDate.set(entry.entry_date, day);
+  }
+  return [...byDate.values()];
+}
+
 // A single list for authorization checks (who owns it).
 export async function getWishlist(id: string): Promise<Wishlist | null> {
   const result = await pool.query<Wishlist>(

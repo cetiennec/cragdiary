@@ -29,6 +29,12 @@ export default function PhotoGallery({
   // Fullscreen shows the whole photo; zoomed fills the frame and scrolls.
   const [zoomed, setZoomed] = useState(false);
   const touchX = useRef<number | null>(null);
+  // Drag-to-pan while zoomed: a scrollable box alone leaves a mouse with
+  // nothing to grab, and on a phone the swipe below would change photo instead
+  // of moving across this one.
+  const frameRef = useRef<HTMLElement | null>(null);
+  const drag = useRef<{ x: number; y: number; left: number; top: number } | null>(null);
+  const moved = useRef(false);
 
   const stepReset = () => setZoomed(false);
 
@@ -79,7 +85,8 @@ export default function PhotoGallery({
           className="lightbox"
           onClick={() => setOpen(null)}
           onTouchStart={(e) => {
-            touchX.current = e.touches[0].clientX;
+            // Zoomed, a swipe belongs to the photo, not to the gallery.
+            touchX.current = zoomed ? null : e.touches[0].clientX;
           }}
           onTouchEnd={(e) => {
             const start = touchX.current;
@@ -93,16 +100,49 @@ export default function PhotoGallery({
           }}
         >
           <figure
+            ref={frameRef}
             className={`lightbox-figure${zoomed ? " zoomed" : ""}`}
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              // A drag ends with a click; only a still pointer toggles.
+              if (moved.current) {
+                moved.current = false;
+                return;
+              }
+              setZoomed((z) => !z);
+            }}
+            onPointerDown={(e) => {
+              if (!zoomed || !frameRef.current) return;
+              frameRef.current.setPointerCapture(e.pointerId);
+              moved.current = false;
+              drag.current = {
+                x: e.clientX,
+                y: e.clientY,
+                left: frameRef.current.scrollLeft,
+                top: frameRef.current.scrollTop,
+              };
+            }}
+            onPointerMove={(e) => {
+              const from = drag.current;
+              if (!from || !frameRef.current) return;
+              if (Math.abs(e.clientX - from.x) + Math.abs(e.clientY - from.y) > 4) {
+                moved.current = true;
+              }
+              frameRef.current.scrollLeft = from.left - (e.clientX - from.x);
+              frameRef.current.scrollTop = from.top - (e.clientY - from.y);
+            }}
+            onPointerUp={(e) => {
+              frameRef.current?.releasePointerCapture(e.pointerId);
+              drag.current = null;
+            }}
+            onPointerCancel={() => {
+              drag.current = null;
+            }}
           >
             {/* eslint-disable-next-line @next/next/no-img-element -- served from our own DB-backed route, already resized/compressed server-side */}
             <img
               src={`/api/photos/${photos[open].id}`}
               alt={photos[open].caption ?? ""}
-              // Fit the screen by default; a click fills it and lets the frame
-              // scroll, which is the only way to read a topo line on a photo.
-              onClick={() => setZoomed((z) => !z)}
             />
             {photos[open].caption && (
               <figcaption className="lightbox-caption">{photos[open].caption}</figcaption>
