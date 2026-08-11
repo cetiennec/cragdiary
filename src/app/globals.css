@@ -5047,7 +5047,7 @@ a {
   margin: 0 auto;
   max-width: none;
   max-height: none;
-  width: 150%;
+  /* The width itself is set inline, from the size the photo was shown at. */
   height: auto;
   border-radius: 0;
 }

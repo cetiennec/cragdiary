@@ -35,8 +35,25 @@ export default function PhotoGallery({
   const frameRef = useRef<HTMLElement | null>(null);
   const drag = useRef<{ x: number; y: number; left: number; top: number } | null>(null);
   const moved = useRef(false);
+  const imgRef = useRef<HTMLImageElement | null>(null);
+  // Zooming is measured against what you actually see, not against the screen:
+  // a tall photo is fitted to the height, so "150% of the window's width" was
+  // nearly tripling it. Twice the displayed size is what a zoom means.
+  const [zoomWidth, setZoomWidth] = useState<number | null>(null);
 
-  const stepReset = () => setZoomed(false);
+  function toggleZoom() {
+    setZoomed((was) => {
+      if (!was && imgRef.current) {
+        setZoomWidth(Math.round(imgRef.current.getBoundingClientRect().width * 2));
+      }
+      return !was;
+    });
+  }
+
+  const stepReset = () => {
+    setZoomed(false);
+    setZoomWidth(null);
+  };
 
   const step = useCallback(
     (delta: number) => {
@@ -109,7 +126,7 @@ export default function PhotoGallery({
                 moved.current = false;
                 return;
               }
-              setZoomed((z) => !z);
+              toggleZoom();
             }}
             onPointerDown={(e) => {
               if (!zoomed || !frameRef.current) return;
@@ -141,8 +158,10 @@ export default function PhotoGallery({
           >
             {/* eslint-disable-next-line @next/next/no-img-element -- served from our own DB-backed route, already resized/compressed server-side */}
             <img
+              ref={imgRef}
               src={`/api/photos/${photos[open].id}`}
               alt={photos[open].caption ?? ""}
+              style={zoomed && zoomWidth ? { width: `${zoomWidth}px` } : undefined}
             />
             {photos[open].caption && (
               <figcaption className="lightbox-caption">{photos[open].caption}</figcaption>
@@ -156,7 +175,7 @@ export default function PhotoGallery({
             aria-pressed={zoomed}
             onClick={(e) => {
               e.stopPropagation();
-              setZoomed((z) => !z);
+              toggleZoom();
             }}
           >
             {zoomed ? "－" : "＋"}
