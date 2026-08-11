@@ -5010,3 +5010,53 @@ a {
   font-size: 0.8rem;
   color: var(--text-muted);
 }
+
+/* Zoom inside the lightbox: fit the screen by default, fill it on demand. */
+
+/* Zoomed, the frame takes the screen and the photo is drawn at twice its
+   width, so there is something to pan over — a photo smaller than the screen
+   gains as much as a big one, which is the point when the detail you want is a
+   topo line drawn on the rock. */
+.lightbox-figure.zoomed {
+  width: 100vw;
+  height: 100vh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  overflow: auto;
+  cursor: zoom-out;
+}
+
+.lightbox-figure.zoomed img {
+  max-width: none;
+  max-height: none;
+  width: 200%;
+  height: auto;
+}
+
+.lightbox-figure img {
+  cursor: zoom-in;
+}
+
+.lightbox-zoom {
+  position: fixed;
+  top: 1rem;
+  right: 4.2rem;
+  z-index: 10;
+  width: 2.4rem;
+  height: 2.4rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  line-height: 1;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.lightbox-zoom:hover {
+  background: rgba(0, 0, 0, 0.7);
+}

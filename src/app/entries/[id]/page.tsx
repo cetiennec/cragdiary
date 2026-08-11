@@ -443,6 +443,7 @@ export default async function EntryPage({
             }))}
             className="photo-grid notion-gallery"
             closeLabel={t.entry.lightboxClose}
+            zoomLabel={t.entry.lightboxZoom}
             banner={isDemo ? t.demo.banner : undefined}
           />
           </>
