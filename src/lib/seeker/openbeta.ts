@@ -153,7 +153,10 @@ export async function searchOpenBeta(
           maxDistance: Math.round(radiusKm * 1000),
         },
       }),
-      signal: AbortSignal.timeout(12000),
+      // The page waits for every source before it can merge them, so a stalled
+      // OpenBeta must not hold up a search in the Alps that it has no answer
+      // for anyway. Same ceiling camptocamp gets.
+      signal: AbortSignal.timeout(8000),
       next: { revalidate: 86400 },
     });
     if (!res.ok) return [];

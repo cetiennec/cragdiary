@@ -6,7 +6,11 @@ import type { C2cRouteResult, C2cActivity } from "@/lib/c2c";
 export const SEEKER_SOURCES = ["c2c", "openbeta"] as const;
 export type SeekerSource = (typeof SEEKER_SOURCES)[number];
 
-export const DEFAULT_SOURCES: SeekerSource[] = ["c2c"];
+// Both by default: someone searching from Colorado should not have to discover
+// a chip before the page finds anything. It costs one extra upstream call, and
+// only where a pin is set — OpenBeta answers "nothing here" for the Alps in
+// about 200 ms, well under what camptocamp itself takes.
+export const DEFAULT_SOURCES: SeekerSource[] = ["c2c", "openbeta"];
 
 export function seekerKey(source: SeekerSource, id: string | number): string {
   return `${source}:${id}`;
