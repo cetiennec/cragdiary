@@ -313,7 +313,7 @@ const en = {
     allTitle: "All climbers",
     following: "Following",
     climbedWith: "Climbed together",
-    climbedTimes: (n: number) => (n === 1 ? "climbed together once" : `climbed together ${n}×`),
+    climbedTimes: (n: number) => (n === 1 ? "1 day together" : `${n} days together`),
     empty: "No rope parties yet — follow climbers or tag partners with @ in your entries.",
   },
   welcome: {
@@ -994,7 +994,7 @@ const fr: Dict = {
     allTitle: "Tous les grimpeurs",
     following: "Suivi",
     climbedWith: "Grimpé ensemble",
-    climbedTimes: (n: number) => (n === 1 ? "grimpé ensemble 1 fois" : `grimpé ensemble ${n} fois`),
+    climbedTimes: (n: number) => (n === 1 ? "1 sortie ensemble" : `${n} sorties ensemble`),
     empty: "Aucune cordée pour l'instant — suivez des grimpeurs ou taguez vos partenaires avec @ dans vos entrées.",
   },
   welcome: {

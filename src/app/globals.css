@@ -5013,22 +5013,23 @@ a {
 
 /* Zoom inside the lightbox: fit the screen by default, fill it on demand. */
 
-/* Zoomed, the frame takes the screen and the photo is drawn at twice its
-   width, so there is something to pan over — a photo smaller than the screen
-   gains as much as a big one, which is the point when the detail you want is a
-   topo line drawn on the rock. */
+/* Zoomed, the frame takes the screen and the photo is drawn half again as wide
+   as it — about its stored size on a laptop, so it gains detail rather than
+   blur. `display: block` matters: a centring flex container makes whatever
+   overflows above and to the left of centre unreachable, which is why the top
+   of a zoomed photo could not be scrolled to. */
 .lightbox-figure.zoomed {
+  display: block;
   width: 100vw;
   height: 100vh;
-  cursor: grab;
-  /* The browser must not claim the gesture for its own scrolling. */
-  touch-action: none;
-  overscroll-behavior: contain;
   max-width: none;
   max-height: none;
   margin: 0;
   overflow: auto;
-  cursor: zoom-out;
+  cursor: grab;
+  /* The browser must not claim the gesture for its own scrolling. */
+  touch-action: none;
+  overscroll-behavior: contain;
 }
 
 .lightbox-figure.zoomed:active {
@@ -5040,10 +5041,13 @@ a {
      the panning. */
   -webkit-user-drag: none;
   user-select: none;
+  display: block;
+  margin: 0 auto;
   max-width: none;
   max-height: none;
-  width: 200%;
+  width: 150%;
   height: auto;
+  border-radius: 0;
 }
 
 .lightbox-figure img {
@@ -5101,15 +5105,34 @@ a {
   border-color: var(--accent);
 }
 
-/* One block per day, your version beside theirs. */
-
-.days-with-day {
-  margin-bottom: 2rem;
+/* The shared days flow in the same grid as the feed. */
+.days-with-count {
+  margin-bottom: 1.2rem;
 }
 
-.days-with-date {
-  font-size: 0.9rem;
-  font-weight: 700;
+/* A climber row reads as a name, then the facts as chips — strung together
+   with dots they ran into one another. */
+
+.climber-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.climber-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.1rem;
+}
+
+.climber-tag {
+  font-size: 0.75rem;
+  font-weight: 600;
   color: var(--text-muted);
-  margin: 0 0 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.05rem 0.5rem;
+  white-space: nowrap;
 }

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
-import { formatDate, getDict } from "@/lib/i18n";
+import { getDict } from "@/lib/i18n";
 import { getDaysWith, getUserByUsername } from "@/lib/queries";
 import EntryCard from "@/components/EntryCard";
 
@@ -27,31 +27,26 @@ export default async function DaysWithPage({
       <h1 className="page-title">
         {t.cordees.title} <Link href={`/u/${other.username}`}>{other.display_name}</Link>
       </h1>
-      <p className="form-hint">
+      <p className="form-hint days-with-count">
         {days.length === 0 ? t.cordees.empty : t.cordees.count(days.length)}
       </p>
 
-      <div className="days-with">
-        {days.map((day) => (
-          <section key={day.date} className="days-with-day">
-            <h2 className="days-with-date">{formatDate(day.date, locale)}</h2>
-            <div className="entry-grid">
-              {day.mine && (
-                <EntryCard entry={day.mine} locale={locale} showAuthor={false} demoLabel={t.demo.banner} />
-              )}
-              {day.theirs && (
-                <EntryCard entry={day.theirs} locale={locale} demoLabel={t.demo.banner} />
-              )}
-            </div>
-            {/* Says plainly whose side is missing, rather than showing a lone
-                card and leaving you to guess. */}
-            {(!day.mine || !day.theirs) && (
-              <p className="form-hint">
-                {day.mine ? t.cordees.onlyMine : t.cordees.onlyTheirs}
-              </p>
-            )}
-          </section>
-        ))}
+      {/* One grid, like the feed: the days flow across the page instead of
+          stacking one block per date. Each card carries its own date and
+          author, so whose version it is stays plain. */}
+      <div className="entry-grid">
+        {days.flatMap((day) =>
+          [day.mine, day.theirs]
+            .filter((entry): entry is NonNullable<typeof entry> => entry !== null)
+            .map((entry) => (
+              <EntryCard
+                key={entry.id}
+                entry={entry}
+                locale={locale}
+                demoLabel={t.demo.banner}
+              />
+            ))
+        )}
       </div>
     </div>
   );

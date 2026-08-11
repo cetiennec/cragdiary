@@ -45,11 +45,19 @@ export default async function ClimbersPage() {
                 <div key={c.username} className="climber-row">
                   <Link href={`/u/${c.username}`} className="climber-row-main">
                     <Avatar user={c} />
-                    <span className="climber-name">{c.display_name}</span>
-                    <span className="climber-meta">
-                      @{c.username}
-                      {c.climbed_count > 0 && ` · 🧗 ${t.climbers.climbedTimes(c.climbed_count)}`}
-                      {c.i_follow && ` · 👤 ${t.climbers.following}`}
+                    <span className="climber-identity">
+                      <span className="climber-name">{c.display_name}</span>
+                    {/* The handle on its own line, the facts as chips: strung
+                        together with dots they read as one long word. */}
+                    <span className="climber-meta">@{c.username}</span>
+                    <span className="climber-tags">
+                      {c.climbed_count > 0 && (
+                        <span className="climber-tag">
+                          🧗 {t.climbers.climbedTimes(c.climbed_count)}
+                        </span>
+                      )}
+                      {c.i_follow && <span className="climber-tag">👤 {t.climbers.following}</span>}
+                    </span>
                     </span>
                   </Link>
                   {/* Every day the two of you wrote up together, in one place. */}
