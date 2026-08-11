@@ -2,10 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import "leaflet/dist/leaflet.css";
+import type { SeekerSource } from "@/lib/seeker/types";
 
 export type SeekerPoint = {
   /** Unique across databases — "c2c:1234", "openbeta:<uuid>". */
   id: string;
+  /** Which database it came from — what the marker is coloured by. */
+  source: SeekerSource;
   title: string;
   lat: number;
   lon: number;
@@ -89,8 +92,18 @@ type Leaflet = typeof import("leaflet");
 const DEFAULT_VIEW: [number, number] = [45.5, 6.5];
 const DEFAULT_ZOOM = 6;
 
-const MARKER_COLOR = "#4a7fa5";
-const ACTIVE_COLOR = "#d94f2b";
+// One colour per database, so a glance at the map says where a marker's
+// information comes from. The legend under the map is the key to these, and
+// both are drawn from this one object so they can never disagree.
+export const SOURCE_COLORS: Record<SeekerSource, string> = {
+  c2c: "#4a7fa5",
+  openbeta: "#2f8f6f",
+};
+
+// Selection is shown by size and a dark rim rather than a colour of its own:
+// the fill has a meaning now, and a hovered marker must not look like it comes
+// from a different database.
+const ACTIVE_RING = "#3d2b1f";
 
 export default function SeekerMap({
   centre,
@@ -100,6 +113,7 @@ export default function SeekerMap({
   onPick,
   onSelect,
   hint,
+  legend,
 }: {
   centre: { lat: number; lon: number } | null;
   radiusKm: number;
@@ -108,6 +122,8 @@ export default function SeekerMap({
   onPick: (lat: number, lon: number) => void;
   onSelect: (id: string) => void;
   hint: string;
+  /** The databases being searched, in the order they should be listed. */
+  legend: { source: SeekerSource; label: string }[];
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   // The map lives in state, not a ref: every drawing effect below depends on
@@ -206,7 +222,7 @@ export default function SeekerMap({
         radius: 6,
         color: "#ffffff",
         weight: 1.5,
-        fillColor: MARKER_COLOR,
+        fillColor: SOURCE_COLORS[point.source],
         fillOpacity: 0.9,
       })
         // A popup rather than a tooltip: the card holds a link to camptocamp,
@@ -259,11 +275,18 @@ export default function SeekerMap({
     };
   }, [map, L, points]);
 
-  // Selecting a result — from either side — makes its marker stand out.
+  // Selecting a result — from either side — makes its marker stand out, while
+  // keeping the fill that says which database it came from.
   useEffect(() => {
+    const sourceById = new Map(points.map((p) => [p.id, p.source]));
     for (const [id, marker] of markerById.current) {
       const active = id === activeId;
-      marker.setStyle({ fillColor: active ? ACTIVE_COLOR : MARKER_COLOR, weight: active ? 3 : 1.5 });
+      const source = sourceById.get(id);
+      marker.setStyle({
+        fillColor: source ? SOURCE_COLORS[source] : SOURCE_COLORS.c2c,
+        color: active ? ACTIVE_RING : "#ffffff",
+        weight: active ? 3 : 1.5,
+      });
       marker.setRadius(active ? 9 : 6);
       if (active) marker.bringToFront();
     }
@@ -272,7 +295,23 @@ export default function SeekerMap({
   return (
     <div className="seeker-map-wrap">
       <div ref={containerRef} className="seeker-map" />
-      <p className="seeker-map-hint">{hint}</p>
+      <div className="seeker-map-foot">
+        <p className="seeker-map-hint">{hint}</p>
+        {legend.length > 0 && (
+          <ul className="seeker-legend">
+            {legend.map(({ source, label }) => (
+              <li key={source}>
+                <span
+                  className="seeker-legend-dot"
+                  style={{ background: SOURCE_COLORS[source] }}
+                  aria-hidden
+                />
+                {label}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }

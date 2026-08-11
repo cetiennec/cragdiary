@@ -4155,6 +4155,44 @@ a {
   margin: 0;
 }
 
+/* The hint and the colour key share the line under the map, and stack instead
+   of crowding each other on a narrow screen. */
+.seeker-map-foot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.6rem 1rem;
+  flex-wrap: wrap;
+}
+
+.seeker-legend {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.seeker-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.32rem;
+}
+
+.seeker-legend-dot {
+  width: 0.62rem;
+  height: 0.62rem;
+  border-radius: 50%;
+  border: 1px solid #ffffff;
+  /* The markers sit on map tiles; the same faint ring keeps the dot legible
+     against the page as it does against the map. */
+  box-shadow: 0 0 0 1px var(--border);
+}
+
 .seeker-status {
   display: flex;
   align-items: baseline;
@@ -4348,9 +4386,29 @@ a {
   line-height: 1.6;
 }
 
-/* Which databases to search — the same chips again. */
+/* Which databases to search: the first choice on the page, on a line of its
+   own above the filters that depend on it. */
+.seeker-row-sources {
+  padding-bottom: 0.1rem;
+}
+
 .seeker-sources legend {
   line-height: 1.6;
+}
+
+/* A ticked source wears the colour its markers have on the map, so the control
+   here and the legend under the map are plainly the same key. Both come from
+   `SOURCE_COLORS` in SeekerMap — keep them in step. */
+.seeker-chip-source.src-c2c input:checked + span {
+  background: #4a7fa5;
+  border-color: #4a7fa5;
+  color: #ffffff;
+}
+
+.seeker-chip-source.src-openbeta input:checked + span {
+  background: #2f8f6f;
+  border-color: #2f8f6f;
+  color: #ffffff;
 }
 
 /* A database that can't answer for the chosen activity stays visible but

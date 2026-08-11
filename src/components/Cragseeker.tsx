@@ -580,6 +580,7 @@ export default function Cragseeker({
         return [
           {
             id: r.key,
+            source: r.source,
             title: r.title,
             lat: r.lat,
             lon: r.lon,
@@ -611,19 +612,9 @@ export default function Cragseeker({
       </header>
 
       <section className="seeker-controls" aria-label={t.filters}>
-        {/* 1. What you're looking for. */}
-        <div className="seeker-row">
-          <label className="seeker-field">
-            <span className="seeker-field-label">{t.activity}</span>
-            <select value={activity} onChange={(e) => setActivity(e.target.value as C2cActivity)}>
-              {C2C_ACTIVITIES.map((a) => (
-                <option key={a} value={a}>
-                  {t.activities[a]}
-                </option>
-              ))}
-            </select>
-          </label>
-
+        {/* 1. Which databases to ask — the choice every filter below hangs off,
+            so it sits above them rather than in among them. */}
+        <div className="seeker-row seeker-row-sources">
           <fieldset className="seeker-facing seeker-sources">
             <legend className="seeker-field-label">{t.databases}</legend>
             {SEEKER_SOURCES.map((source) => {
@@ -631,7 +622,9 @@ export default function Cragseeker({
               return (
                 <label
                   key={source}
-                  className={`seeker-chip${handled ? "" : " seeker-chip-off"}`}
+                  className={`seeker-chip seeker-chip-source src-${source}${
+                    handled ? "" : " seeker-chip-off"
+                  }`}
                   title={handled ? t.sourceHints[source] : t.sourceUnavailable}
                 >
                   <input
@@ -653,6 +646,20 @@ export default function Cragseeker({
               );
             })}
           </fieldset>
+        </div>
+
+        {/* 2. What you're looking for. */}
+        <div className="seeker-row">
+          <label className="seeker-field">
+            <span className="seeker-field-label">{t.activity}</span>
+            <select value={activity} onChange={(e) => setActivity(e.target.value as C2cActivity)}>
+              {C2C_ACTIVITIES.map((a) => (
+                <option key={a} value={a}>
+                  {t.activities[a]}
+                </option>
+              ))}
+            </select>
+          </label>
 
           {showOutdoorType && (
             <fieldset className="seeker-facing seeker-styles">
@@ -672,7 +679,7 @@ export default function Cragseeker({
           )}
         </div>
 
-        {/* 2. Where to look. */}
+        {/* 3. Where to look. */}
         <div className="seeker-row">
           <div className="seeker-field seeker-field-grow">
             <span className="seeker-field-label">{t.where}</span>
@@ -735,7 +742,7 @@ export default function Cragseeker({
           </label>
         </div>
 
-        {/* 3. The settings that belong to the chosen activity. */}
+        {/* 4. The settings that belong to the chosen activity. */}
         <div className="seeker-row seeker-row-settings">
           {activeRanges.map((key) => (
             <RangeSelect
@@ -802,7 +809,7 @@ export default function Cragseeker({
           </label>
         </div>
 
-        {/* 4. Free text and aspect, side by side. */}
+        {/* 5. Free text and aspect, side by side. */}
         <div className="seeker-row">
           <label className="seeker-field seeker-field-grow">
             <span className="seeker-field-label">{t.keyword}</span>
@@ -831,7 +838,7 @@ export default function Cragseeker({
           </fieldset>
         </div>
 
-        {/* 5. Getting there — rough for now — with the search-wide actions
+        {/* 6. Getting there — rough for now — with the search-wide actions
             anchored bottom right. */}
         <div className="seeker-row seeker-row-end">
           <div className="seeker-transport">
@@ -870,6 +877,9 @@ export default function Cragseeker({
         onPick={dropPin}
         onSelect={setActiveId}
         hint={t.mapHint}
+        // Only the databases actually being searched belong in the legend —
+        // a colour with nothing on the map to match it explains nothing.
+        legend={activeSources.map((source) => ({ source, label: t.sources[source] }))}
       />
 
       <div className="seeker-status">
