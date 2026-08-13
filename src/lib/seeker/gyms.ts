@@ -6,7 +6,16 @@
 
 import { degreeBox } from "./refuges";
 
-const OVERPASS_API = "https://overpass-api.de/api/interpreter";
+// The main instance throttles under load and, when it does, can answer 200
+// with an HTML error page instead of failing outright — indistinguishable
+// from "no gyms here" unless the body is actually parsed. A second public
+// mirror is tried once before giving up, since the map is drawn either way if
+// both miss but a busy afternoon on the main instance shouldn't mean "no gyms
+// exist" for the whole day the cache holds that answer.
+const OVERPASS_ENDPOINTS = [
+  "https://overpass-api.de/api/interpreter",
+  "https://overpass.kumi.systems/api/interpreter",
+];
 
 // sport=climbing alone also matches outdoor crags mapped as a node (rare but
 // real); requiring an indoor-facility tag as well is what actually says "gym"
@@ -37,6 +46,25 @@ type OverpassElement = {
   tags?: Record<string, string> | null;
 };
 
+type OverpassResponse = { elements?: OverpassElement[] | null };
+
+async function query(endpoint: string, bbox: string): Promise<OverpassResponse | null> {
+  const res = await fetch(endpoint, {
+    method: "POST",
+    body: `data=${encodeURIComponent(QUERY(bbox))}`,
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    signal: AbortSignal.timeout(15000),
+    // Overpass is a shared public instance and throttles under load — a
+    // day's cache keeps a busy afternoon from ever hitting it twice for the
+    // same neighbourhood.
+    next: { revalidate: 86400 },
+  });
+  // A busy instance can still answer 200 with an HTML error page rather than
+  // JSON — content-type says which, before the parse would throw either way.
+  if (!res.ok || !(res.headers.get("content-type") ?? "").includes("json")) return null;
+  return res.json();
+}
+
 /**
  * Gyms around a point. Same bounding box helper as the shelters layer — a
  * WGS84 box that circumscribes the search circle.
@@ -50,26 +78,18 @@ export async function gymsAround(near: {
   // Overpass wants "south,west,north,east".
   const bbox = [box.south, box.west, box.north, box.east].map((n) => n.toFixed(5)).join(",");
 
-  let data: { elements?: OverpassElement[] | null } | null = null;
-  try {
-    const res = await fetch(OVERPASS_API, {
-      method: "POST",
-      body: `data=${encodeURIComponent(QUERY(bbox))}`,
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      signal: AbortSignal.timeout(15000),
-      // Overpass is a shared public instance and throttles under load — a
-      // day's cache keeps a busy afternoon from ever hitting it twice for the
-      // same neighbourhood. The map is drawn either way if this misses.
-      next: { revalidate: 86400 },
-    });
-    if (!res.ok) return [];
-    data = await res.json();
-  } catch {
-    // Gyms are an extra, never the point of the search.
-    return [];
+  let data: OverpassResponse | null = null;
+  for (const endpoint of OVERPASS_ENDPOINTS) {
+    try {
+      data = await query(endpoint, bbox);
+      if (data) break;
+    } catch {
+      // Try the next mirror; gyms are an extra, never the point of the search.
+    }
   }
+  if (!data) return [];
 
-  return (data?.elements ?? []).flatMap<ClimbingGym>((el) => {
+  return (data.elements ?? []).flatMap<ClimbingGym>((el) => {
     const tags = el.tags;
     const name = tags?.name;
     const lat = el.lat ?? el.center?.lat;
