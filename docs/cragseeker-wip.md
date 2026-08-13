@@ -1,9 +1,11 @@
 # Cragidary — sujets laissés ouverts
 
-État au 11 août 2026. Ce qui suit n'est **pas** implémenté : ce sont les décisions
-prises ou les pistes évaluées pendant l'ajout d'OpenBeta, notées pour ne pas
-refaire deux fois la même enquête. Ce qui est en production est décrit par le
-code et l'historique git, pas ici.
+État au 13 août 2026. L'essentiel de ce qui suit n'est **pas** implémenté : ce
+sont les décisions prises ou les pistes évaluées pendant l'ajout d'OpenBeta,
+notées pour ne pas refaire deux fois la même enquête. Ce qui est en production
+est décrit par le code et l'historique git, pas ici — sauf exception signalée
+explicitement (§6, §6bis) quand une fonctionnalité est en prod mais qu'un
+sujet à côté reste ouvert.
 
 ## 1. Crédit des photos importées de camptocamp — décidé, non implémenté
 
@@ -104,21 +106,60 @@ identifiants : elle est derrière une clé de partenariat. Demande à faire par 
 Vraie API JSON, mais `{"ERROR": "NO API KEY"}` : clé à récupérer via un compte.
 Recouvre largement camptocamp sur le ski de rando, donc peu de gain pour le coût.
 
-## 6. Météo — à reprendre depuis le début
+## 6. Météo — fait, en version minimale (13 août 2026)
 
-Proposée lors d'une session précédente dont je n'ai pas le contexte : **le détail
-de ce qui avait été envisagé est perdu**, il faut retrouver l'intention (météo sur
-une entrée passée ? prévision sur une falaise de la wishlist ? filtre « beau temps
-ce week-end » dans Cragseeker ?).
+Un lien « ouvrir dans… » par résultat, au même point que le parking
+(`WeatherLink.tsx`) : Windy et Meteoblue, sur les coordonnées exactes du
+résultat. Pas d'appel serveur, pas de clé, pas de CGU à vérifier — le site ne
+fait qu'ouvrir un lien externe.
 
-Candidat évident, vérifié aujourd'hui : **Open-Meteo** répond en 200 sans clé
-d'API, avec `weather_code`, `temperature_2m_max` et `precipitation_sum` par jour,
-et gère le fuseau tout seul (`timezone=auto`). À confirmer : ses conditions
-d'utilisation pour un site public, et l'existence d'un historique pour dater les
-entrées passées.
+Ce que ça ne couvre pas, et qui reste ouvert si le besoin revient : la météo
+*sur une entrée passée* (dater une sortie du carnet) ou un filtre « beau temps
+ce week-end » dans Cragseeker lui-même, qui demanderaient un vrai appel API
+côté serveur. **Open-Meteo** reste le candidat évident pour ça — répond en 200
+sans clé, `weather_code`/`temperature_2m_max`/`precipitation_sum` par jour,
+fuseau automatique — à vérifier alors : ses CGU pour un site public, et
+l'existence d'un historique pour dater des entrées passées.
 
 À noter, piège maison : `next.config.ts` interdit la géolocalisation à l'échelle
 du site (voir la mémoire *Permissions-Policy*), ce qui a déjà mordu.
+
+## 6bis. Salles d'escalade — fait, mais invisibles en prod (13 août 2026)
+
+Couche carte, même traitement que les refuges (`lib/seeker/gyms.ts`,
+`/api/seeker/gyms`) : OpenStreetMap via Overpass, `sport=climbing` +
+`leisure` dans `sports_centre`/`climbing` — filtre qui exclut les falaises
+mappées en point. Vérifié en direct : Chamonix, Paris et Berlin ont de vraies
+salles dans OSM (jusqu'à 31 résultats), la requête et le parsing sont
+corrects.
+
+**Le problème n'est pas le code, c'est le réseau.** Vu en production
+(`cragdiary.com`, logs Vercel) : les quatre miroirs Overpass testés
+(`overpass-api.de`, `overpass.kumi.systems`, `overpass.osm.ch`,
+`overpass.private.coffee`) répondent tous instantanément depuis n'importe quel
+autre réseau, mais **restent muets jusqu'au timeout** depuis Vercel — pas un
+refus rapide, un silence. Quatre opérateurs indépendants avec le même
+comportement, ça ressemble à un blocage par plage IP/ASN (AWS Lambda, qui
+héberge les fonctions Vercel), une pratique courante contre le scraping côté
+opérateurs Overpass auto-hébergés — pas à une coïncidence de charge.
+
+Le code dégrade proprement (`ok: false`, pas de cache sur un échec, voir
+`src/lib/seeker/gyms.ts`) : la couche affiche juste « rien » plutôt que de
+planter ou de mentir pendant 24 h. Mais elle n'affichera vraisemblablement
+jamais rien tant que ceci n'est pas résolu.
+
+Deux pistes identifiées, ni l'une ni l'autre tentée :
+
+- **Un relais Cloudflare Worker** devant Overpass : IP différentes de celles
+  d'AWS, gratuit, garde les données OSM déjà vérifiées bonnes. Coût : une
+  deuxième infra à maintenir hors Vercel.
+- **Google Places API** (`climbing_gym`) : source consolidée, fiable, pas de
+  pari réseau — mais payante (crédit mensuel gratuit probablement suffisant à
+  ce trafic) et clé à gérer. Première dépendance payante du projet si retenue.
+
+Décidé le 13 août : **on s'arrête là pour l'instant**, le reste de la session
+(météo, bascule des deux bases, message d'erreur de géolocalisation, cache
+des photos privées) est en production et solide.
 
 ## 7. Décidés et clos — ne pas rouvrir
 
