@@ -8,13 +8,19 @@ import { degreeBox } from "./refuges";
 
 // The main instance throttles under load and, when it does, can answer 200
 // with an HTML error page instead of failing outright — indistinguishable
-// from "no gyms here" unless the body is actually parsed. A second public
-// mirror is tried once before giving up, since the map is drawn either way if
-// both miss but a busy afternoon on the main instance shouldn't mean "no gyms
-// exist" for the whole day the cache holds that answer.
+// from "no gyms here" unless the body is actually parsed. All are tried in
+// parallel before giving up, since the map is drawn either way if every one
+// misses but one bad instance shouldn't mean "no gyms exist" for the whole
+// day the cache holds that answer. Confirmed live: the first two both hang
+// until timeout from this app's own host (production logs), while resolving
+// instantly from elsewhere — looks like an ASN-level block rather than
+// ordinary load, so more independently-run instances is the actual mitigation
+// here, not just a second opinion on busy-ness.
 const OVERPASS_ENDPOINTS = [
   "https://overpass-api.de/api/interpreter",
   "https://overpass.kumi.systems/api/interpreter",
+  "https://overpass.osm.ch/api/interpreter",
+  "https://overpass.private.coffee/api/interpreter",
 ];
 
 // sport=climbing alone also matches outdoor crags mapped as a node (rare but
