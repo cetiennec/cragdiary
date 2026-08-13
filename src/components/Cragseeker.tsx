@@ -1205,15 +1205,15 @@ export default function Cragseeker({
                   hint={t.parkingHint}
                 />
               )}
-              {route.lat != null && route.lon != null && (
-                <WeatherLink
-                  point={{ lat: route.lat, lon: route.lon }}
-                  label={t.weather}
-                  openIn={t.openIn}
-                  hint={t.weatherHint}
-                />
-              )}
               <div className="seeker-actions">
+                {route.lat != null && route.lon != null && (
+                  <WeatherLink
+                    point={{ lat: route.lat, lon: route.lon }}
+                    label={t.weather}
+                    openIn={t.openIn}
+                    hint={t.weatherHint}
+                  />
+                )}
                 <a href={route.url} target="_blank" rel="noopener noreferrer">
                   {t.openOn[route.source]}
                 </a>
