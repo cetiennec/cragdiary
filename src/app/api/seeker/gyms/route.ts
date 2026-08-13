@@ -7,6 +7,12 @@ import { gymsAround } from "@/lib/seeker/gyms";
 
 export type { ClimbingGym } from "@/lib/seeker/gyms";
 
+// Two Overpass attempts run in parallel at up to 8s each, plus our own
+// processing — comfortably under most plans' default budget, but naming it
+// explicitly means a slow Overpass gets to actually finish rather than the
+// platform cutting the function off first.
+export const maxDuration = 15;
+
 const MAX_RADIUS_KM = 300;
 
 function coord(value: string | null, limit: number): number | null {

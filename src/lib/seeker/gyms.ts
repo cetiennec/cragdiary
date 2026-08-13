@@ -49,35 +49,46 @@ type OverpassElement = {
 type OverpassResponse = { elements?: OverpassElement[] | null };
 
 async function query(endpoint: string, bbox: string): Promise<OverpassResponse | null> {
-  const res = await fetch(endpoint, {
-    method: "POST",
-    body: `data=${encodeURIComponent(QUERY(bbox))}`,
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-      // Overpass's own usage policy asks for a descriptive User-Agent so a
-      // heavy user can be identified and asked to slow down rather than
-      // blocked outright — an unmarked request from a datacenter IP (every
-      // request here, run from Vercel) is exactly what a rate limiter is
-      // tuned to distrust.
-      "User-Agent": "cragdiary.com climbing-gyms layer (contact: cragdiary@pm.me)",
-    },
-    signal: AbortSignal.timeout(15000),
-    // No Next fetch-cache here on purpose: caching *this* call would cache
-    // whatever it got back, success or a busy instance's error page alike —
-    // exactly what turned one bad answer into "no gyms exist here" for a
-    // whole day, before this was noticed. The caller caches, and only when
-    // the answer is real; see `ok` below.
-    cache: "no-store",
-  });
-  // A busy instance can still answer 200 with an HTML error page rather than
-  // JSON — content-type says which, before the parse would throw either way.
-  if (!res.ok || !(res.headers.get("content-type") ?? "").includes("json")) {
-    console.error(
-      `gyms: ${endpoint} answered ${res.status} ${res.headers.get("content-type") ?? "(no content-type)"}`
-    );
+  try {
+    const res = await fetch(endpoint, {
+      method: "POST",
+      body: `data=${encodeURIComponent(QUERY(bbox))}`,
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        // Overpass's own usage policy asks for a descriptive User-Agent so a
+        // heavy user can be identified and asked to slow down rather than
+        // blocked outright — an unmarked request from a datacenter IP (every
+        // request here, run from Vercel) is exactly what a rate limiter is
+        // tuned to distrust.
+        "User-Agent": "cragdiary.com climbing-gyms layer (contact: cragdiary@pm.me)",
+      },
+      // Short enough that two endpoints run in parallel (below) still fit
+      // comfortably inside a serverless function's own execution budget —
+      // sequential 15s-each attempts were themselves the failure, liable to
+      // get the whole invocation killed by the platform before either
+      // finished, and read back as an opaque "fetch failed".
+      signal: AbortSignal.timeout(8000),
+      // No Next fetch-cache here on purpose: caching *this* call would cache
+      // whatever it got back, success or a busy instance's error page alike —
+      // exactly what turned one bad answer into "no gyms exist here" for a
+      // whole day, before this was noticed. The caller caches, and only when
+      // the answer is real; see `ok` below.
+      cache: "no-store",
+    });
+    // A busy instance can still answer 200 with an HTML error page rather
+    // than JSON — content-type says which, before the parse would throw.
+    if (!res.ok || !(res.headers.get("content-type") ?? "").includes("json")) {
+      console.error(
+        `gyms: ${endpoint} answered ${res.status} ${res.headers.get("content-type") ?? "(no content-type)"}`
+      );
+      return null;
+    }
+    return await res.json();
+  } catch (err) {
+    const cause = err instanceof Error && "cause" in err ? ` (${String(err.cause)})` : "";
+    console.error(`gyms: ${endpoint} failed —`, err instanceof Error ? err.message : err, cause);
     return null;
   }
-  return res.json();
 }
 
 /**
@@ -96,16 +107,10 @@ export async function gymsAround(near: {
   // Overpass wants "south,west,north,east".
   const bbox = [box.south, box.west, box.north, box.east].map((n) => n.toFixed(5)).join(",");
 
-  let data: OverpassResponse | null = null;
-  for (const endpoint of OVERPASS_ENDPOINTS) {
-    try {
-      data = await query(endpoint, bbox);
-      if (data) break;
-    } catch (err) {
-      // Try the next mirror; gyms are an extra, never the point of the search.
-      console.error(`gyms: ${endpoint} failed —`, err instanceof Error ? err.message : err);
-    }
-  }
+  // Both endpoints at once, not one after another: the mirror shouldn't have
+  // to wait out the main instance's own timeout before it even gets to try.
+  const attempts = await Promise.all(OVERPASS_ENDPOINTS.map((endpoint) => query(endpoint, bbox)));
+  const data = attempts.find((d): d is OverpassResponse => d !== null) ?? null;
   if (!data) return { gyms: [], ok: false };
 
   const gyms = (data.elements ?? []).flatMap<ClimbingGym>((el) => {
