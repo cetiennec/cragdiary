@@ -31,6 +31,10 @@ jobs:
           DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
       - run: npx tsc --noEmit
       - run: npm run lint -- --max-warnings 5
+      # Advisory only: a CVE landing in a transitive dep must never fail an
+      # unrelated PR at 2am. `--omit=dev` skips advisories in tooling
+      # (Playwright, eslint…) that never ships to production.
+      - run: npm audit --omit=dev || true
 
   # schema.sql and the migrations must describe the same database. Drift here
   # means a deploy meeting a column that isn't there.
