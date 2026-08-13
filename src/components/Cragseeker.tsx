@@ -490,8 +490,16 @@ export default function Cragseeker({
 
   function locate() {
     setGeoError(false);
+    // `navigator.geolocation` is missing on an insecure origin, an ancient
+    // browser, or when Permissions-Policy has it switched off — optional
+    // chaining on the call below would then silently do nothing at all,
+    // leaving the button stuck on "locating" forever with no explanation.
+    if (!navigator.geolocation) {
+      setGeoError(true);
+      return;
+    }
     setLocating(true);
-    navigator.geolocation?.getCurrentPosition(
+    navigator.geolocation.getCurrentPosition(
       (pos) => {
         setLocating(false);
         dropPin(pos.coords.latitude, pos.coords.longitude);
@@ -512,8 +520,12 @@ export default function Cragseeker({
       return;
     }
     setGeoError(false);
+    if (!navigator.geolocation) {
+      setGeoError(true);
+      return;
+    }
     setOriginPending(true);
-    navigator.geolocation?.getCurrentPosition(
+    navigator.geolocation.getCurrentPosition(
       (pos) => {
         setOriginPending(false);
         setOrigin({ lat: pos.coords.latitude, lon: pos.coords.longitude });
