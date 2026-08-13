@@ -52,7 +52,15 @@ async function query(endpoint: string, bbox: string): Promise<OverpassResponse |
   const res = await fetch(endpoint, {
     method: "POST",
     body: `data=${encodeURIComponent(QUERY(bbox))}`,
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      // Overpass's own usage policy asks for a descriptive User-Agent so a
+      // heavy user can be identified and asked to slow down rather than
+      // blocked outright — an unmarked request from a datacenter IP (every
+      // request here, run from Vercel) is exactly what a rate limiter is
+      // tuned to distrust.
+      "User-Agent": "cragdiary.com climbing-gyms layer (contact: cragdiary@pm.me)",
+    },
     signal: AbortSignal.timeout(15000),
     // No Next fetch-cache here on purpose: caching *this* call would cache
     // whatever it got back, success or a busy instance's error page alike —
@@ -63,7 +71,12 @@ async function query(endpoint: string, bbox: string): Promise<OverpassResponse |
   });
   // A busy instance can still answer 200 with an HTML error page rather than
   // JSON — content-type says which, before the parse would throw either way.
-  if (!res.ok || !(res.headers.get("content-type") ?? "").includes("json")) return null;
+  if (!res.ok || !(res.headers.get("content-type") ?? "").includes("json")) {
+    console.error(
+      `gyms: ${endpoint} answered ${res.status} ${res.headers.get("content-type") ?? "(no content-type)"}`
+    );
+    return null;
+  }
   return res.json();
 }
 
@@ -88,8 +101,9 @@ export async function gymsAround(near: {
     try {
       data = await query(endpoint, bbox);
       if (data) break;
-    } catch {
+    } catch (err) {
       // Try the next mirror; gyms are an extra, never the point of the search.
+      console.error(`gyms: ${endpoint} failed —`, err instanceof Error ? err.message : err);
     }
   }
   if (!data) return { gyms: [], ok: false };
