@@ -124,54 +124,49 @@ l'existence d'un historique pour dater des entrées passées.
 À noter, piège maison : `next.config.ts` interdit la géolocalisation à l'échelle
 du site (voir la mémoire *Permissions-Policy*), ce qui a déjà mordu.
 
-## 6bis. Salles d'escalade — fait, mais invisibles en prod (13 août 2026)
+## 6bis. Salles d'escalade — résolu par un instantané mensuel (13 août 2026)
 
 Couche carte, même traitement que les refuges (`lib/seeker/gyms.ts`,
-`/api/seeker/gyms`) : OpenStreetMap via Overpass, `sport=climbing` +
-`leisure` dans `sports_centre`/`climbing` — filtre qui exclut les falaises
-mappées en point. Vérifié en direct : Chamonix, Paris et Berlin ont de vraies
-salles dans OSM (jusqu'à 31 résultats), la requête et le parsing sont
-corrects.
+`/api/seeker/gyms`) : OpenStreetMap, `sport=climbing` + `leisure` dans
+`sports_centre`/`climbing` — filtre qui exclut les falaises mappées en point.
 
-**Le problème n'est pas le code, c'est le réseau.** Vu en production
-(`cragdiary.com`, logs Vercel) : les quatre miroirs Overpass testés
-(`overpass-api.de`, `overpass.kumi.systems`, `overpass.osm.ch`,
-`overpass.private.coffee`) répondent tous instantanément depuis n'importe quel
-autre réseau, mais **restent muets jusqu'au timeout** depuis Vercel — pas un
-refus rapide, un silence. Quatre opérateurs indépendants avec le même
-comportement, ça ressemble à un blocage par plage IP/ASN (AWS Lambda, qui
-héberge les fonctions Vercel), une pratique courante contre le scraping côté
-opérateurs Overpass auto-hébergés — pas à une coïncidence de charge.
+**Le problème n'était pas le code, c'était le réseau — spécifiquement, le
+réseau de Vercel.** Vu en production (`cragdiary.com`, logs Vercel) : quatre
+miroirs Overpass indépendants (`overpass-api.de`, `overpass.kumi.systems`,
+`overpass.osm.ch`, `overpass.private.coffee`) répondaient tous instantanément
+depuis n'importe quel autre réseau, mais restaient muets jusqu'au timeout
+depuis Vercel — pas un refus rapide, un silence. Ça ressemble à un blocage par
+plage IP/ASN (AWS Lambda, qui héberge les fonctions Vercel) plutôt qu'à une
+coïncidence de charge chez quatre opérateurs différents.
 
-Le code dégrade proprement (`ok: false`, pas de cache sur un échec, voir
-`src/lib/seeker/gyms.ts`) : la couche affiche juste « rien » plutôt que de
-planter ou de mentir pendant 24 h. Mais elle n'affichera vraisemblablement
-jamais rien tant que ceci n'est pas résolu.
+**La vraie réponse n'était pas de contourner le blocage, mais de ne plus
+avoir besoin d'interroger Overpass à la demande.** Les salles changent à
+peine — pas besoin d'une requête par recherche. `climbing_gyms` (migration
+031) est maintenant un instantané, rechargé en entier une fois par mois par
+`scripts/refresh-climbing-gyms.mjs` (déclenché par
+`.github/workflows/gyms-refresh.yml`, sur les runners GitHub — un réseau
+différent de celui de Vercel, qui répond correctement) : une requête Overpass
+mondiale (~7000 nœuds, ~100 s, un seul appel — le filtre est assez précis
+pour ne pas avoir besoin de découper par région), `truncate` + réinsertion.
+`/api/seeker/gyms` lit maintenant `climbing_gyms` en local (`gymsAround` dans
+`lib/seeker/gyms.ts`) — recherche par boîte puis cercle exact en JS, comme
+les autres couches. Vérifié en local avec de vraies données (5901 salles
+chargées, recherche autour de Chamonix : 6 résultats, popup avec nom et site
+web).
 
-Quatre pistes identifiées, aucune tentée :
+Options écartées en cours de route, pour ne pas les reproposer : un relais
+Cloudflare Worker (infra à maintenir, alors que le vrai problème était la
+fréquence des requêtes, pas leur origine réseau) ; Google Places API (payant,
+première dépendance facturée du projet) ; Geoapify/LocationIQ (gratuits, mêmes
+données OSM via une autre infra — auraient sans doute marché, mais
+premières dépendances à clé du projet, et le déploiement mensuel n'a besoin
+d'aucune des deux).
 
-- **Un relais Cloudflare Worker** devant Overpass : IP différentes de celles
-  d'AWS, gratuit, garde les données OSM déjà vérifiées bonnes. Coût : une
-  deuxième infra à maintenir hors Vercel.
-- **Google Places API** (`climbing_gym`) : source consolidée, fiable, pas de
-  pari réseau — mais payante (crédit mensuel gratuit probablement suffisant à
-  ce trafic) et clé à gérer. Première dépendance payante du projet si retenue.
-- **Geoapify Places API**, vérifié le 13 août : mêmes données OSM, mais
-  servies par leur propre infra plutôt que par les miroirs Overpass bloqués —
-  contourne vraisemblablement le blocage sans repayer ni maintenir un relais.
-  Gratuit, 3000 requêtes/jour, **aucune carte bancaire requise**. Catégorie
-  `entertainment.activity_park.climbing`, dérivée des mêmes tags OSM
-  (`sport=climbing`) que la requête Overpass actuelle. Demande tout de même
-  une clé API — première dépendance à clé du projet pour une recherche, alors
-  que c2c, OpenBeta, refuges.info et Overpass sont tous sans clé.
-- **LocationIQ** (vérifié le 13 août, même famille que Geoapify) : gratuit,
-  5000 requêtes/jour, sans carte, données OSM, attribution requise sur le
-  plan gratuit. Pas creusé plus loin, Geoapify déjà suffisant comme piste.
-
-Décidé le 13 août : **on s'arrête là pour l'instant**, y compris l'offre de
-basculer sur Geoapify (déclinée) — le reste de la session (météo, bascule des
-deux bases, message d'erreur de géolocalisation, cache des photos privées)
-est en production et solide.
+Dette restante : si `climbing_gyms` est vide (avant le premier run planifié,
+ou sur une base fraîchement clonée), la couche n'affiche rien plutôt que
+d'échouer — normal, mais lancer `node scripts/refresh-climbing-gyms.mjs
+--apply` une fois à la main est nécessaire avant que le premier 1er du mois
+n'arrive.
 
 ## 7. Décidés et clos — ne pas rouvrir
 
