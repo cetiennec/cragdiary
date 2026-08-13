@@ -1,0 +1,93 @@
+// Indoor climbing gyms — OpenStreetMap via Overpass. Open API, no key, ODbL.
+//
+// Same rule as refuges.ts: this is not a fifth route database, it answers a
+// different question ("where can I climb regardless of weather") and rides on
+// the map as a layer beside the results rather than among them.
+
+import { degreeBox } from "./refuges";
+
+const OVERPASS_API = "https://overpass-api.de/api/interpreter";
+
+// sport=climbing alone also matches outdoor crags mapped as a node (rare but
+// real); requiring an indoor-facility tag as well is what actually says "gym"
+// rather than "place with climbing".
+const QUERY = (bbox: string) => `
+[out:json][timeout:15];
+(
+  nwr["sport"="climbing"]["leisure"~"^(sports_centre|climbing)$"](${bbox});
+);
+out center 200;
+`;
+
+export type ClimbingGym = {
+  id: number;
+  name: string;
+  lat: number;
+  lon: number;
+  /** Bouldering only, when OSM says so ("climbing:boulder" = "yes" and no ropes tag). */
+  bouldering: boolean | null;
+  website: string | null;
+};
+
+type OverpassElement = {
+  id: number;
+  lat?: number;
+  lon?: number;
+  center?: { lat: number; lon: number };
+  tags?: Record<string, string> | null;
+};
+
+/**
+ * Gyms around a point. Same bounding box helper as the shelters layer — a
+ * WGS84 box that circumscribes the search circle.
+ */
+export async function gymsAround(near: {
+  lat: number;
+  lon: number;
+  radiusKm: number;
+}): Promise<ClimbingGym[]> {
+  const box = degreeBox(near.lat, near.lon, near.radiusKm);
+  // Overpass wants "south,west,north,east".
+  const bbox = [box.south, box.west, box.north, box.east].map((n) => n.toFixed(5)).join(",");
+
+  let data: { elements?: OverpassElement[] | null } | null = null;
+  try {
+    const res = await fetch(OVERPASS_API, {
+      method: "POST",
+      body: `data=${encodeURIComponent(QUERY(bbox))}`,
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      signal: AbortSignal.timeout(15000),
+      // Overpass is a shared public instance and throttles under load — a
+      // day's cache keeps a busy afternoon from ever hitting it twice for the
+      // same neighbourhood. The map is drawn either way if this misses.
+      next: { revalidate: 86400 },
+    });
+    if (!res.ok) return [];
+    data = await res.json();
+  } catch {
+    // Gyms are an extra, never the point of the search.
+    return [];
+  }
+
+  return (data?.elements ?? []).flatMap<ClimbingGym>((el) => {
+    const tags = el.tags;
+    const name = tags?.name;
+    const lat = el.lat ?? el.center?.lat;
+    const lon = el.lon ?? el.center?.lon;
+    if (!name || lat == null || lon == null) return [];
+    // "Bouldering only" is worth a flag; "has bouldering among other things"
+    // isn't distinctive enough to say anything with.
+    const hasRopes = tags?.["climbing:toprope"] === "yes" || tags?.["climbing:sport"] === "yes";
+    const bouldering = tags?.["climbing:boulder"] === "yes" && !hasRopes ? true : null;
+    return [
+      {
+        id: el.id,
+        name,
+        lat,
+        lon,
+        bouldering,
+        website: tags?.website ?? tags?.["contact:website"] ?? null,
+      },
+    ];
+  });
+}

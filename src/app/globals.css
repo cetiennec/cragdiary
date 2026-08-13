@@ -4406,6 +4406,23 @@ a {
   opacity: 1;
 }
 
+/* Gyms: same square shape as shelters — off by default and not a result — but
+   their own colour, since the two layers can be on at once. */
+.seeker-gym-pin {
+  width: 9px;
+  height: 9px;
+  background: #c2793a;
+  border: 1.5px solid #ffffff;
+  border-radius: 2px;
+  box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.35);
+  opacity: 0.75;
+  transition: opacity 0.12s ease;
+}
+
+.seeker-gym-pin:hover {
+  opacity: 1;
+}
+
 .seeker-legend-square {
   border-radius: 2px;
 }

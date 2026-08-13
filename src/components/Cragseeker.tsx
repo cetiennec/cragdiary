@@ -1,7 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import SeekerMap, { HUT_COLOR, SOURCE_COLORS, type MapLayer, type SeekerPoint } from "./SeekerMap";
+import SeekerMap, {
+  GYM_COLOR,
+  HUT_COLOR,
+  SOURCE_COLORS,
+  type MapLayer,
+  type SeekerPoint,
+} from "./SeekerMap";
 import ParkingLink from "./ParkingLink";
 import Toast from "./Toast";
 import { saveWishFromSearch } from "@/app/actions";
@@ -9,6 +15,7 @@ import { drivingMinutes, formatDuration } from "@/lib/travel";
 import type { SeekerResult } from "@/app/api/seeker/route";
 import type { OpenBetaClimb } from "@/app/api/seeker/climbs/route";
 import type { MountainHut } from "@/app/api/seeker/huts/route";
+import type { ClimbingGym } from "@/app/api/seeker/gyms/route";
 import type { C2cAccessPoint, C2cRouteDetail } from "@/app/api/c2c/access/route";
 import type { GeoSuggestion } from "@/app/api/geo/search/route";
 import {
@@ -217,6 +224,10 @@ export default function Cragseeker({
   // Stamped with the circle they were fetched for, so moving the pin can never
   // leave the previous neighbourhood's shelters on the map.
   const [huts, setHuts] = useState<{ at: string; list: MountainHut[] } | null>(null);
+  // Indoor climbing gyms — the same "map layer, not a result" treatment as
+  // shelters, and off unless asked for the same reason.
+  const [showGyms, setShowGyms] = useState(params.gyms === "1");
+  const [gyms, setGyms] = useState<{ at: string; list: ClimbingGym[] } | null>(null);
   // Confirms the add, which otherwise happens at the foot of a card the eye
   // may already have left.
   const [toast, setToast] = useState<{ text: string; tone: "ok" | "error" } | null>(null);
@@ -261,6 +272,7 @@ export default function Cragseeker({
     if (facing.length) sp.set("fac", facing.join(","));
     if (outdoorType && showOutdoorType) sp.set("crtyp", outdoorType);
     if (showHuts) sp.set("huts", "1");
+    if (showGyms) sp.set("gyms", "1");
     return sp.toString();
   }, [
     activity,
@@ -276,6 +288,7 @@ export default function Cragseeker({
     outdoorType,
     showOutdoorType,
     showHuts,
+    showGyms,
   ]);
 
   const query = `${search}&lang=${locale}`;
@@ -409,6 +422,34 @@ export default function Cragseeker({
   const visibleHuts = useMemo(
     () => (showHuts && hutCircle && huts?.at === hutCircle ? huts.list : []),
     [showHuts, hutCircle, huts]
+  );
+
+  // Gyms follow the pin the same way shelters do — not the filters.
+  const gymCircle = hutCircle;
+
+  useEffect(() => {
+    if (!showGyms || !gymCircle) return;
+    let cancelled = false;
+    (async () => {
+      const [lat, lon, km] = gymCircle.split(",");
+      try {
+        const res = await fetch(`/api/seeker/gyms?lat=${lat}&lon=${lon}&radius=${km}`);
+        const data = (await res.json()) as { gyms: ClimbingGym[] };
+        if (!cancelled) setGyms({ at: gymCircle, list: data.gyms });
+      } catch {
+        // A missing gym layer is a far smaller loss than a broken search.
+        if (!cancelled) setGyms({ at: gymCircle, list: [] });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [showGyms, gymCircle]);
+
+  // Only gyms belonging to the circle on screen, and only while asked for.
+  const visibleGyms = useMemo(
+    () => (showGyms && gymCircle && gyms?.at === gymCircle ? gyms.list : []),
+    [showGyms, gymCircle, gyms]
   );
 
   useEffect(() => {
@@ -643,6 +684,10 @@ export default function Cragseeker({
     () => ({ beds: t.hutBeds, noBeds: t.hutNoBeds, open: t.hutOpen }),
     [t]
   );
+  const gymLabels = useMemo(
+    () => ({ bouldering: t.gymBouldering, visit: t.gymVisit }),
+    [t]
+  );
 
   // The map's key doubles as its switchboard: every colour on it can be turned
   // off, so explaining a colour and offering its switch is the same gesture.
@@ -679,8 +724,18 @@ export default function Cragseeker({
         title: t.hutsHint,
         onToggle: () => setShowHuts((on) => !on),
       },
+      {
+        id: "gyms",
+        label: t.gymsLegend,
+        color: GYM_COLOR,
+        square: true,
+        checked: showGyms,
+        disabled: !centre,
+        title: t.gymsHint,
+        onToggle: () => setShowGyms((on) => !on),
+      },
     ],
-    [activity, activeSources, centre, showHuts, t]
+    [activity, activeSources, centre, showHuts, showGyms, t]
   );
 
   // A marker carries the same overview as its list card, so hovering a point on
@@ -998,6 +1053,8 @@ export default function Cragseeker({
         layersLabel={t.mapLayers}
         huts={visibleHuts}
         hutLabels={hutLabels}
+        gyms={visibleGyms}
+        gymLabels={gymLabels}
       />
 
       <div className="seeker-status">

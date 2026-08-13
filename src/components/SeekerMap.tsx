@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import "leaflet/dist/leaflet.css";
 import type { SeekerSource } from "@/lib/seeker/types";
 import type { MountainHut } from "@/lib/seeker/refuges";
+import type { ClimbingGym } from "@/lib/seeker/gyms";
 
 export type SeekerPoint = {
   /** Unique across databases — "c2c:1234", "openbeta:<uuid>". */
@@ -125,6 +126,37 @@ function hutCard(
   return card;
 }
 
+// Same rule as hutCard: built from DOM nodes, since a gym's name comes from
+// OpenStreetMap and `textContent` cannot become markup.
+function gymCard(gym: ClimbingGym, labels: { bouldering: string; visit: string }): HTMLElement {
+  const card = document.createElement("div");
+  card.className = "seeker-tip";
+
+  const title = document.createElement("strong");
+  title.className = "seeker-tip-title";
+  title.textContent = gym.name;
+  card.append(title);
+
+  if (gym.bouldering) {
+    const meta = document.createElement("span");
+    meta.className = "seeker-tip-meta";
+    meta.textContent = labels.bouldering;
+    card.append(meta);
+  }
+
+  if (gym.website) {
+    const link = document.createElement("a");
+    link.className = "seeker-tip-c2c";
+    link.href = gym.website;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.textContent = labels.visit;
+    card.append(link);
+  }
+
+  return card;
+}
+
 /** One line of the map menu: a colour, what it means, and its switch. */
 export type MapLayer = {
   id: string;
@@ -158,6 +190,10 @@ export const SOURCE_COLORS: Record<SeekerSource, string> = {
 // a black-and-white print alike.
 export const HUT_COLOR = "#7d5ba6";
 
+// Gyms are the same shape as shelters (a square, not a result) but need their
+// own colour: both layers can be switched on together.
+export const GYM_COLOR = "#c2793a";
+
 // Selection is shown by size and a dark rim rather than a colour of its own:
 // the fill has a meaning now, and a hovered marker must not look like it comes
 // from a different database.
@@ -175,6 +211,8 @@ export default function SeekerMap({
   layersLabel,
   huts,
   hutLabels,
+  gyms,
+  gymLabels,
 }: {
   centre: { lat: number; lon: number } | null;
   radiusKm: number;
@@ -194,6 +232,10 @@ export default function SeekerMap({
   huts: MountainHut[];
   /** How to label a shelter's popup. */
   hutLabels: { beds: string; noBeds: string; open: string };
+  /** Indoor climbing gyms to draw beside the results, empty when the layer is off. */
+  gyms: ClimbingGym[];
+  /** How to label a gym's popup. */
+  gymLabels: { bouldering: string; visit: string };
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   // The map lives in state, not a ref: every drawing effect below depends on
@@ -376,6 +418,39 @@ export default function SeekerMap({
       layer.remove();
     };
   }, [map, L, huts, hutLabels]);
+
+  // Gyms, on their own layer for the same reason shelters get one: switching
+  // it off must never disturb the results, or the shelters, underneath.
+  useEffect(() => {
+    if (!map || !L || gyms.length === 0) return;
+
+    const layer = L.layerGroup().addTo(map);
+    for (const gym of gyms) {
+      L.marker([gym.lat, gym.lon], {
+        icon: L.divIcon({
+          className: "seeker-gym-pin",
+          html: "",
+          iconSize: [11, 11],
+          iconAnchor: [5, 5],
+        }),
+        // Results first, then shelters, then gyms — a gym must never sit over
+        // either a route marker or a shelter's.
+        zIndexOffset: -600,
+        keyboard: false,
+      })
+        .bindPopup(gymCard(gym, gymLabels), {
+          className: "seeker-tip-wrap",
+          closeButton: false,
+          maxWidth: 240,
+          offset: [0, -4],
+        })
+        .addTo(layer);
+    }
+
+    return () => {
+      layer.remove();
+    };
+  }, [map, L, gyms, gymLabels]);
 
   // Selecting a result — from either side — makes its marker stand out, while
   // keeping the fill that says which database it came from.

@@ -95,8 +95,9 @@ jobs:
       - name: Nothing private leaks
         run: node scripts/privacy-check.mjs http://localhost:3111 "$DATABASE_URL"
 
-  # Everything that leans on camptocamp's API. Same checks, but their outage is
-  # their problem: reported, never blocking.
+  # Everything that leans on an API we don't control — camptocamp, and
+  # Overpass for the gyms layer. Same checks, but their outage is their
+  # problem: reported, never blocking.
   camptocamp:
     runs-on: ubuntu-latest
     continue-on-error: true
@@ -132,6 +133,8 @@ jobs:
         run: node scripts/c2c-import-check.mjs http://localhost:3111 "$DATABASE_URL"
       - name: The Cragseeker hover card stays inside the map
         run: node scripts/seeker-tip-check.mjs http://localhost:3111 /tmp
+      - name: The gyms layer toggles, fetches once, and clears
+        run: node scripts/seeker-gyms-check.mjs http://localhost:3111 /tmp
 
   # Is the live database ready for what is about to be deployed? Three times
   # this week a deploy went out ahead of its migration and the only warning was
