@@ -35,28 +35,60 @@ const centre = async () => {
   return `${url.searchParams.get("lat")},${url.searchParams.get("lon")}`;
 };
 
+// Gyms have cards of their own under the results — checked before anything
+// moves the pin, since the section is drawn for wherever the search now is.
+await page.locator(".seeker-gyms").scrollIntoViewIfNeeded();
+const gymCards = await page.locator(".seeker-gym-card").count();
+console.log(`gym cards: ${gymCards}`);
+check("the gyms section is listed below the results", await page.locator(".seeker-gyms").isVisible());
+check("every gym card carries a map thumbnail", gymCards > 0 && gymCards === (await page.locator(".seeker-gym-thumb").count()));
+await page.screenshot({ path: `${out}/seeker-gyms.png`, fullPage: true });
+
 const start = await centre();
 check("the pin is drawn", (await pinAt()) !== null);
 
-// 1. A pan that happens to end over empty map.
+// Every gesture below is a real mouse at real coordinates, so the map has to
+// be on screen first: `page.mouse` never scrolls, and a click aimed below the
+// viewport lands on nothing and passes every check for the wrong reason.
+await page.evaluate(() =>
+  document.querySelector(".seeker-map").scrollIntoView({ block: "center" })
+);
+await page.waitForTimeout(400);
 const map = await page.locator(".seeker-map").boundingBox();
-await page.mouse.move(map.x + 900, map.y + 700);
+check("the map is on screen for the gestures below", map.y >= 0 && map.y + map.height <= 1000);
+
+// 1. A near-miss on a result marker: a few pixels off, still meant for it. The
+// marker has to be one well inside the map — a click aimed just outside the
+// container proves nothing.
+const marker = await page.evaluate(() => {
+  const box = document.querySelector(".seeker-map").getBoundingClientRect();
+  for (const el of document.querySelectorAll("path.leaflet-interactive")) {
+    const m = el.getBoundingClientRect();
+    const x = m.x + m.width / 2;
+    const y = m.y + m.height / 2;
+    if (x > box.left + 40 && x < box.right - 40 && y > box.top + 40 && y < box.bottom - 40) {
+      return { x, y };
+    }
+  }
+  return null;
+});
+check("a result marker is visible to aim at", marker !== null);
+await page.mouse.click(marker.x + 8, marker.y + 8);
+await page.waitForTimeout(700);
+check("missing a marker by a few pixels leaves the pin alone", (await centre()) === start);
+
+// 2. A pan that happens to end over empty map.
+await page.mouse.move(map.x + 700, map.y + 320);
 await page.mouse.down();
-await page.mouse.move(map.x + 700, map.y + 600, { steps: 12 });
+await page.mouse.move(map.x + 540, map.y + 240, { steps: 12 });
 await page.mouse.up();
 await page.waitForTimeout(600);
 check("panning the map leaves the pin where it was", (await centre()) === start);
 
-// 2. A double-click, which zooms.
-await page.mouse.dblclick(map.x + 400, map.y + 800);
+// 3. A double-click, which zooms.
+await page.mouse.dblclick(map.x + 400, map.y + 380);
 await page.waitForTimeout(700);
 check("double-clicking to zoom never drops the pin", (await centre()) === start);
-
-// 3. A near-miss on a result marker: a few pixels off, still meant for it.
-const marker = await page.locator("path.leaflet-interactive").first().boundingBox();
-await page.mouse.click(marker.x + marker.width / 2 + 8, marker.y + marker.height / 2 + 8);
-await page.waitForTimeout(700);
-check("missing a marker by a few pixels leaves the pin alone", (await centre()) === start);
 
 // 4. A click that really is on empty map still moves the search. The spot is
 // found rather than guessed: the map has just panned a popup into view, and a
@@ -90,12 +122,6 @@ await page.mouse.move(before.x + 120, before.y + 60, { steps: 15 });
 await page.mouse.up();
 await page.waitForTimeout(1200);
 check("dragging the pin moves the search", (await centre()) !== afterClick);
-
-// 6. And gyms have cards of their own under the results.
-await page.locator(".seeker-gyms").scrollIntoViewIfNeeded();
-const gymCards = await page.locator(".seeker-gym-card").count();
-console.log(`gym cards: ${gymCards}`);
-check("the gyms section is listed below the results", await page.locator(".seeker-gyms").isVisible());
 
 await page.screenshot({ path: `${out}/seeker-pin.png`, fullPage: true });
 await browser.close();

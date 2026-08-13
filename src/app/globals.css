@@ -4444,6 +4444,41 @@ a {
   border-left: 3px solid #c2793a;
 }
 
+/* A window onto a grid of OSM tiles laid out in absolute pixels by GymThumb.
+   The 512px cap is what its tile grid is sized for — widen one, widen both. */
+.seeker-gym-thumb {
+  position: relative;
+  overflow: hidden;
+  height: 96px;
+  max-width: 512px;
+  margin: -0.1rem 0 0.6rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface-muted, #e8e0d4);
+}
+
+.seeker-gym-thumb img {
+  position: absolute;
+  max-width: none;
+  /* Print-like rather than screen-bright: the card's own text has to win. */
+  filter: saturate(0.85) contrast(0.95);
+}
+
+/* The gym is at the centre by construction — this is the pin for it, in the
+   same colour its marker wears on the map above. */
+.seeker-gym-thumb-dot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 11px;
+  height: 11px;
+  margin: -5px 0 0 -5px;
+  background: #c2793a;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.35);
+}
+
 /* A ticked source wears the colour its markers have on the map, so the control
    here and the legend under the map are plainly the same key. Both come from
    `SOURCE_COLORS` in SeekerMap — keep them in step. */

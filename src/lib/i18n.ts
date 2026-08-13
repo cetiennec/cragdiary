@@ -699,6 +699,7 @@ const en = {
     gymsCount: "{n} within the search circle",
     gymsEmpty: "No gym mapped inside this circle.",
     gymCall: "Call",
+    gymThumbAlt: "Map of the area around {name}",
     openIn: "Open in…",
     climbed: "You've climbed this",
     climbedHint: "This route already appears in your journal",
@@ -747,7 +748,8 @@ const en = {
     added: "Added ✓",
     addFailed: "Couldn't add — try again.",
     loginToSave: "Log in to save routes to a wishlist.",
-    attribution: "Route data from camptocamp.org (CC BY-SA) and openbeta.io (CC0)",
+    attribution:
+      "Route data from camptocamp.org (CC BY-SA) and openbeta.io (CC0). Maps and gyms © OpenStreetMap contributors (ODbL)",
     outdoorTypes: {
       single: "single pitch",
       multi: "multi-pitch",
@@ -1456,6 +1458,7 @@ const fr: Dict = {
     gymsCount: "{n} dans le rayon de recherche",
     gymsEmpty: "Aucune salle recensée dans ce rayon.",
     gymCall: "Appeler",
+    gymThumbAlt: "Carte des environs de {name}",
     openIn: "Ouvrir dans…",
     climbed: "Déjà grimpée",
     climbedHint: "Cette voie figure déjà dans votre carnet",
@@ -1506,7 +1509,8 @@ const fr: Dict = {
     added: "Ajoutée ✓",
     addFailed: "Échec de l'ajout — réessayez.",
     loginToSave: "Connectez-vous pour enregistrer des voies dans une liste.",
-    attribution: "Données de voies : camptocamp.org (CC BY-SA) et openbeta.io (CC0)",
+    attribution:
+      "Données de voies : camptocamp.org (CC BY-SA) et openbeta.io (CC0). Cartes et salles © les contributeurs OpenStreetMap (ODbL)",
     outdoorTypes: {
       single: "couenne",
       multi: "grande voie",

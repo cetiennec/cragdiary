@@ -11,6 +11,7 @@ import SeekerMap, {
 import ParkingLink from "./ParkingLink";
 import WeatherLink from "./WeatherLink";
 import Toast from "./Toast";
+import GymThumb from "./GymThumb";
 import { saveWishFromSearch } from "@/app/actions";
 import type { SeekerResult } from "@/app/api/seeker/route";
 import type { OpenBetaClimb } from "@/app/api/seeker/climbs/route";
@@ -1267,6 +1268,7 @@ export default function Cragseeker({
             <ul className="seeker-results">
               {visibleGyms.map((gym) => (
                 <li key={gym.id} className="seeker-result seeker-gym-card">
+                  <GymThumb lat={gym.lat} lon={gym.lon} alt={fill(t.gymThumbAlt, "name", gym.name)} />
                   <div className="seeker-result-head">
                     <a href={gym.website} target="_blank" rel="noopener noreferrer">
                       {gym.name}
