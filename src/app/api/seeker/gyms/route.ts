@@ -25,8 +25,20 @@ export async function GET(req: Request) {
 
   const radiusKm = Math.min(MAX_RADIUS_KM, Math.max(1, Number(sp.get("radius")) || 50));
 
+  const { gyms, ok } = await gymsAround({ lat, lon, radiusKm });
   return Response.json(
-    { gyms: await gymsAround({ lat, lon, radiusKm }) },
-    { headers: { "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=604800" } }
+    { gyms },
+    {
+      headers: {
+        // A real answer — even a genuine zero — is worth a day at the edge.
+        // A miss (Overpass busy on both mirrors) must not be: caching that
+        // would turn one bad moment into "no gyms exist here" for a whole
+        // day, for every visitor to this exact spot. A short s-maxage still
+        // shields a busy instance from being hit on every single request.
+        "Cache-Control": ok
+          ? "public, s-maxage=86400, stale-while-revalidate=604800"
+          : "public, s-maxage=30",
+      },
+    }
   );
 }

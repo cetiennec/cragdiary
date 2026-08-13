@@ -54,10 +54,12 @@ async function query(endpoint: string, bbox: string): Promise<OverpassResponse |
     body: `data=${encodeURIComponent(QUERY(bbox))}`,
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     signal: AbortSignal.timeout(15000),
-    // Overpass is a shared public instance and throttles under load — a
-    // day's cache keeps a busy afternoon from ever hitting it twice for the
-    // same neighbourhood.
-    next: { revalidate: 86400 },
+    // No Next fetch-cache here on purpose: caching *this* call would cache
+    // whatever it got back, success or a busy instance's error page alike —
+    // exactly what turned one bad answer into "no gyms exist here" for a
+    // whole day, before this was noticed. The caller caches, and only when
+    // the answer is real; see `ok` below.
+    cache: "no-store",
   });
   // A busy instance can still answer 200 with an HTML error page rather than
   // JSON — content-type says which, before the parse would throw either way.
@@ -67,13 +69,16 @@ async function query(endpoint: string, bbox: string): Promise<OverpassResponse |
 
 /**
  * Gyms around a point. Same bounding box helper as the shelters layer — a
- * WGS84 box that circumscribes the search circle.
+ * WGS84 box that circumscribes the search circle. `ok` is false when every
+ * endpoint failed — an unknown, not an answer — so the caller can tell a
+ * real "no gyms here" from Overpass simply being busy, and cache only the
+ * former.
  */
 export async function gymsAround(near: {
   lat: number;
   lon: number;
   radiusKm: number;
-}): Promise<ClimbingGym[]> {
+}): Promise<{ gyms: ClimbingGym[]; ok: boolean }> {
   const box = degreeBox(near.lat, near.lon, near.radiusKm);
   // Overpass wants "south,west,north,east".
   const bbox = [box.south, box.west, box.north, box.east].map((n) => n.toFixed(5)).join(",");
@@ -87,9 +92,9 @@ export async function gymsAround(near: {
       // Try the next mirror; gyms are an extra, never the point of the search.
     }
   }
-  if (!data) return [];
+  if (!data) return { gyms: [], ok: false };
 
-  return (data.elements ?? []).flatMap<ClimbingGym>((el) => {
+  const gyms = (data.elements ?? []).flatMap<ClimbingGym>((el) => {
     const tags = el.tags;
     const name = tags?.name;
     const lat = el.lat ?? el.center?.lat;
@@ -110,4 +115,5 @@ export async function gymsAround(near: {
       },
     ];
   });
+  return { gyms, ok: true };
 }
