@@ -858,13 +858,16 @@ export default function Cragseeker({
               );
             })}
           </fieldset>
-          {/* Same switch as the gyms row in the map's own key — this is the
-              one a first-time visitor is actually likely to see, since the
-              map's corner menu is easy to miss entirely. */}
+          {/* The same switch as the gyms row in the map's own key — this is
+              the one a first-time visitor is actually likely to see, since
+              the map's corner menu is easy to miss entirely. A toggle, not a
+              one-way "turn on": it has to answer to the same state either
+              could set. */}
           <button
             type="button"
             className={`seeker-gyms-nudge${showGyms ? " is-on" : ""}`}
-            onClick={() => setShowGyms(true)}
+            aria-pressed={showGyms}
+            onClick={() => setShowGyms((on) => !on)}
             disabled={!centre}
           >
             ☁ {t.gymsHint}
@@ -1245,15 +1248,15 @@ export default function Cragseeker({
                   hint={t.parkingHint}
                 />
               )}
+              {route.lat != null && route.lon != null && (
+                <WeatherLink
+                  point={{ lat: route.lat, lon: route.lon }}
+                  label={t.weather}
+                  openIn={t.openIn}
+                  hint={t.weatherHint}
+                />
+              )}
               <div className="seeker-actions">
-                {route.lat != null && route.lon != null && (
-                  <WeatherLink
-                    point={{ lat: route.lat, lon: route.lon }}
-                    label={t.weather}
-                    openIn={t.openIn}
-                    hint={t.weatherHint}
-                  />
-                )}
                 <a href={route.url} target="_blank" rel="noopener noreferrer">
                   {t.openOn[route.source]}
                 </a>
