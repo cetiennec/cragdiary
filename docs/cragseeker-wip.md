@@ -148,7 +148,7 @@ Le code dégrade proprement (`ok: false`, pas de cache sur un échec, voir
 planter ou de mentir pendant 24 h. Mais elle n'affichera vraisemblablement
 jamais rien tant que ceci n'est pas résolu.
 
-Deux pistes identifiées, ni l'une ni l'autre tentée :
+Quatre pistes identifiées, aucune tentée :
 
 - **Un relais Cloudflare Worker** devant Overpass : IP différentes de celles
   d'AWS, gratuit, garde les données OSM déjà vérifiées bonnes. Coût : une
@@ -156,10 +156,22 @@ Deux pistes identifiées, ni l'une ni l'autre tentée :
 - **Google Places API** (`climbing_gym`) : source consolidée, fiable, pas de
   pari réseau — mais payante (crédit mensuel gratuit probablement suffisant à
   ce trafic) et clé à gérer. Première dépendance payante du projet si retenue.
+- **Geoapify Places API**, vérifié le 13 août : mêmes données OSM, mais
+  servies par leur propre infra plutôt que par les miroirs Overpass bloqués —
+  contourne vraisemblablement le blocage sans repayer ni maintenir un relais.
+  Gratuit, 3000 requêtes/jour, **aucune carte bancaire requise**. Catégorie
+  `entertainment.activity_park.climbing`, dérivée des mêmes tags OSM
+  (`sport=climbing`) que la requête Overpass actuelle. Demande tout de même
+  une clé API — première dépendance à clé du projet pour une recherche, alors
+  que c2c, OpenBeta, refuges.info et Overpass sont tous sans clé.
+- **LocationIQ** (vérifié le 13 août, même famille que Geoapify) : gratuit,
+  5000 requêtes/jour, sans carte, données OSM, attribution requise sur le
+  plan gratuit. Pas creusé plus loin, Geoapify déjà suffisant comme piste.
 
-Décidé le 13 août : **on s'arrête là pour l'instant**, le reste de la session
-(météo, bascule des deux bases, message d'erreur de géolocalisation, cache
-des photos privées) est en production et solide.
+Décidé le 13 août : **on s'arrête là pour l'instant**, y compris l'offre de
+basculer sur Geoapify (déclinée) — le reste de la session (météo, bascule des
+deux bases, message d'erreur de géolocalisation, cache des photos privées)
+est en production et solide.
 
 ## 7. Décidés et clos — ne pas rouvrir
 
