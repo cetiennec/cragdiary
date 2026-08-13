@@ -1,17 +1,13 @@
 // Indoor climbing gyms around the search pin, for the map layer. Same shape
 // as /api/seeker/huts: switched on by hand, and it must never be able to slow
-// down or fail the results it sits beside.
+// down or fail the results it sits beside. Reads our own `climbing_gyms`
+// table — a monthly snapshot, not a live upstream call — see
+// lib/seeker/gyms.ts for why.
 
 import { limitPublicApi } from "@/lib/rate-limit";
 import { gymsAround } from "@/lib/seeker/gyms";
 
 export type { ClimbingGym } from "@/lib/seeker/gyms";
-
-// Two Overpass attempts run in parallel at up to 8s each, plus our own
-// processing — comfortably under most plans' default budget, but naming it
-// explicitly means a slow Overpass gets to actually finish rather than the
-// platform cutting the function off first.
-export const maxDuration = 15;
 
 const MAX_RADIUS_KM = 300;
 
@@ -36,11 +32,12 @@ export async function GET(req: Request) {
     { gyms },
     {
       headers: {
-        // A real answer — even a genuine zero — is worth a day at the edge.
-        // A miss (Overpass busy on both mirrors) must not be: caching that
-        // would turn one bad moment into "no gyms exist here" for a whole
-        // day, for every visitor to this exact spot. A short s-maxage still
-        // shields a busy instance from being hit on every single request.
+        // A real answer — even a genuine zero — is worth a day at the edge:
+        // the underlying table only changes once a month anyway. A miss (a
+        // DB hiccup) must not be cached that long, or one bad moment reads
+        // as "no gyms here" for a whole day, for every visitor to this exact
+        // spot — a short s-maxage still avoids hammering the database on a
+        // burst of retries.
         "Cache-Control": ok
           ? "public, s-maxage=86400, stale-while-revalidate=604800"
           : "public, s-maxage=30",

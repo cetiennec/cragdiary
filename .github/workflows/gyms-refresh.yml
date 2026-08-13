@@ -1,0 +1,31 @@
+name: Refresh climbing gyms
+
+# Gyms barely change, so a monthly snapshot is plenty — see
+# scripts/refresh-climbing-gyms.mjs and docs/cragseeker-wip.md §6bis for why
+# this runs here instead of querying Overpass live from the app: Vercel's own
+# outbound requests to Overpass are unreliable (an ASN-level block, by the
+# look of it), where a GitHub Actions runner isn't.
+on:
+  schedule:
+    - cron: "17 3 1 * *" # 03:17 UTC on the 1st — off the hour, so it isn't
+      # competing with everyone else's midnight cron for Overpass's attention.
+  workflow_dispatch: {} # manual re-run, e.g. right after this workflow changes
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Make sure the table exists
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: node scripts/migrate-031-climbing-gyms.js
+      - name: Query Overpass and replace climbing_gyms
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: node scripts/refresh-climbing-gyms.mjs --apply

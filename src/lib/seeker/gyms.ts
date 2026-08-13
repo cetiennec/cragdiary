@@ -1,108 +1,34 @@
-// Indoor climbing gyms — OpenStreetMap via Overpass. Open API, no key, ODbL.
+// Indoor climbing gyms — OpenStreetMap, refreshed monthly into our own
+// `climbing_gyms` table rather than queried live. Two reasons: gyms barely
+// change, so a live query answers a question that doesn't need asking every
+// time; and it didn't work anyway — Overpass, queried live from Vercel, was
+// unreachable in production (four independent mirrors all hung until
+// timeout, an ASN-level block by the look of it — see
+// docs/cragseeker-wip.md §6bis). scripts/refresh-climbing-gyms.mjs runs the
+// actual Overpass query, from outside Vercel, on a schedule.
 //
 // Same rule as refuges.ts: this is not a fifth route database, it answers a
-// different question ("where can I climb regardless of weather") and rides on
-// the map as a layer beside the results rather than among them.
+// different question ("where can I climb regardless of weather") and rides
+// on the map as a layer beside the results rather than among them.
 
+import { pool } from "@/lib/db";
+import { distanceKm } from "@/lib/c2c";
 import { degreeBox } from "./refuges";
 
-// The main instance throttles under load and, when it does, can answer 200
-// with an HTML error page instead of failing outright — indistinguishable
-// from "no gyms here" unless the body is actually parsed. All are tried in
-// parallel before giving up, since the map is drawn either way if every one
-// misses but one bad instance shouldn't mean "no gyms exist" for the whole
-// day the cache holds that answer. Confirmed live: the first two both hang
-// until timeout from this app's own host (production logs), while resolving
-// instantly from elsewhere — looks like an ASN-level block rather than
-// ordinary load, so more independently-run instances is the actual mitigation
-// here, not just a second opinion on busy-ness.
-const OVERPASS_ENDPOINTS = [
-  "https://overpass-api.de/api/interpreter",
-  "https://overpass.kumi.systems/api/interpreter",
-  "https://overpass.osm.ch/api/interpreter",
-  "https://overpass.private.coffee/api/interpreter",
-];
-
-// sport=climbing alone also matches outdoor crags mapped as a node (rare but
-// real); requiring an indoor-facility tag as well is what actually says "gym"
-// rather than "place with climbing".
-const QUERY = (bbox: string) => `
-[out:json][timeout:15];
-(
-  nwr["sport"="climbing"]["leisure"~"^(sports_centre|climbing)$"](${bbox});
-);
-out center 200;
-`;
-
 export type ClimbingGym = {
-  id: number;
+  id: string;
   name: string;
   lat: number;
   lon: number;
-  /** Bouldering only, when OSM says so ("climbing:boulder" = "yes" and no ropes tag). */
+  /** Bouldering only, when OSM said so at the last refresh. */
   bouldering: boolean | null;
   website: string | null;
 };
 
-type OverpassElement = {
-  id: number;
-  lat?: number;
-  lon?: number;
-  center?: { lat: number; lon: number };
-  tags?: Record<string, string> | null;
-};
-
-type OverpassResponse = { elements?: OverpassElement[] | null };
-
-async function query(endpoint: string, bbox: string): Promise<OverpassResponse | null> {
-  try {
-    const res = await fetch(endpoint, {
-      method: "POST",
-      body: `data=${encodeURIComponent(QUERY(bbox))}`,
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        // Overpass's own usage policy asks for a descriptive User-Agent so a
-        // heavy user can be identified and asked to slow down rather than
-        // blocked outright — an unmarked request from a datacenter IP (every
-        // request here, run from Vercel) is exactly what a rate limiter is
-        // tuned to distrust.
-        "User-Agent": "cragdiary.com climbing-gyms layer (contact: cragdiary@pm.me)",
-      },
-      // Short enough that two endpoints run in parallel (below) still fit
-      // comfortably inside a serverless function's own execution budget —
-      // sequential 15s-each attempts were themselves the failure, liable to
-      // get the whole invocation killed by the platform before either
-      // finished, and read back as an opaque "fetch failed".
-      signal: AbortSignal.timeout(8000),
-      // No Next fetch-cache here on purpose: caching *this* call would cache
-      // whatever it got back, success or a busy instance's error page alike —
-      // exactly what turned one bad answer into "no gyms exist here" for a
-      // whole day, before this was noticed. The caller caches, and only when
-      // the answer is real; see `ok` below.
-      cache: "no-store",
-    });
-    // A busy instance can still answer 200 with an HTML error page rather
-    // than JSON — content-type says which, before the parse would throw.
-    if (!res.ok || !(res.headers.get("content-type") ?? "").includes("json")) {
-      console.error(
-        `gyms: ${endpoint} answered ${res.status} ${res.headers.get("content-type") ?? "(no content-type)"}`
-      );
-      return null;
-    }
-    return await res.json();
-  } catch (err) {
-    const cause = err instanceof Error && "cause" in err ? ` (${String(err.cause)})` : "";
-    console.error(`gyms: ${endpoint} failed —`, err instanceof Error ? err.message : err, cause);
-    return null;
-  }
-}
-
 /**
- * Gyms around a point. Same bounding box helper as the shelters layer — a
- * WGS84 box that circumscribes the search circle. `ok` is false when every
- * endpoint failed — an unknown, not an answer — so the caller can tell a
- * real "no gyms here" from Overpass simply being busy, and cache only the
- * former.
+ * Gyms around a point. A box first (cheap, indexed, keeps the candidate set
+ * small) then the exact circle in application code — the same two-step shape
+ * the live databases use, just against our own table instead of an upstream.
  */
 export async function gymsAround(near: {
   lat: number;
@@ -110,35 +36,33 @@ export async function gymsAround(near: {
   radiusKm: number;
 }): Promise<{ gyms: ClimbingGym[]; ok: boolean }> {
   const box = degreeBox(near.lat, near.lon, near.radiusKm);
-  // Overpass wants "south,west,north,east".
-  const bbox = [box.south, box.west, box.north, box.east].map((n) => n.toFixed(5)).join(",");
 
-  // Both endpoints at once, not one after another: the mirror shouldn't have
-  // to wait out the main instance's own timeout before it even gets to try.
-  const attempts = await Promise.all(OVERPASS_ENDPOINTS.map((endpoint) => query(endpoint, bbox)));
-  const data = attempts.find((d): d is OverpassResponse => d !== null) ?? null;
-  if (!data) return { gyms: [], ok: false };
+  // `ok: false` on a DB hiccup, not a thrown error: a missing shelter layer
+  // is a far smaller loss than a broken search, same rule as the other map
+  // layers, and it keeps the caller from caching a transient failure as "no
+  // gyms here" the way the old live-Overpass version once did by accident.
+  try {
+    const result = await pool.query<{
+      id: string;
+      name: string;
+      lat: number;
+      lon: number;
+      bouldering: boolean | null;
+      website: string | null;
+    }>(
+      `select osm_id::text as id, name, lat, lon, bouldering, website
+       from climbing_gyms
+       where lat between $1 and $2 and lon between $3 and $4`,
+      [box.south, box.north, box.west, box.east]
+    );
 
-  const gyms = (data.elements ?? []).flatMap<ClimbingGym>((el) => {
-    const tags = el.tags;
-    const name = tags?.name;
-    const lat = el.lat ?? el.center?.lat;
-    const lon = el.lon ?? el.center?.lon;
-    if (!name || lat == null || lon == null) return [];
-    // "Bouldering only" is worth a flag; "has bouldering among other things"
-    // isn't distinctive enough to say anything with.
-    const hasRopes = tags?.["climbing:toprope"] === "yes" || tags?.["climbing:sport"] === "yes";
-    const bouldering = tags?.["climbing:boulder"] === "yes" && !hasRopes ? true : null;
-    return [
-      {
-        id: el.id,
-        name,
-        lat,
-        lon,
-        bouldering,
-        website: tags?.website ?? tags?.["contact:website"] ?? null,
-      },
-    ];
-  });
-  return { gyms, ok: true };
+    const gyms = result.rows
+      .filter((g) => distanceKm(near, g) <= near.radiusKm)
+      .sort((a, b) => distanceKm(near, a) - distanceKm(near, b));
+
+    return { gyms, ok: true };
+  } catch (err) {
+    console.error("gyms: query failed —", err instanceof Error ? err.message : err);
+    return { gyms: [], ok: false };
+  }
 }

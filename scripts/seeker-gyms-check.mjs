@@ -35,8 +35,12 @@ const gymBox = gymRow.locator("input[type=checkbox]");
 check("gyms layer starts off", !(await gymBox.isChecked()));
 check("no gyms API call before the layer is switched on", gymRequests.length === 0);
 
-await gymBox.check();
-await page.waitForResponse((r) => r.url().includes("/api/seeker/gyms"), { timeout: 15000 });
+// The listener has to be armed before the click, not after — a DB-backed
+// response can resolve faster than a follow-up await, which used to race.
+await Promise.all([
+  page.waitForResponse((r) => r.url().includes("/api/seeker/gyms"), { timeout: 15000 }),
+  gymBox.check(),
+]);
 await page.waitForTimeout(600);
 check("gyms API call fired once switched on", gymRequests.length === 1);
 check("URL records the toggle", page.url().includes("gyms=1"));

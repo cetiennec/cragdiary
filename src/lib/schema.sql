@@ -212,3 +212,24 @@ alter table photos add column if not exists c2c_filename text;
 -- The topo the outing was climbed on (migration 030). `c2c_url` holds the
 -- outing — the story — and the route's own page was lost on import.
 alter table entries add column if not exists c2c_route_url text;
+
+-- Indoor climbing gyms (migration 031), for the Cragseeker map layer. A
+-- periodic snapshot rather than a live query: gyms barely change, and asking
+-- Overpass fresh on every request turned out to be unreliable from Vercel's
+-- own network. Refreshed wholesale by scripts/refresh-climbing-gyms.mjs
+-- (scheduled monthly in CI) — every row is replaced each run, so a closed
+-- gym simply stops being written rather than needing its own cleanup.
+create table if not exists climbing_gyms (
+  osm_id bigint primary key,
+  name text not null,
+  lat double precision not null,
+  lon double precision not null,
+  -- Bouldering only, when OSM says so; null otherwise (see lib/seeker/gyms.ts).
+  bouldering boolean,
+  website text,
+  updated_at timestamptz not null default now()
+);
+-- Not a real spatial index, just enough to narrow a box before the app
+-- refines to a circle — the table is a few thousand rows, a seq scan would
+-- be fine too, this just keeps the habit for whenever it grows.
+create index if not exists climbing_gyms_lat_lon_idx on climbing_gyms(lat, lon);
