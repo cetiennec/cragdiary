@@ -45,10 +45,16 @@ export async function GET(
       // The thumbnail is encoded in the same format as the photo it came from,
       // so both are served under the row's own content type.
       "Content-Type": content_type,
+      // A photo id is content-addressed — nothing ever rewrites `data` in
+      // place, only new rows replace old ones — so caching it is never stale,
+      // public or private. Private stays `private` (never a shared cache) and
+      // a day rather than public's forever: the same person re-scrolling
+      // their own diary skips the database, but a lost or shared device only
+      // holds the bytes for a day, not indefinitely.
       "Cache-Control":
         visibility === "public"
           ? "public, max-age=31536000, immutable"
-          : "private, max-age=0",
+          : "private, max-age=86400, immutable",
     },
   });
 }
