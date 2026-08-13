@@ -4352,17 +4352,6 @@ a {
   margin-left: auto;
 }
 
-.seeker-locate.on {
-  border-color: var(--accent);
-  color: var(--accent);
-  font-weight: 600;
-}
-
-.seeker-travel {
-  color: var(--accent);
-  font-weight: 600;
-}
-
 /* List picker and its Add button travel as one control on a result card. */
 .seeker-add {
   display: inline-flex;
@@ -4428,6 +4417,38 @@ a {
   cursor: not-allowed;
 }
 
+/* Gyms as cards, below the results and set apart from them: same card shape,
+   but wearing the gym colour so the section and its markers read as one layer. */
+.seeker-gyms {
+  margin-top: 1.6rem;
+  border-top: 1px solid var(--border);
+  padding-top: 1.1rem;
+}
+
+.seeker-gyms-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  font-size: 1rem;
+  margin: 0 0 0.8rem;
+}
+
+.seeker-gyms-count {
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.seeker-gym-card {
+  border-left: 3px solid #c2793a;
+}
+
+/* A gym without a website has no link to be — its name is just a name. */
+.seeker-gym-name {
+  font-weight: 600;
+}
+
 /* A ticked source wears the colour its markers have on the map, so the control
    here and the legend under the map are plainly the same key. Both come from
    `SOURCE_COLORS` in SeekerMap — keep them in step. */
@@ -4446,6 +4467,22 @@ a {
 /* Shelters on the map: a square, where every result is a circle. Colour alone
    would not survive a colour-blind eye, and the two mean quite different
    things — one you climb, the other you sleep in. */
+/* The search's own point. Round like a result, but in the accent colour and
+   bigger, and it says it can be dragged by the cursor it takes. */
+.seeker-centre-pin {
+  width: 12px;
+  height: 12px;
+  background: var(--accent);
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.35);
+  cursor: grab;
+}
+
+.seeker-centre-pin:active {
+  cursor: grabbing;
+}
+
 .seeker-hut-pin {
   width: 9px;
   height: 9px;
@@ -4623,48 +4660,6 @@ a {
   border-radius: 999px;
   padding: 0 0.4rem;
   margin-left: 0.4rem;
-}
-
-/* "Getting there" — its own small panel, since the estimate is rough enough
-   that it needs saying out loud. */
-.seeker-transport {
-  flex: 1 1 320px;
-  border: 1px dashed var(--border);
-  border-radius: 12px;
-  padding: 0.6rem 0.8rem;
-}
-
-.seeker-transport-head {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  margin: 0 0 0.45rem;
-}
-
-.seeker-wip {
-  font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-  color: var(--accent);
-  border: 1px solid var(--accent);
-  border-radius: 999px;
-  padding: 0.05rem 0.45rem;
-}
-
-.seeker-transport-body {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.7rem;
-  flex-wrap: wrap;
-}
-
-.seeker-transport-body .seeker-note {
-  flex: 1 1 200px;
-  line-height: 1.45;
 }
 
 /* The activity's own settings get a little air above them. */

@@ -126,9 +126,12 @@ function hutCard(
   return card;
 }
 
+/** How to label a gym, shared by its map popup and its card in the list. */
+export type GymLabels = { bouldering: string; visit: string };
+
 // Same rule as hutCard: built from DOM nodes, since a gym's name comes from
 // OpenStreetMap and `textContent` cannot become markup.
-function gymCard(gym: ClimbingGym, labels: { bouldering: string; visit: string }): HTMLElement {
+function gymCard(gym: ClimbingGym, labels: GymLabels): HTMLElement {
   const card = document.createElement("div");
   card.className = "seeker-tip";
 
@@ -137,10 +140,30 @@ function gymCard(gym: ClimbingGym, labels: { bouldering: string; visit: string }
   title.textContent = gym.name;
   card.append(title);
 
+  if (gym.address) {
+    const area = document.createElement("span");
+    area.className = "seeker-tip-area";
+    area.textContent = gym.address;
+    card.append(area);
+  }
+
   if (gym.bouldering) {
+    const tags = document.createElement("span");
+    tags.className = "seeker-tip-tags";
+    const chip = document.createElement("span");
+    chip.className = "seeker-tip-tag";
+    chip.textContent = labels.bouldering;
+    tags.append(chip);
+    card.append(tags);
+  }
+
+  // Opening hours stay in OSM's own syntax, and the phone is plain text: both
+  // are read, not parsed.
+  const facts = [gym.opening_hours, gym.phone].filter(Boolean);
+  if (facts.length) {
     const meta = document.createElement("span");
     meta.className = "seeker-tip-meta";
-    meta.textContent = labels.bouldering;
+    meta.textContent = facts.join(" · ");
     card.append(meta);
   }
 
@@ -194,6 +217,48 @@ export const HUT_COLOR = "#7d5ba6";
 // own colour: both layers can be switched on together.
 export const GYM_COLOR = "#c2793a";
 
+// How far the pointer may travel between press and release and still count as
+// a click rather than the end of a pan. A few pixels of hand tremor, no more.
+const DRAG_SLOP = 6;
+
+// Anything landing this close to a drawn marker is read as aiming at it. Wider
+// than the 6 px markers themselves, because missing one by three pixels and
+// having the whole search jump elsewhere is the annoyance being fixed.
+const MARKER_SLOP = 20;
+
+// A double-click zooms. The pin is dropped only once no second click follows —
+// short enough not to feel laggy, longer than a real double-click's gap.
+const DOUBLE_CLICK_GRACE = 250;
+
+/**
+ * The nearest marker to a click, within `MARKER_SLOP` pixels — results,
+ * shelters and gyms alike, since a near-miss on any of them means the click was
+ * aimed at a marker. `id` is set for results only: they are the ones the list
+ * below can select.
+ */
+function nearestMarker(
+  map: import("leaflet").Map,
+  at: import("leaflet").Point,
+  drawn: { points: SeekerPoint[]; huts: MountainHut[]; gyms: ClimbingGym[] }
+): { id: string | null } | null {
+  let best: { id: string | null } | null = null;
+  let bestDistance = MARKER_SLOP;
+
+  const consider = (lat: number, lon: number, id: string | null) => {
+    const distance = map.latLngToContainerPoint([lat, lon]).distanceTo(at);
+    if (distance <= bestDistance) {
+      bestDistance = distance;
+      best = { id };
+    }
+  };
+
+  for (const point of drawn.points) consider(point.lat, point.lon, point.id);
+  for (const hut of drawn.huts) consider(hut.lat, hut.lon, null);
+  for (const gym of drawn.gyms) consider(gym.lat, gym.lon, null);
+
+  return best;
+}
+
 // Selection is shown by size and a dark rim rather than a colour of its own:
 // the fill has a meaning now, and a hovered marker must not look like it comes
 // from a different database.
@@ -235,7 +300,7 @@ export default function SeekerMap({
   /** Indoor climbing gyms to draw beside the results, empty when the layer is off. */
   gyms: ClimbingGym[];
   /** How to label a gym's popup. */
-  gymLabels: { bouldering: string; visit: string };
+  gymLabels: GymLabels;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   // The map lives in state, not a ref: every drawing effect below depends on
@@ -247,6 +312,16 @@ export default function SeekerMap({
   // Closing is delayed by a moment so the pointer can travel from the marker to
   // the card without it vanishing on the way — the card holds a link.
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Dropping the pin waits out a possible second click, so a double-click zoom
+  // doesn't also move the search. Cleared by `dblclick`.
+  const pickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Everything currently drawn, read by the click guard below. A ref, not the
+  // props themselves: the map is built once and its handler must always see the
+  // current markers without rebinding.
+  const drawn = useRef({ points, huts, gyms });
+  useEffect(() => {
+    drawn.current = { points, huts, gyms };
+  }, [points, huts, gyms]);
 
   // Callbacks live in a ref so the map is built exactly once — rebinding
   // handlers must never tear down the tiles the user is looking at.
@@ -258,6 +333,7 @@ export default function SeekerMap({
   useEffect(() => {
     let disposed = false;
     let created: import("leaflet").Map | undefined;
+    let cleanupClick: (() => void) | undefined;
 
     (async () => {
       // Leaflet touches `window` at import time, so it loads after mount only.
@@ -272,9 +348,42 @@ export default function SeekerMap({
             '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
         })
         .addTo(created);
+      // Moving the pin restarts the search, so a click only counts when it
+      // really was a click on empty map: not the tail of a pan, not half of a
+      // double-click zoom, and not a near-miss on a marker.
+      let pressedAt: { x: number; y: number } | null = null;
+      const onPointerDown = (e: PointerEvent) => {
+        pressedAt = { x: e.clientX, y: e.clientY };
+      };
+      containerRef.current.addEventListener("pointerdown", onPointerDown);
+
       created.on("click", (e: import("leaflet").LeafletMouseEvent) => {
-        handlers.current.onPick(e.latlng.lat, e.latlng.lng);
+        // 1. A pan whose pointer barely moved still ends in a DOM click.
+        const native = e.originalEvent;
+        if (pressedAt && native) {
+          const moved = Math.hypot(native.clientX - pressedAt.x, native.clientY - pressedAt.y);
+          if (moved > DRAG_SLOP) return;
+        }
+
+        // 2. A marker missed by a few pixels means "I wanted that marker",
+        // never "put the search somewhere else".
+        const near = nearestMarker(created!, e.containerPoint, drawn.current);
+        if (near) {
+          if (near.id) handlers.current.onSelect(near.id);
+          return;
+        }
+
+        // 3. Double-click zooms; only a click left alone drops the pin.
+        if (pickTimer.current) clearTimeout(pickTimer.current);
+        const { lat, lng } = e.latlng;
+        pickTimer.current = setTimeout(() => handlers.current.onPick(lat, lng), DOUBLE_CLICK_GRACE);
       });
+      created.on("dblclick", () => {
+        if (pickTimer.current) clearTimeout(pickTimer.current);
+      });
+      cleanupClick = () => {
+        containerRef.current?.removeEventListener("pointerdown", onPointerDown);
+      };
 
       setL(() => mod);
       setMap(created);
@@ -282,6 +391,8 @@ export default function SeekerMap({
 
     return () => {
       disposed = true;
+      if (pickTimer.current) clearTimeout(pickTimer.current);
+      cleanupClick?.();
       created?.remove();
       setMap(null);
     };
@@ -303,14 +414,27 @@ export default function SeekerMap({
       fillOpacity: 0.05,
       interactive: false,
     });
-    const pin = L.circleMarker([centre.lat, centre.lon], {
-      radius: 6,
-      color: "#ffffff",
-      weight: 2,
-      fillColor: accent,
-      fillOpacity: 1,
-      interactive: false,
-    });
+    // Draggable, so nudging the search a valley over is a gesture rather than a
+    // click that has to land on empty map. The circle follows in real time,
+    // since it is what the drag is actually aiming at.
+    const pin = L.marker([centre.lat, centre.lon], {
+      icon: L.divIcon({
+        className: "seeker-centre-pin",
+        html: "",
+        iconSize: [14, 14],
+        iconAnchor: [7, 7],
+      }),
+      draggable: true,
+      keyboard: false,
+      zIndexOffset: 500,
+    })
+      .on("drag", (e) => {
+        circle.setLatLng((e.target as import("leaflet").Marker).getLatLng());
+      })
+      .on("dragend", (e) => {
+        const { lat, lng } = (e.target as import("leaflet").Marker).getLatLng();
+        handlers.current.onPick(lat, lng);
+      });
     const layer = L.layerGroup([circle, pin]).addTo(map);
 
     // The container is often still being laid out on the first pass, and

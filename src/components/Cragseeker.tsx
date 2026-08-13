@@ -12,7 +12,6 @@ import ParkingLink from "./ParkingLink";
 import WeatherLink from "./WeatherLink";
 import Toast from "./Toast";
 import { saveWishFromSearch } from "@/app/actions";
-import { drivingMinutes, formatDuration } from "@/lib/travel";
 import type { SeekerResult } from "@/app/api/seeker/route";
 import type { OpenBetaClimb } from "@/app/api/seeker/climbs/route";
 import type { MountainHut } from "@/app/api/seeker/huts/route";
@@ -236,8 +235,6 @@ export default function Cragseeker({
   // and an OpenBeta crag can otherwise collide in the same map.
   const [saved, setSaved] = useState<Record<string, SaveState>>({});
   const [listId, setListId] = useState(wishlists[0]?.id ?? "");
-  const [origin, setOrigin] = useState<{ lat: number; lon: number } | null>(null);
-  const [originPending, setOriginPending] = useState(false);
   const [copied, setCopied] = useState(false);
   // Mountain shelters, a map layer rather than a source of results: they answer
   // "where could I sleep", not "what could I climb". Off unless asked for.
@@ -540,32 +537,6 @@ export default function Cragseeker({
     );
   }
 
-  // Travel time is opt-in and computed in the browser: asking for the position
-  // is the whole point of the button, and it never leaves the page.
-  function estimateTravel() {
-    if (origin) {
-      setOrigin(null);
-      return;
-    }
-    setGeoError(null);
-    if (!navigator.geolocation) {
-      setGeoError("unavailable");
-      return;
-    }
-    setOriginPending(true);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setOriginPending(false);
-        setOrigin({ lat: pos.coords.latitude, lon: pos.coords.longitude });
-      },
-      (err) => {
-        setOriginPending(false);
-        setGeoError(geoErrorKind(err));
-      },
-      { timeout: 15000 }
-    );
-  }
-
   async function shareSearch() {
     const url = window.location.href;
     if (navigator.share) {
@@ -785,9 +756,6 @@ export default function Cragseeker({
     () =>
       results.flatMap((r) => {
         if (r.lat == null || r.lon == null) return [];
-        const travel = origin
-          ? fill(t.byCar, "t", formatDuration(drivingMinutes(origin, { lat: r.lat, lon: r.lon })))
-          : null;
         return [
           {
             id: r.key,
@@ -798,16 +766,14 @@ export default function Cragseeker({
             url: r.url,
             area: r.area,
             tags: tagsFor(r),
-            distance:
-              travel ??
-              (r.distance_km != null ? fill(t.away, "km", Math.round(r.distance_km)) : null),
+            distance: r.distance_km != null ? fill(t.away, "km", Math.round(r.distance_km)) : null,
             climbed: isClimbed(r) ? `✓ ${t.climbed}` : null,
             summary: r.summary,
             sourceLabel: t.openOn[r.source],
           },
         ];
       }),
-    [results, origin, isClimbed, tagsFor, t]
+    [results, isClimbed, tagsFor, t]
   );
 
   return (
@@ -1064,25 +1030,8 @@ export default function Cragseeker({
           </fieldset>
         </div>
 
-        {/* 6. Getting there — rough for now — with the search-wide actions
-            anchored bottom right. */}
+        {/* 6. The search-wide actions, anchored bottom right. */}
         <div className="seeker-row seeker-row-end">
-          <div className="seeker-transport">
-            <p className="seeker-transport-head">
-              {t.transport} <span className="seeker-wip">{t.wip}</span>
-            </p>
-            <div className="seeker-transport-body">
-              <button
-                type="button"
-                className={`seeker-locate${origin ? " on" : ""}`}
-                onClick={estimateTravel}
-                disabled={originPending}
-              >
-                {originPending ? t.locating : origin ? `⏱ ${t.travelOff}` : `⏱ ${t.travelTime}`}
-              </button>
-            </div>
-          </div>
-
           <div className="seeker-row-actions">
             <button type="button" className="seeker-locate" onClick={shareSearch}>
               {copied ? `✓ ${t.copied}` : `🔗 ${t.share}`}
@@ -1157,20 +1106,10 @@ export default function Cragseeker({
                 <a href={route.url} target="_blank" rel="noopener noreferrer">
                   {route.title}
                 </a>
-                {origin && route.lat != null && route.lon != null ? (
-                  <span className="seeker-distance seeker-travel">
-                    {fill(
-                      t.byCar,
-                      "t",
-                      formatDuration(drivingMinutes(origin, { lat: route.lat, lon: route.lon }))
-                    )}
+                {route.distance_km != null && (
+                  <span className="seeker-distance">
+                    {fill(t.away, "km", Math.round(route.distance_km))}
                   </span>
-                ) : (
-                  route.distance_km != null && (
-                    <span className="seeker-distance">
-                      {fill(t.away, "km", Math.round(route.distance_km))}
-                    </span>
-                  )
                 )}
               </div>
               {route.area && <p className="seeker-area">{route.area}</p>}
@@ -1307,6 +1246,61 @@ export default function Cragseeker({
             {loading ? "…" : t.loadMore}
           </button>
         </div>
+      )}
+
+      {/* Gyms get cards of their own, below the results and never among them:
+          a gym answers "where can I climb whatever the weather", not "what
+          could I climb here", and mixing the two would make the count above
+          mean two different things at once. Shown only when the layer is on,
+          so the page stays the same as before for anyone not asking. */}
+      {showGyms && centre && (
+        <section className="seeker-gyms">
+          <h2 className="seeker-gyms-head">
+            {t.gymsHeading}
+            <span className="seeker-gyms-count">
+              {visibleGyms.length > 0 ? fill(t.gymsCount, "n", visibleGyms.length) : ""}
+            </span>
+          </h2>
+          {visibleGyms.length === 0 ? (
+            <p className="empty-state">{t.gymsEmpty}</p>
+          ) : (
+            <ul className="seeker-results">
+              {visibleGyms.map((gym) => (
+                <li key={gym.id} className="seeker-result seeker-gym-card">
+                  <div className="seeker-result-head">
+                    {gym.website ? (
+                      <a href={gym.website} target="_blank" rel="noopener noreferrer">
+                        {gym.name}
+                      </a>
+                    ) : (
+                      <span className="seeker-gym-name">{gym.name}</span>
+                    )}
+                    <span className="seeker-distance">
+                      {fill(t.away, "km", Math.round(gym.distance_km))}
+                    </span>
+                  </div>
+                  {gym.address && <p className="seeker-area">{gym.address}</p>}
+                  {gym.bouldering && (
+                    <p className="seeker-tags">
+                      <span className="seeker-tag">{t.gymBouldering}</span>
+                    </p>
+                  )}
+                  {/* OSM's own opening-hours syntax, shown as written: it reads
+                      well enough, and parsing it properly is a library. */}
+                  {gym.opening_hours && <p className="seeker-summary">{gym.opening_hours}</p>}
+                  <div className="seeker-actions">
+                    {gym.website && (
+                      <a href={gym.website} target="_blank" rel="noopener noreferrer">
+                        {t.gymVisit}
+                      </a>
+                    )}
+                    {gym.phone && <a href={`tel:${gym.phone}`}>{`${t.gymCall} ${gym.phone}`}</a>}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
       )}
 
       <p className="seeker-attribution">{t.attribution}</p>

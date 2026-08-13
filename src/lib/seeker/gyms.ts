@@ -23,6 +23,14 @@ export type ClimbingGym = {
   /** Bouldering only, when OSM said so at the last refresh. */
   bouldering: boolean | null;
   website: string | null;
+  /** One line, already assembled at refresh time. Null when OSM had no address. */
+  address: string | null;
+  /** Raw OSM syntax ("Mo-Fr 10:00-23:00"), shown as-is — parsing it is a
+      library's worth of work for a line the reader can already read. */
+  opening_hours: string | null;
+  phone: string | null;
+  /** Straight-line km from the search pin, for the card that lists them. */
+  distance_km: number;
 };
 
 /**
@@ -42,23 +50,18 @@ export async function gymsAround(near: {
   // layers, and it keeps the caller from caching a transient failure as "no
   // gyms here" the way the old live-Overpass version once did by accident.
   try {
-    const result = await pool.query<{
-      id: string;
-      name: string;
-      lat: number;
-      lon: number;
-      bouldering: boolean | null;
-      website: string | null;
-    }>(
-      `select osm_id::text as id, name, lat, lon, bouldering, website
+    const result = await pool.query<Omit<ClimbingGym, "distance_km">>(
+      `select osm_id::text as id, name, lat, lon, bouldering, website,
+              address, opening_hours, phone
        from climbing_gyms
        where lat between $1 and $2 and lon between $3 and $4`,
       [box.south, box.north, box.west, box.east]
     );
 
     const gyms = result.rows
-      .filter((g) => distanceKm(near, g) <= near.radiusKm)
-      .sort((a, b) => distanceKm(near, a) - distanceKm(near, b));
+      .map((g) => ({ ...g, distance_km: distanceKm(near, g) }))
+      .filter((g) => g.distance_km <= near.radiusKm)
+      .sort((a, b) => a.distance_km - b.distance_km);
 
     return { gyms, ok: true };
   } catch (err) {

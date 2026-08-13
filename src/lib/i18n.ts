@@ -604,7 +604,7 @@ const en = {
     droppedPin: "Pin on the map",
     radius: "Around",
     mapHint:
-      "Hover a marker for the route at a glance. Click anywhere else on the map to move the search pin.",
+      "Hover a marker for the route at a glance. Drag the search pin, or click an empty spot on the map, to search elsewhere.",
     activity: "Activity",
     activities: {
       rock_climbing: "Rock climbing",
@@ -695,6 +695,10 @@ const en = {
     gymsLegend: "Climbing gyms",
     gymBouldering: "bouldering only",
     gymVisit: "Website ↗",
+    gymsHeading: "Climbing gyms nearby",
+    gymsCount: "{n} within the search circle",
+    gymsEmpty: "No gym mapped inside this circle.",
+    gymCall: "Call",
     openIn: "Open in…",
     climbed: "You've climbed this",
     climbedHint: "This route already appears in your journal",
@@ -1358,7 +1362,7 @@ const fr: Dict = {
     droppedPin: "Point sur la carte",
     radius: "Dans un rayon de",
     mapHint:
-      "Survolez un point pour voir la voie en un coup d'œil. Cliquez ailleurs sur la carte pour déplacer le point de recherche.",
+      "Survolez un point pour voir la voie en un coup d'œil. Faites glisser le point de recherche, ou cliquez sur une zone vide de la carte, pour chercher ailleurs.",
     activity: "Activité",
     activities: {
       rock_climbing: "Escalade",
@@ -1448,6 +1452,10 @@ const fr: Dict = {
     gymsLegend: "Salles d'escalade",
     gymBouldering: "bloc uniquement",
     gymVisit: "Site ↗",
+    gymsHeading: "Salles d'escalade à proximité",
+    gymsCount: "{n} dans le rayon de recherche",
+    gymsEmpty: "Aucune salle recensée dans ce rayon.",
+    gymCall: "Appeler",
     openIn: "Ouvrir dans…",
     climbed: "Déjà grimpée",
     climbedHint: "Cette voie figure déjà dans votre carnet",
