@@ -157,13 +157,10 @@ function gymCard(gym: ClimbingGym, labels: GymLabels): HTMLElement {
     card.append(tags);
   }
 
-  // Opening hours stay in OSM's own syntax, and the phone is plain text: both
-  // are read, not parsed.
-  const facts = [gym.opening_hours, gym.phone].filter(Boolean);
-  if (facts.length) {
+  if (gym.phone) {
     const meta = document.createElement("span");
     meta.className = "seeker-tip-meta";
-    meta.textContent = facts.join(" · ");
+    meta.textContent = gym.phone;
     card.append(meta);
   }
 

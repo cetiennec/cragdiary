@@ -87,6 +87,7 @@ function addressOf(tags) {
 // a name and coordinates are required, and "bouldering only" is worth a flag
 // only when nothing suggests ropes too.
 let outdoors = 0;
+let siteless = 0;
 const rows = (data.elements ?? []).flatMap((el) => {
   const tags = el.tags ?? {};
   const name = tags.name;
@@ -95,6 +96,15 @@ const rows = (data.elements ?? []).flatMap((el) => {
   if (!name || lat == null || lon == null) return [];
   if (isOutdoors(tags, name)) {
     outdoors += 1;
+    return [];
+  }
+  // A website is the line between a gym someone can actually go to and a
+  // school wall or a municipal hall that OSM happens to tag `sport=climbing`:
+  // the ones worth listing all have one, and without it a card has nothing to
+  // offer but a name. Worldwide this halves the table, on purpose.
+  const website = tags.website ?? tags["contact:website"] ?? null;
+  if (!website) {
+    siteless += 1;
     return [];
   }
   const hasRopes = tags["climbing:toprope"] === "yes" || tags["climbing:sport"] === "yes";
@@ -106,7 +116,7 @@ const rows = (data.elements ?? []).flatMap((el) => {
       lat,
       lon,
       bouldering,
-      website: tags.website ?? tags["contact:website"] ?? null,
+      website,
       address: addressOf(tags),
       opening_hours: tags.opening_hours ?? null,
       phone: tags.phone ?? tags["contact:phone"] ?? null,
@@ -146,7 +156,7 @@ for (const gym of [...rows].sort((a, b) => richness(b) - richness(a))) {
 console.log(
   `Parsed ${deduped.length} gyms from ${data.elements?.length ?? 0} raw elements ` +
     `(${outdoors} dropped as outdoor crags, rope courses or via ferratas, ` +
-    `${duplicates} as duplicates of a gym already kept).`
+    `${siteless} with no website, ${duplicates} as duplicates of a gym already kept).`
 );
 
 if (!apply) {

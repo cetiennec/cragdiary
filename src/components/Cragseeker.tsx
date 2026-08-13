@@ -1268,13 +1268,9 @@ export default function Cragseeker({
               {visibleGyms.map((gym) => (
                 <li key={gym.id} className="seeker-result seeker-gym-card">
                   <div className="seeker-result-head">
-                    {gym.website ? (
-                      <a href={gym.website} target="_blank" rel="noopener noreferrer">
-                        {gym.name}
-                      </a>
-                    ) : (
-                      <span className="seeker-gym-name">{gym.name}</span>
-                    )}
+                    <a href={gym.website} target="_blank" rel="noopener noreferrer">
+                      {gym.name}
+                    </a>
                     <span className="seeker-distance">
                       {fill(t.away, "km", Math.round(gym.distance_km))}
                     </span>
@@ -1285,15 +1281,10 @@ export default function Cragseeker({
                       <span className="seeker-tag">{t.gymBouldering}</span>
                     </p>
                   )}
-                  {/* OSM's own opening-hours syntax, shown as written: it reads
-                      well enough, and parsing it properly is a library. */}
-                  {gym.opening_hours && <p className="seeker-summary">{gym.opening_hours}</p>}
                   <div className="seeker-actions">
-                    {gym.website && (
-                      <a href={gym.website} target="_blank" rel="noopener noreferrer">
-                        {t.gymVisit}
-                      </a>
-                    )}
+                    <a href={gym.website} target="_blank" rel="noopener noreferrer">
+                      {t.gymVisit}
+                    </a>
                     {gym.phone && <a href={`tel:${gym.phone}`}>{`${t.gymCall} ${gym.phone}`}</a>}
                   </div>
                 </li>

@@ -22,12 +22,10 @@ export type ClimbingGym = {
   lon: number;
   /** Bouldering only, when OSM said so at the last refresh. */
   bouldering: boolean | null;
-  website: string | null;
+  /** Always set: a gym without one is not written at refresh time. */
+  website: string;
   /** One line, already assembled at refresh time. Null when OSM had no address. */
   address: string | null;
-  /** Raw OSM syntax ("Mo-Fr 10:00-23:00"), shown as-is — parsing it is a
-      library's worth of work for a line the reader can already read. */
-  opening_hours: string | null;
   phone: string | null;
   /** Straight-line km from the search pin, for the card that lists them. */
   distance_km: number;
@@ -51,8 +49,7 @@ export async function gymsAround(near: {
   // gyms here" the way the old live-Overpass version once did by accident.
   try {
     const result = await pool.query<Omit<ClimbingGym, "distance_km">>(
-      `select osm_id::text as id, name, lat, lon, bouldering, website,
-              address, opening_hours, phone
+      `select osm_id::text as id, name, lat, lon, bouldering, website, address, phone
        from climbing_gyms
        where lat between $1 and $2 and lon between $3 and $4`,
       [box.south, box.north, box.west, box.east]

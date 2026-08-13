@@ -4444,11 +4444,6 @@ a {
   border-left: 3px solid #c2793a;
 }
 
-/* A gym without a website has no link to be — its name is just a name. */
-.seeker-gym-name {
-  font-weight: 600;
-}
-
 /* A ticked source wears the colour its markers have on the map, so the control
    here and the legend under the map are plainly the same key. Both come from
    `SOURCE_COLORS` in SeekerMap — keep them in step. */

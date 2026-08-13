@@ -58,8 +58,26 @@ await page.mouse.click(marker.x + marker.width / 2 + 8, marker.y + marker.height
 await page.waitForTimeout(700);
 check("missing a marker by a few pixels leaves the pin alone", (await centre()) === start);
 
-// 4. A click that really is on empty map still moves the search.
-await page.mouse.click(map.x + 120, map.y + 120);
+// 4. A click that really is on empty map still moves the search. The spot is
+// found rather than guessed: the map has just panned a popup into view, and a
+// fixed corner is not reliably empty.
+const empty = await page.evaluate(() => {
+  const box = document.querySelector(".seeker-map").getBoundingClientRect();
+  const marks = [...document.querySelectorAll("path.leaflet-interactive, .leaflet-marker-icon")].map(
+    (el) => el.getBoundingClientRect()
+  );
+  for (let y = box.top + 60; y < box.bottom - 60; y += 20) {
+    for (let x = box.left + 60; x < box.right - 260; x += 20) {
+      const clear = marks.every(
+        (m) => Math.hypot(m.x + m.width / 2 - x, m.y + m.height / 2 - y) > 60
+      );
+      if (clear) return { x, y };
+    }
+  }
+  return null;
+});
+check("the map has an empty spot to click", empty !== null);
+await page.mouse.click(empty.x, empty.y);
 await page.waitForTimeout(1200);
 const afterClick = await centre();
 check("a deliberate click on empty map moves the pin", afterClick !== start);
