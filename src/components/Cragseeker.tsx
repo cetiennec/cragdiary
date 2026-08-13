@@ -225,7 +225,11 @@ export default function Cragseeker({
   const [nextOffset, setNextOffset] = useState(0);
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
-  const [geoError, setGeoError] = useState(false);
+  // "denied" is the browser's own permission prompt being refused — worth
+  // pointing at the site's permissions specifically, rather than the generic
+  // "try a place instead" that fits every other failure (no fix, a timeout,
+  // an inaccurate/unsupported network position).
+  const [geoError, setGeoError] = useState<"denied" | "unavailable" | null>(null);
   const [locating, setLocating] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
   // Keyed by the cross-database key, never a native id: camptocamp route 1234
@@ -504,14 +508,22 @@ export default function Cragseeker({
     setPlaceInput("");
   }
 
+  // A denied permission gets its own message pointing at the site's
+  // permissions; every other failure (no fix on our end — a timeout, the
+  // network position service being briefly unavailable) keeps the generic
+  // "try a place instead" that already fit them all.
+  function geoErrorKind(err: GeolocationPositionError): "denied" | "unavailable" {
+    return err.code === err.PERMISSION_DENIED ? "denied" : "unavailable";
+  }
+
   function locate() {
-    setGeoError(false);
+    setGeoError(null);
     // `navigator.geolocation` is missing on an insecure origin, an ancient
     // browser, or when Permissions-Policy has it switched off — optional
     // chaining on the call below would then silently do nothing at all,
     // leaving the button stuck on "locating" forever with no explanation.
     if (!navigator.geolocation) {
-      setGeoError(true);
+      setGeoError("unavailable");
       return;
     }
     setLocating(true);
@@ -520,11 +532,11 @@ export default function Cragseeker({
         setLocating(false);
         dropPin(pos.coords.latitude, pos.coords.longitude);
       },
-      () => {
+      (err) => {
         setLocating(false);
-        setGeoError(true);
+        setGeoError(geoErrorKind(err));
       },
-      { timeout: 10000 }
+      { timeout: 15000 }
     );
   }
 
@@ -535,9 +547,9 @@ export default function Cragseeker({
       setOrigin(null);
       return;
     }
-    setGeoError(false);
+    setGeoError(null);
     if (!navigator.geolocation) {
-      setGeoError(true);
+      setGeoError("unavailable");
       return;
     }
     setOriginPending(true);
@@ -546,11 +558,11 @@ export default function Cragseeker({
         setOriginPending(false);
         setOrigin({ lat: pos.coords.latitude, lon: pos.coords.longitude });
       },
-      () => {
+      (err) => {
         setOriginPending(false);
-        setGeoError(true);
+        setGeoError(geoErrorKind(err));
       },
-      { timeout: 10000 }
+      { timeout: 15000 }
     );
   }
 
@@ -1077,7 +1089,11 @@ export default function Cragseeker({
             </button>
           </div>
         </div>
-        {geoError && <p className="seeker-note">{t.locationDenied}</p>}
+        {geoError && (
+          <p className="seeker-note">
+            {geoError === "denied" ? t.locationBlocked : t.locationDenied}
+          </p>
+        )}
       </section>
 
       <SeekerMap

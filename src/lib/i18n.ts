@@ -599,6 +599,8 @@ const en = {
     myLocation: "Near me",
     locating: "Locating…",
     locationDenied: "Couldn't get your position — search for a place instead.",
+    locationBlocked:
+      "Location access is blocked — check your browser's site permissions, or search for a place instead.",
     droppedPin: "Pin on the map",
     radius: "Around",
     mapHint:
@@ -1351,6 +1353,8 @@ const fr: Dict = {
     myLocation: "Autour de moi",
     locating: "Localisation…",
     locationDenied: "Position indisponible — cherchez plutôt un lieu.",
+    locationBlocked:
+      "Localisation bloquée — vérifiez les autorisations du site dans votre navigateur, ou cherchez plutôt un lieu.",
     droppedPin: "Point sur la carte",
     radius: "Dans un rayon de",
     mapHint:
