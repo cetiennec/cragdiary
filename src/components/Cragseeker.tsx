@@ -9,6 +9,7 @@ import SeekerMap, {
   type SeekerPoint,
 } from "./SeekerMap";
 import ParkingLink from "./ParkingLink";
+import WeatherLink from "./WeatherLink";
 import Toast from "./Toast";
 import { saveWishFromSearch } from "@/app/actions";
 import { drivingMinutes, formatDuration } from "@/lib/travel";
@@ -697,13 +698,17 @@ export default function Cragseeker({
     () => [
       ...SEEKER_SOURCES.map((source) => {
         const handled = sourceHandles(source, activity);
+        // Unchecking the last active source used to silently spring back to
+        // both — activeSources refuses to ever be empty — which read as a
+        // stuck checkbox. Disabling it here says the same rule up front.
+        const isLastActive = handled && activeSources.length === 1 && activeSources.includes(source);
         return {
           id: source,
           label: t.sources[source],
           color: SOURCE_COLORS[source],
           checked: handled && activeSources.includes(source),
-          disabled: !handled,
-          title: handled ? t.sourceHints[source] : t.sourceUnavailable,
+          disabled: !handled || isLastActive,
+          title: !handled ? t.sourceUnavailable : isLastActive ? t.keepOneSource : t.sourceHints[source],
           onToggle: () =>
             setSources((prev) =>
               prev.includes(source)
@@ -1065,6 +1070,15 @@ export default function Cragseeker({
         ) : (
           <span>{countLabel}</span>
         )}
+        {/* The list below stays the old search's while a new one is in
+            flight — camptocamp alone can take a few seconds — so without this
+            the count above looks caught up when it is quietly stale. */}
+        {loading && results.length > 0 && (
+          <span className="seeker-updating">
+            <span className="seeker-spinner" aria-hidden />
+            {t.updating}
+          </span>
+        )}
         {!centre && <span className="seeker-note">{t.noLocation}</span>}
         {!centre && activeSources.includes("openbeta") && (
           <span className="seeker-note">{t.openbetaNeedsPin}</span>
@@ -1177,6 +1191,14 @@ export default function Cragseeker({
                   label={t.parking}
                   openIn={t.openIn}
                   hint={t.parkingHint}
+                />
+              )}
+              {route.lat != null && route.lon != null && (
+                <WeatherLink
+                  point={{ lat: route.lat, lon: route.lon }}
+                  label={t.weather}
+                  openIn={t.openIn}
+                  hint={t.weatherHint}
                 />
               )}
               <div className="seeker-actions">

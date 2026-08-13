@@ -654,6 +654,7 @@ const en = {
     clear: "Clear filters",
     noLocation: "Pick a place or drop a pin to search a region — or search by name alone.",
     searching: "Searching…",
+    updating: "Updating…",
     error: "No answer from the databases — try again in a moment.",
     empty: "No route matches these criteria. Try a wider radius or an easier grade.",
     resultCount: "{n} routes found",
@@ -688,7 +689,7 @@ const en = {
     hutBeds: "places",
     hutNoBeds: "nowhere to sleep",
     hutOpen: "refuges.info ↗",
-    gymsHint: "Indoor climbing gyms around the pin, from OpenStreetMap.",
+    gymsHint: "Bad weather? Show the climbing gyms around the pin.",
     gymsLegend: "Climbing gyms",
     gymBouldering: "bouldering only",
     gymVisit: "Website ↗",
@@ -696,6 +697,8 @@ const en = {
     climbed: "You've climbed this",
     climbedHint: "This route already appears in your journal",
     parkingHint: "Access point from camptocamp — opens the parking on a map",
+    weather: "Weather",
+    weatherHint: "Opens the forecast for this exact spot",
     openOnC2c: "Camptocamp ↗",
     // Which databases to search, and what to call a result from each. The two
     // barely overlap: camptocamp is the Alps, OpenBeta is the United States.
@@ -709,6 +712,7 @@ const en = {
       openbeta: "Crags in the United States — the OpenBeta community database.",
     } as Record<string, string>,
     sourceUnavailable: "This database only catalogues rock climbing.",
+    keepOneSource: "At least one database has to stay on.",
     openOn: {
       c2c: "Camptocamp ↗",
       openbeta: "OpenBeta ↗",
@@ -1402,6 +1406,7 @@ const fr: Dict = {
     noLocation:
       "Choisissez un lieu ou posez un point pour chercher dans une région — ou cherchez par nom.",
     searching: "Recherche en cours…",
+    updating: "Mise à jour…",
     error: "Pas de réponse des bases — réessayez dans un instant.",
     empty: "Aucune voie ne correspond. Élargissez le rayon ou baissez la cotation.",
     resultCount: "{n} voies trouvées",
@@ -1436,7 +1441,7 @@ const fr: Dict = {
     hutBeds: "places",
     hutNoBeds: "aucun couchage",
     hutOpen: "refuges.info ↗",
-    gymsHint: "Salles d'escalade autour du point, d'après OpenStreetMap.",
+    gymsHint: "La météo est mauvaise ? Affichez les salles d'escalade autour du point.",
     gymsLegend: "Salles d'escalade",
     gymBouldering: "bloc uniquement",
     gymVisit: "Site ↗",
@@ -1444,6 +1449,8 @@ const fr: Dict = {
     climbed: "Déjà grimpée",
     climbedHint: "Cette voie figure déjà dans votre carnet",
     parkingHint: "Point d'accès camptocamp — ouvre le parking sur une carte",
+    weather: "Météo",
+    weatherHint: "Ouvre les prévisions pour ce point précis",
     openOnC2c: "Camptocamp ↗",
     // Quelles bases interroger, et comment nommer un résultat de chacune. Elles
     // ne se recouvrent guère : camptocamp couvre les Alpes, OpenBeta les
@@ -1458,6 +1465,7 @@ const fr: Dict = {
       openbeta: "Les falaises des États-Unis — la base communautaire OpenBeta.",
     } as Record<string, string>,
     sourceUnavailable: "Cette base ne recense que l'escalade rocheuse.",
+    keepOneSource: "Au moins une base doit rester active.",
     openOn: {
       c2c: "Camptocamp ↗",
       openbeta: "OpenBeta ↗",

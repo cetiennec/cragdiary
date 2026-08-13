@@ -4181,6 +4181,31 @@ a {
   font-weight: 400;
 }
 
+/* A new search is in flight while the list below still shows the old one —
+   camptocamp alone can take a few seconds — so this is the only sign of it. */
+.seeker-updating {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.seeker-spinner {
+  width: 0.8rem;
+  height: 0.8rem;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: seeker-spin 0.7s linear infinite;
+}
+
+@keyframes seeker-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .seeker-results {
   list-style: none;
   padding: 0;
@@ -4652,6 +4677,39 @@ a {
   color: #ffffff;
   font-size: 0.72rem;
   font-weight: 700;
+  line-height: 1;
+}
+
+/* Weather, at any result's own coordinates — same shape as parking, its own
+   mark so the two are never mistaken for one another at a glance. */
+.seeker-weather {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.seeker-weather-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.seeker-weather-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.15rem;
+  height: 1.15rem;
+  flex: none;
+  border-radius: 4px;
+  background: #5a9bc2;
+  color: #ffffff;
+  font-size: 0.72rem;
   line-height: 1;
 }
 
