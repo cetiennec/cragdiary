@@ -39,12 +39,15 @@ export function sourceHandles(source: SeekerSource, activity: C2cActivity): bool
 }
 
 // Parse the `src` query parameter against the whitelist — never trust it to
-// name a fetcher.
+// name a fetcher. A missing parameter (a fresh visit, an old shared link)
+// means "no opinion" and gets both; an explicitly empty one means someone
+// unticked every database on purpose — to browse only the gyms layer, say —
+// and that choice is real, not a blank page to rescue.
 export function parseSources(raw: string | null): SeekerSource[] {
-  const asked = (raw ?? "")
+  if (raw === null) return DEFAULT_SOURCES;
+  return raw
     .split(",")
     .filter((s): s is SeekerSource => (SEEKER_SOURCES as readonly string[]).includes(s));
-  return asked.length ? asked : DEFAULT_SOURCES;
 }
 
 // A result carries its provenance, and a key that is unique *across* sources:

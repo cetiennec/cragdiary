@@ -4395,6 +4395,39 @@ a {
   line-height: 1.6;
 }
 
+/* The same switch as the gyms row in the map's own key, surfaced where it is
+   actually likely to be seen — the map's corner menu is easy to miss the
+   first time. Pushed to the far right of the databases it sits beside. */
+.seeker-gyms-nudge {
+  margin-left: auto;
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.3rem 0.75rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  background: var(--surface, transparent);
+  cursor: pointer;
+}
+
+.seeker-gyms-nudge:hover:not(:disabled) {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.seeker-gyms-nudge.is-on {
+  color: #c2793a;
+  border-color: #c2793a;
+}
+
+.seeker-gyms-nudge:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 /* A ticked source wears the colour its markers have on the map, so the control
    here and the legend under the map are plainly the same key. Both come from
    `SOURCE_COLORS` in SeekerMap — keep them in step. */

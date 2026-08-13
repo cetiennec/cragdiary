@@ -120,13 +120,15 @@ function initialRanges(params: SeekerParams): Ranges {
   return out;
 }
 
-// Which databases to ask. Unknown names are dropped rather than trusted, and
-// an empty list falls back to the default rather than searching nothing.
+// Which databases to ask. Unknown names are dropped rather than trusted. A
+// missing `src` (a fresh visit, an old shared link) defaults to both; an
+// explicitly empty one is someone's deliberate "none" and stays that way —
+// see parseSources in lib/seeker/types.ts, which the server side mirrors.
 function initialSources(params: SeekerParams): SeekerSource[] {
-  const asked = (params.src ?? "")
+  if (params.src === undefined) return DEFAULT_SOURCES;
+  return params.src
     .split(",")
     .filter((s): s is SeekerSource => (SEEKER_SOURCES as readonly string[]).includes(s));
-  return asked.length ? asked : DEFAULT_SOURCES;
 }
 
 function initialCentre(params: SeekerParams): Centre | null {
@@ -183,13 +185,27 @@ export default function Cragseeker({
     (C2C_OUTDOOR_TYPES as readonly string[]).includes(params.crtyp ?? "") ? params.crtyp! : ""
   );
 
-  // A source that can't answer for this activity is greyed out rather than
-  // silently returning nothing, and is dropped from the search behind the
-  // scenes — switching to ski touring must not leave OpenBeta ticked and mute.
-  const activeSources = useMemo(() => {
-    const kept = sources.filter((s) => sourceHandles(s, activity));
-    return kept.length ? kept : DEFAULT_SOURCES;
-  }, [sources, activity]);
+  // Switching to an activity none of the ticked sources cover would otherwise
+  // search nothing with no visible cause — OpenBeta stays ticked and mute
+  // after a switch to ski touring. Corrected right here during render (React's
+  // own pattern for adjusting state from a prop/derived change, rather than
+  // an effect) so the very first render after the switch is already right;
+  // sources already empty — chosen on purpose, to browse only the gyms layer
+  // — are left alone, since that is not a mismatch to rescue.
+  const [sourcesActivity, setSourcesActivity] = useState(activity);
+  if (activity !== sourcesActivity) {
+    setSourcesActivity(activity);
+    setSources((prev) =>
+      prev.length === 0 || prev.some((s) => sourceHandles(s, activity)) ? prev : DEFAULT_SOURCES
+    );
+  }
+
+  // A source that can't answer for this activity is dropped from the search
+  // behind the scenes rather than silently returning nothing.
+  const activeSources = useMemo(
+    () => sources.filter((s) => sourceHandles(s, activity)),
+    [sources, activity]
+  );
 
   const activeRanges = ACTIVITY_RANGE_FILTERS[activity];
   const heightLabel = ACTIVITY_HEIGHT_PARAM[activity] === "hdif" ? t.heightGain : t.height;
@@ -710,17 +726,13 @@ export default function Cragseeker({
     () => [
       ...SEEKER_SOURCES.map((source) => {
         const handled = sourceHandles(source, activity);
-        // Unchecking the last active source used to silently spring back to
-        // both — activeSources refuses to ever be empty — which read as a
-        // stuck checkbox. Disabling it here says the same rule up front.
-        const isLastActive = handled && activeSources.length === 1 && activeSources.includes(source);
         return {
           id: source,
           label: t.sources[source],
           color: SOURCE_COLORS[source],
           checked: handled && activeSources.includes(source),
-          disabled: !handled || isLastActive,
-          title: !handled ? t.sourceUnavailable : isLastActive ? t.keepOneSource : t.sourceHints[source],
+          disabled: !handled,
+          title: handled ? t.sourceHints[source] : t.sourceUnavailable,
           onToggle: () =>
             setSources((prev) =>
               prev.includes(source)
@@ -819,12 +831,13 @@ export default function Cragseeker({
                     checked={handled && activeSources.includes(source)}
                     disabled={!handled}
                     onChange={(e) =>
+                      // Both may end up unticked — a deliberate way to browse
+                      // only the gyms layer — and that is left as is; see
+                      // activeSources above.
                       setSources((prev) =>
                         e.target.checked
                           ? [...prev.filter((s) => s !== source), source]
-                          : // Unticking the last one would search nothing, so the
-                            // other database takes over rather than leaving a blank page.
-                            prev.filter((s) => s !== source)
+                          : prev.filter((s) => s !== source)
                       )
                     }
                   />
@@ -833,6 +846,17 @@ export default function Cragseeker({
               );
             })}
           </fieldset>
+          {/* Same switch as the gyms row in the map's own key — this is the
+              one a first-time visitor is actually likely to see, since the
+              map's corner menu is easy to miss entirely. */}
+          <button
+            type="button"
+            className={`seeker-gyms-nudge${showGyms ? " is-on" : ""}`}
+            onClick={() => setShowGyms(true)}
+            disabled={!centre}
+          >
+            ☁ {t.gymsHint}
+          </button>
         </div>
 
         {/* 2. What you're looking for. */}

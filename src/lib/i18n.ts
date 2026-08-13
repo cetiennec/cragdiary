@@ -712,7 +712,6 @@ const en = {
       openbeta: "Crags in the United States — the OpenBeta community database.",
     } as Record<string, string>,
     sourceUnavailable: "This database only catalogues rock climbing.",
-    keepOneSource: "At least one database has to stay on.",
     openOn: {
       c2c: "Camptocamp ↗",
       openbeta: "OpenBeta ↗",
@@ -1465,7 +1464,6 @@ const fr: Dict = {
       openbeta: "Les falaises des États-Unis — la base communautaire OpenBeta.",
     } as Record<string, string>,
     sourceUnavailable: "Cette base ne recense que l'escalade rocheuse.",
-    keepOneSource: "Au moins une base doit rester active.",
     openOn: {
       c2c: "Camptocamp ↗",
       openbeta: "OpenBeta ↗",

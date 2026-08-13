@@ -74,11 +74,18 @@ export async function GET(req: Request) {
     : "rock_climbing";
 
   // A source that can't answer for this activity is dropped rather than asked:
-  // OpenBeta knows nothing about ski touring, and a stale link may still say so.
-  // Dropping every source would answer an honest question with an empty page,
-  // so what remains is whichever default *can* hear it.
-  const asked = parseSources(sp.get("src")).filter((s) => sourceHandles(s, activity));
-  const sources = asked.length ? asked : DEFAULT_SOURCES.filter((s) => sourceHandles(s, activity));
+  // OpenBeta knows nothing about ski touring, and a stale link may still say
+  // so. That is a *mismatch* and falls back to whichever default can hear it
+  // — but `src=` (parseSources returning empty) is someone's deliberate "no
+  // database, I just want the gyms layer", and stays empty, same as the page.
+  const rawSources = parseSources(sp.get("src"));
+  const asked = rawSources.filter((s) => sourceHandles(s, activity));
+  const sources =
+    rawSources.length === 0
+      ? []
+      : asked.length
+        ? asked
+        : DEFAULT_SOURCES.filter((s) => sourceHandles(s, activity));
 
   const lat = coord(sp.get("lat"), 90);
   const lon = coord(sp.get("lon"), 180);
