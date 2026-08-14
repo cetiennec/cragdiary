@@ -66,6 +66,9 @@ export type User = {
   approve_followers: boolean;
   /** Linked camptocamp account, shown under the bio; null when not linked. */
   c2c_profile_id: number | null;
+  /** A personal site the profile links to. Always an http(s) URL — see
+      `normaliseWebsite` in app/actions.ts, which is what writes it. */
+  website: string | null;
   created_at: string;
 };
 

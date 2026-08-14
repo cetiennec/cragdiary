@@ -340,6 +340,30 @@ export async function logout(): Promise<void> {
   redirect("/");
 }
 
+/**
+ * A personal site as typed by its owner, turned into something safe to put in
+ * an `href` — or into null. Anything but http(s) is dropped rather than
+ * stored: a profile is a page other people read, and `javascript:` in a link
+ * they click is exactly the hole a free-text field would otherwise open.
+ * A bare "example.com" is assumed to mean https, which is what people type.
+ */
+function normaliseWebsite(raw: string): string | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  const candidate = /^[a-z][a-z0-9+.-]*:/i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  try {
+    const url = new URL(candidate);
+    if (url.protocol !== "http:" && url.protocol !== "https:") return null;
+    // A hostname with no dot is a typo or an intranet name, not a site anyone
+    // else can reach.
+    if (!url.hostname.includes(".")) return null;
+    const href = url.toString();
+    return href.length <= 300 ? href : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function updateProfile(formData: FormData): Promise<void> {
   const user = await currentUser();
   if (!user) throw new Error("Unauthorized");
@@ -358,13 +382,14 @@ export async function updateProfile(formData: FormData): Promise<void> {
   const c2cProfileId = formData.has("c2c_profile")
     ? parseProfileId(String(formData.get("c2c_profile") ?? ""))
     : null;
+  const website = normaliseWebsite(String(formData.get("website") ?? ""));
 
   try {
     await pool.query(
       `update users set bio = $1, visibility = coalesce($2, visibility), email = $3,
-              c2c_profile_id = $5
+              c2c_profile_id = $5, website = $6
        where id = $4`,
-      [bio, profileVisibility, email, user.id, c2cProfileId]
+      [bio, profileVisibility, email, user.id, c2cProfileId, website]
     );
   } catch (e) {
     const pgError = e as { code?: string };

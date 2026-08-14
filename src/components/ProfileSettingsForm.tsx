@@ -15,6 +15,8 @@ type SettingsLabels = {
   emailHint: string;
   c2cAccountFieldLabel: string;
   c2cAccountFieldHint: string;
+  websiteLabel: string;
+  websiteHint: string;
   coverLabel: string;
   coverRemove: string;
   exportLabel: string;
@@ -54,6 +56,7 @@ async function shrinkOnChange(
 export default function ProfileSettingsForm({
   bio,
   email,
+  website,
   c2cProfileId,
   hasAvatar,
   hasCover,
@@ -61,6 +64,7 @@ export default function ProfileSettingsForm({
   t,
 }: {
   bio: string;
+  website: string;
   email: string;
   c2cProfileId: number | null;
   hasAvatar: boolean;
@@ -112,6 +116,18 @@ export default function ProfileSettingsForm({
           <input type="email" name="email" defaultValue={email} autoComplete="email" />
         </label>
         <p className="form-hint">{t.emailHint}</p>
+        <label>
+          {t.websiteLabel}
+          <input
+            type="url"
+            name="website"
+            defaultValue={website}
+            placeholder="https://…"
+            autoComplete="url"
+            inputMode="url"
+          />
+        </label>
+        <p className="form-hint">{t.websiteHint}</p>
         <label>
           {t.c2cAccountFieldLabel}
           <input

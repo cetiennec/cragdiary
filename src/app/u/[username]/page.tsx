@@ -35,6 +35,23 @@ import C2cSync from "@/components/C2cSync";
 import ProfileCover from "@/components/ProfileCover";
 import WelcomeTour from "@/components/WelcomeTour";
 
+/**
+ * What a personal link should read as: the site, not the URL. `https://` and a
+ * leading `www.` say nothing, and a long path would wrap across the profile
+ * header — the full address is still where the link goes.
+ */
+function websiteLabel(url: string): string {
+  try {
+    const { hostname, pathname } = new URL(url);
+    const host = hostname.replace(/^www\./, "");
+    const path = pathname === "/" ? "" : pathname.replace(/\/$/, "");
+    const label = `${host}${path}`;
+    return label.length > 42 ? `${label.slice(0, 41)}…` : label;
+  } catch {
+    return url;
+  }
+}
+
 export async function generateMetadata({
   params,
 }: {
@@ -282,6 +299,20 @@ export default async function ProfilePage({
             <p className="form-hint profile-visibility-hint">{t.profile.unlistedHint}</p>
           )}
           {profile.bio && <p className="profile-bio">{profile.bio}</p>}
+          {/* A personal site, if there is one. `nofollow ugc` because this is
+              a link a stranger wrote: the profile lends its reader, not the
+              site's ranking. */}
+          {profile.website && (
+            <p className="profile-website">
+              <a
+                href={profile.website}
+                target="_blank"
+                rel="noopener noreferrer nofollow ugc"
+              >
+                🔗 {websiteLabel(profile.website)}
+              </a>
+            </p>
+          )}
           {/* The linked camptocamp account sits under the bio; syncing from it
               is the owner's business only. */}
           {profile.c2c_profile_id && (
@@ -324,6 +355,7 @@ export default async function ProfilePage({
           <ProfileSettingsForm
             bio={profile.bio ?? ""}
             email={profile.email ?? ""}
+            website={profile.website ?? ""}
             c2cProfileId={profile.c2c_profile_id}
             hasAvatar={profile.has_avatar}
             hasCover={profile.has_cover}
@@ -336,6 +368,8 @@ export default async function ProfilePage({
               settingsSave: t.profile.settingsSave,
               emailLabel: t.profile.emailLabel,
               emailHint: t.profile.emailHint,
+              websiteLabel: t.profile.websiteLabel,
+              websiteHint: t.profile.websiteHint,
               c2cAccountFieldLabel: t.profile.c2cAccountFieldLabel,
               c2cAccountFieldHint: t.profile.c2cAccountFieldHint,
               coverLabel: t.profile.coverLabel,
