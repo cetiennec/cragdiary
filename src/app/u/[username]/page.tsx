@@ -33,6 +33,7 @@ import ProfileMap from "@/components/ProfileMap";
 import ProfileSettingsForm from "@/components/ProfileSettingsForm";
 import FollowersPanel from "@/components/FollowersPanel";
 import C2cSync from "@/components/C2cSync";
+import AvatarPicker from "@/components/AvatarPicker";
 import ProfileCover from "@/components/ProfileCover";
 import ShareButton from "@/components/ShareButton";
 import WelcomeTour from "@/components/WelcomeTour";
@@ -274,14 +275,24 @@ export default async function ProfilePage({
         </p>
       )}
       <header className="profile-header">
-        <div className="profile-avatar" aria-hidden>
-          {profile.has_avatar ? (
-            // eslint-disable-next-line @next/next/no-img-element -- served from our own DB-backed route, already resized server-side
-            <img src={`/api/avatars/${profile.username}`} alt="" />
-          ) : (
-            profile.display_name.slice(0, 1).toUpperCase()
-          )}
-        </div>
+        {/* Your own photograph is the button for changing it. */}
+        {isSelf ? (
+          <AvatarPicker
+            username={profile.username}
+            hasAvatar={profile.has_avatar}
+            initial={profile.display_name.slice(0, 1).toUpperCase()}
+            label={t.profile.avatarChange}
+          />
+        ) : (
+          <div className="profile-avatar" aria-hidden>
+            {profile.has_avatar ? (
+              // eslint-disable-next-line @next/next/no-img-element -- served from our own DB-backed route, already resized server-side
+              <img src={`/api/avatars/${profile.username}`} alt="" />
+            ) : (
+              profile.display_name.slice(0, 1).toUpperCase()
+            )}
+          </div>
+        )}
         <div>
           {/* Beside the name, and smaller than it: what you share is this
               person's journal, so the button belongs to their name. Absent on a

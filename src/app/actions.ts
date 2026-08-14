@@ -510,6 +510,33 @@ export async function updateEmailPrefs(
   return { saved: true };
 }
 
+/**
+ * Just the profile picture, from the avatar itself rather than from the
+ * settings panel. Its own action on purpose: `updateProfile` reads the whole
+ * form, so a partial submission would quietly erase the bio and the recovery
+ * email on the way to changing a photograph.
+ */
+export async function updateAvatar(formData: FormData): Promise<void> {
+  const user = await currentUser();
+  if (!user) throw new Error("Unauthorized");
+
+  const file = formData.get("avatar");
+  if (!(file instanceof File) || file.size === 0) return;
+
+  const processed = await sharp(Buffer.from(await file.arrayBuffer()))
+    .rotate()
+    .resize({ width: 320, height: 320, fit: "cover" })
+    .webp({ quality: 80 })
+    .toBuffer();
+  await pool.query("update users set avatar = $1, avatar_type = 'image/webp' where id = $2", [
+    processed,
+    user.id,
+  ]);
+
+  revalidatePath(`/u/${user.username}`);
+  revalidatePath("/");
+}
+
 export async function updateProfile(formData: FormData): Promise<void> {
   const user = await currentUser();
   if (!user) throw new Error("Unauthorized");

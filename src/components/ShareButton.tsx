@@ -3,29 +3,30 @@
 import { useState } from "react";
 
 /**
- * The ordinary share mark — a box with an arrow leaving it, the one every
- * phone puts on its share sheet. Drawn rather than an emoji so it takes the
- * button's own colour and stays the same on every platform, where 🔗 is a
- * chain on one and a paperclip on the next.
+ * The ordinary share mark — an arrow leaving its frame. Drawn rather than
+ * taken from the emoji font so it takes the button's own colour and looks the
+ * same everywhere, where 🔗 is a chain on one platform and a paperclip on the
+ * next.
  */
 function ShareMark() {
   return (
     <svg viewBox="0 0 24 24" width="15" height="15" fill="none" aria-hidden focusable="false">
-      <path d="M12 3.5 L12 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      {/* The frame this page is, left open where the arrow goes out of it. */}
       <path
-        d="M8.6 6.9 L12 3.4 L15.4 6.9"
+        d="M10 5 H5.5 A1.5 1.5 0 0 0 4 6.5 v12 A1.5 1.5 0 0 0 5.5 20 h12 A1.5 1.5 0 0 0 19 18.5 V14"
         stroke="currentColor"
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
       <path
-        d="M6.5 10.5 H5.5 A1.5 1.5 0 0 0 4 12 v7 A1.5 1.5 0 0 0 5.5 20.5 h13 A1.5 1.5 0 0 0 20 19 v-7 A1.5 1.5 0 0 0 18.5 10.5 h-1"
+        d="M13.5 4 H20 V10.5"
         stroke="currentColor"
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
+      <path d="M20 4 L11.5 12.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
 }
