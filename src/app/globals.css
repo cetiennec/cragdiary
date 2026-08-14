@@ -4072,6 +4072,18 @@ a {
   overflow: hidden;
   z-index: 0;
   cursor: crosshair;
+  /* Holding the map is our gesture. Safari on iOS otherwise answers a long
+     press with its own — the callout menu, and the selection handles that come
+     with it — which fires around half a second in and steals the press. */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Except inside a popup, which is text and links meant to be read and copied. */
+.seeker-map .leaflet-popup {
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 /* The hover card on a map marker: the list card's overview, in miniature.
@@ -4497,7 +4509,7 @@ a {
 /* Shelters on the map: a square, where every result is a circle. Colour alone
    would not survive a colour-blind eye, and the two mean quite different
    things — one you climb, the other you sleep in. */
-/* The three-second press that moves the search, drawn while it is held: an
+/* The two-second press that moves the search, drawn while it is held: an
    outline that says where, and a disc that fills to say how far along. Nothing
    about it is clickable — it is a picture of a gesture already in progress. */
 .seeker-press {
@@ -4520,7 +4532,7 @@ a {
   background: var(--accent);
   opacity: 0.35;
   transform: scale(0);
-  animation: seeker-press-fill 3s linear forwards;
+  animation: seeker-press-fill 2s linear forwards;
 }
 
 @keyframes seeker-press-fill {

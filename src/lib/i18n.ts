@@ -69,7 +69,6 @@ const en = {
     emailUses: "An email address is what lets you:",
     emailUseReset: "reset your password if you forget it",
     emailUseDigest: "get a monthly digest, if you ask for one",
-    emailWarning: "Without one, an account can never be recovered.",
     password: "Password",
     privacyPre: "We store your username, display name and — if you give one — a recovery email. Nothing else, no trackers. See the ",
     privacyLink: "privacy notice",
@@ -613,7 +612,7 @@ const en = {
     droppedPin: "Pin on the map",
     radius: "Around",
     mapHint:
-      "Hover a marker to see the route. To search elsewhere, drag the orange pin, or hold a spot on the map for three seconds.",
+      "Hover a marker to see the route. To search elsewhere, drag the orange pin, or hold a spot on the map for two seconds.",
     activity: "Activity",
     activities: {
       rock_climbing: "Rock climbing",
@@ -836,7 +835,6 @@ const fr: Dict = {
     emailUses: "L'email sert à :",
     emailUseReset: "récupérer votre mot de passe en cas d'oubli",
     emailUseDigest: "recevoir un résumé mensuel, si vous le demandez",
-    emailWarning: "Sans email, aucune récupération de compte n'est possible.",
     password: "Mot de passe",
     privacyPre: "Nous conservons votre nom d'utilisateur, votre nom affiché et — si vous en donnez un — un email de récupération. Rien d'autre, aucun traqueur. Voir la ",
     privacyLink: "note de confidentialité",
@@ -1383,7 +1381,7 @@ const fr: Dict = {
     droppedPin: "Point sur la carte",
     radius: "Dans un rayon de",
     mapHint:
-      "Survolez un point pour voir la voie. Pour chercher ailleurs, glissez le point orange, ou appuyez 3 secondes sur la carte.",
+      "Survolez un point pour voir la voie. Pour chercher ailleurs, glissez le point orange, ou appuyez 2 secondes sur la carte.",
     activity: "Activité",
     activities: {
       rock_climbing: "Escalade",

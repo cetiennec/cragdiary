@@ -43,16 +43,13 @@ export default async function SignupPage({
           <input type="email" name="email" autoComplete="email" placeholder={t.signup.emailHint} />
         </label>
         {/* Said at the point of the choice, and only while the box is still
-            empty: what the address buys, then what its absence costs. */}
+            empty: what the address is for. */}
         <div className="form-hint form-warn">
           <p>{t.signup.emailUses}</p>
           <ul>
             <li>{t.signup.emailUseReset}</li>
             <li>{t.signup.emailUseDigest}</li>
           </ul>
-          <p className="form-warn-line">
-            <span aria-hidden>⚠️</span> {t.signup.emailWarning}
-          </p>
         </div>
         <label>
           {t.signup.password}
