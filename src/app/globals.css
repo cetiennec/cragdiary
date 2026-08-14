@@ -4381,6 +4381,25 @@ a {
   margin-left: 0;
 }
 
+/* The ✕ that retires a hint for good: quiet, and inside the sentence it ends. */
+.hint-dismiss {
+  margin-left: 0.4rem;
+  font: inherit;
+  font-size: 0.78rem;
+  line-height: 1;
+  padding: 0.1rem 0.3rem;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.hint-dismiss:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
 /* A notification whose day is gone: same shape, no pointer, no hover — there
    is nothing behind it any more. */
 .notif-link.is-gone {

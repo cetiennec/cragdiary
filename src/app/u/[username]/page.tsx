@@ -20,6 +20,7 @@ import { coverEmojis } from "@/components/AutoCover";
 import { flagEmoji } from "@/lib/geo";
 import { setProfileVisibility, toggleFollow } from "@/app/actions";
 import VisibilityPicker from "@/components/VisibilityPicker";
+import VisibilityHint from "@/components/VisibilityHint";
 import { renderMentions } from "@/lib/mentions";
 import FilterBar from "@/components/FilterBar";
 import AutoFilterForm from "@/components/AutoFilterForm";
@@ -33,6 +34,7 @@ import ProfileSettingsForm from "@/components/ProfileSettingsForm";
 import FollowersPanel from "@/components/FollowersPanel";
 import C2cSync from "@/components/C2cSync";
 import ProfileCover from "@/components/ProfileCover";
+import ShareButton from "@/components/ShareButton";
 import WelcomeTour from "@/components/WelcomeTour";
 
 /**
@@ -292,11 +294,14 @@ export default async function ProfilePage({
               />
             </div>
           )}
-          {isSelf && profile.visibility === "private" && (
-            <p className="form-hint profile-visibility-hint">{t.profile.privateHint}</p>
-          )}
-          {isSelf && profile.visibility === "unlisted" && (
-            <p className="form-hint profile-visibility-hint">{t.profile.unlistedHint}</p>
+          {/* Said once per setting, then dismissed for good — see
+              VisibilityHint. */}
+          {isSelf && profile.visibility !== "public" && (
+            <VisibilityHint
+              value={profile.visibility}
+              text={profile.visibility === "private" ? t.profile.privateHint : t.profile.unlistedHint}
+              dismissLabel={t.profile.hintDismiss}
+            />
           )}
           {profile.bio && <p className="profile-bio">{profile.bio}</p>}
           {/* A personal site, if there is one. `nofollow ugc` because this is
@@ -327,6 +332,17 @@ export default async function ProfilePage({
             </p>
           )}
         </div>
+        {/* Sharing a private profile would be sharing a door nobody else can
+            open, so the button only exists where the link leads somewhere —
+            which includes an unlisted profile, since a link is the whole point
+            of unlisted. */}
+        {profile.visibility !== "private" && (
+          <ShareButton
+            label={t.profile.share}
+            copied={t.profile.shareCopied}
+            text={`🧗 ${profile.display_name} — ${t.profile.shareTagline}`}
+          />
+        )}
         {user && !isSelf && (
           // One button, three states: asking, waiting, or following. Clicking
           // it always undoes whatever it says.
