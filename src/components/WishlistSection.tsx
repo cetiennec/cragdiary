@@ -76,7 +76,12 @@ export default function WishlistSection({
         />
       )}
 
-      {shareable && (isOwner || shared) && (
+      {/* Who holds the list is the business of the people who hold it. A
+          visitor reading a public list sees the routes, not the names — an
+          unlisted climber added by someone else must not find their name
+          published on a page they never chose. The 🤝 above still says the
+          list is shared; it names nobody. */}
+      {shareable && (isOwner || isMember) && (
         <WishlistMembers
           listId={list.id}
           owner={{ username: list.owner_username, display_name: list.owner_display_name }}

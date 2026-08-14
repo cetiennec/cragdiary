@@ -283,7 +283,21 @@ export default async function ProfilePage({
           )}
         </div>
         <div>
-          <h1 className="profile-name">{profile.display_name}</h1>
+          {/* Beside the name, and smaller than it: what you share is this
+              person's journal, so the button belongs to their name. Absent on a
+              private profile — sharing a door nobody else can open is not
+              sharing. An unlisted one keeps it: a link is the whole point. */}
+          <div className="profile-name-row">
+            <h1 className="profile-name">{profile.display_name}</h1>
+            {profile.visibility !== "private" && (
+              <ShareButton
+                label={t.profile.share}
+                copied={t.profile.shareCopied}
+                text={`🧗 ${profile.display_name} — ${t.profile.shareTagline}`}
+                small
+              />
+            )}
+          </div>
           <p className="profile-sub">
             @{profile.username} · {t.profile.entryCount(page.total)}
           </p>
@@ -335,17 +349,6 @@ export default async function ProfilePage({
             </p>
           )}
         </div>
-        {/* Far right of the header, on the line where the bio's links end.
-            Absent on a private profile — sharing a door nobody else can open is
-            not sharing. An unlisted one keeps it: a link is the whole point of
-            unlisted. */}
-        {profile.visibility !== "private" && (
-          <ShareButton
-            label={t.profile.share}
-            copied={t.profile.shareCopied}
-            text={`🧗 ${profile.display_name} — ${t.profile.shareTagline}`}
-          />
-        )}
         {user && !isSelf && (
           // One button, three states: asking, waiting, or following. Clicking
           // it always undoes whatever it says.
