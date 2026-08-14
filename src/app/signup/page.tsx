@@ -52,6 +52,7 @@ export default async function SignupPage({
           <p>{t.signup.emailUses}</p>
           <ul>
             <li>{t.signup.emailUseReset}</li>
+            <li>{t.signup.emailUseTags}</li>
             <li>{t.signup.emailUseDigest}</li>
           </ul>
         </div>

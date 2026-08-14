@@ -30,6 +30,11 @@ export type Notification = {
   actor_has_avatar: boolean;
 };
 
+// How many a person keeps. A notification is a nudge, not an archive — what
+// happened is in the journal, the wishlist and the profiles themselves — so
+// past this the older ones go rather than accumulating for years.
+export const NOTIFICATION_KEEP = 10;
+
 // Insert a notification. No-op when the actor is the recipient (you don't get
 // notified about your own actions).
 export async function notify(opts: {
@@ -42,6 +47,19 @@ export async function notify(opts: {
   await pool.query(
     "insert into notifications (user_id, actor_id, type, data) values ($1, $2, $3, $4)",
     [opts.userId, opts.actorId, opts.type, opts.data ? JSON.stringify(opts.data) : null]
+  );
+  // Trimmed here rather than by a scheduled job: the only moment a list can
+  // grow is the moment something is added to it, and one small delete beside
+  // one small insert needs nothing watching it.
+  await pool.query(
+    `delete from notifications
+     where user_id = $1
+       and id not in (
+         select id from notifications where user_id = $1
+         order by created_at desc, id desc
+         limit $2
+       )`,
+    [opts.userId, NOTIFICATION_KEEP]
   );
 }
 
@@ -60,7 +78,10 @@ export async function unreadCount(userId: string): Promise<number> {
   return Number(r.rows[0]?.n ?? 0);
 }
 
-export async function getNotifications(userId: string, limit = 50): Promise<Notification[]> {
+export async function getNotifications(
+  userId: string,
+  limit = NOTIFICATION_KEEP
+): Promise<Notification[]> {
   const r = await pool.query<Notification>(
     `select n.id, n.type, n.data, n.read, to_char(n.created_at, 'YYYY-MM-DD') as created_at,
             a.username as actor_username, a.display_name as actor_display_name,
