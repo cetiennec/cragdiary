@@ -24,8 +24,15 @@ export default async function SignupPage({
             autoComplete="username"
             pattern="[a-z0-9\-]{3,20}"
             placeholder={t.signup.usernameHint}
+            // The browser's own "does not match the requested format" says
+            // nothing about the format; `title` is what it shows underneath.
+            title={t.signup.usernameRules}
           />
         </label>
+        {/* Spelled out, and not only in the placeholder: a placeholder is gone
+            the moment someone starts typing, which is exactly when the rule
+            matters. */}
+        <p className="form-hint">{t.signup.usernameRules}</p>
         <label>
           {t.signup.displayName}
           <input type="text" name="display_name" required placeholder={t.signup.displayNameHint} />
@@ -34,6 +41,10 @@ export default async function SignupPage({
           {t.signup.email}
           <input type="email" name="email" autoComplete="email" placeholder={t.signup.emailHint} />
         </label>
+        {/* Said plainly at the point of the choice: password recovery sends a
+            link to this address and has no other route in, so an account
+            without one cannot be recovered at all. */}
+        <p className="form-hint">{t.signup.emailWarning}</p>
         <label>
           {t.signup.password}
           <input

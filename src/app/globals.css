@@ -4497,6 +4497,48 @@ a {
 /* Shelters on the map: a square, where every result is a circle. Colour alone
    would not survive a colour-blind eye, and the two mean quite different
    things — one you climb, the other you sleep in. */
+/* The five-second press that moves the search, drawn while it is held: an
+   outline that says where, and a disc that fills to say how far along. Nothing
+   about it is clickable — it is a picture of a gesture already in progress. */
+.seeker-press {
+  position: absolute;
+  z-index: 650;
+  width: 46px;
+  height: 46px;
+  margin: -23px 0 0 -23px;
+  border: 2px solid var(--accent);
+  border-radius: 50%;
+  pointer-events: none;
+  background: transparent;
+}
+
+.seeker-press::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  background: var(--accent);
+  opacity: 0.35;
+  transform: scale(0);
+  animation: seeker-press-fill 5s linear forwards;
+}
+
+@keyframes seeker-press-fill {
+  to {
+    transform: scale(1);
+  }
+}
+
+/* Someone who asked for less motion still needs to see the press register;
+   they just don't need it growing under their finger. */
+@media (prefers-reduced-motion: reduce) {
+  .seeker-press::after {
+    animation: none;
+    transform: scale(1);
+    opacity: 0.2;
+  }
+}
+
 /* The search's own point. Round like a result, but in the accent colour and
    bigger, and it says it can be dragged by the cursor it takes. */
 .seeker-centre-pin {

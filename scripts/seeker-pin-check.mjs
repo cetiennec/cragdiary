@@ -90,9 +90,9 @@ await page.mouse.dblclick(map.x + 400, map.y + 380);
 await page.waitForTimeout(700);
 check("double-clicking to zoom never drops the pin", (await centre()) === start);
 
-// 4. A click that really is on empty map still moves the search. The spot is
-// found rather than guessed: the map has just panned a popup into view, and a
-// fixed corner is not reliably empty.
+// 4. A press held for five seconds moves the search — and a short one does
+// not. The spot is found rather than guessed: a fixed corner is not reliably
+// clear of markers once a popup's auto-pan has slid the map about.
 const empty = await page.evaluate(() => {
   const box = document.querySelector(".seeker-map").getBoundingClientRect();
   const marks = [...document.querySelectorAll("path.leaflet-interactive, .leaflet-marker-icon")].map(
@@ -108,11 +108,30 @@ const empty = await page.evaluate(() => {
   }
   return null;
 });
-check("the map has an empty spot to click", empty !== null);
+check("the map has an empty spot to press", empty !== null);
+
+// A single click, then a press let go too early: neither is the gesture.
 await page.mouse.click(empty.x, empty.y);
+await page.waitForTimeout(800);
+check("a single click never moves the pin", (await centre()) === start);
+
+await page.mouse.move(empty.x, empty.y);
+await page.mouse.down();
+await page.waitForTimeout(2000);
+check("the press draws itself while held", await page.locator(".seeker-press").isVisible());
+await page.mouse.up();
+await page.waitForTimeout(800);
+check("a press let go early leaves the pin alone", (await centre()) === start);
+check("the press mark is gone once released", (await page.locator(".seeker-press").count()) === 0);
+
+// And the whole five seconds.
+await page.mouse.move(empty.x, empty.y);
+await page.mouse.down();
+await page.waitForTimeout(5600);
+await page.mouse.up();
 await page.waitForTimeout(1200);
-const afterClick = await centre();
-check("a deliberate click on empty map moves the pin", afterClick !== start);
+const afterPress = await centre();
+check("a five-second press moves the pin there", afterPress !== start);
 
 // 5. And the pin can be dragged.
 const before = await pinAt();
@@ -121,7 +140,7 @@ await page.mouse.down();
 await page.mouse.move(before.x + 120, before.y + 60, { steps: 15 });
 await page.mouse.up();
 await page.waitForTimeout(1200);
-check("dragging the pin moves the search", (await centre()) !== afterClick);
+check("dragging the pin moves the search", (await centre()) !== afterPress);
 
 await page.screenshot({ path: `${out}/seeker-pin.png`, fullPage: true });
 await browser.close();

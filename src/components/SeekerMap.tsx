@@ -223,9 +223,10 @@ const DRAG_SLOP = 6;
 // having the whole search jump elsewhere is the annoyance being fixed.
 const MARKER_SLOP = 20;
 
-// A double-click zooms. The pin is dropped only once no second click follows —
-// short enough not to feel laggy, longer than a real double-click's gap.
-const DOUBLE_CLICK_GRACE = 250;
+// How long the map has to be held before the search moves there. Long on
+// purpose: nothing about panning, zooming or reading the map lasts this long,
+// so the gesture can only be meant.
+const LONG_PRESS_MS = 5000;
 
 /**
  * The nearest marker to a click, within `MARKER_SLOP` pixels — results,
@@ -309,9 +310,6 @@ export default function SeekerMap({
   // Closing is delayed by a moment so the pointer can travel from the marker to
   // the card without it vanishing on the way — the card holds a link.
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Dropping the pin waits out a possible second click, so a double-click zoom
-  // doesn't also move the search. Cleared by `dblclick`.
-  const pickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Everything currently drawn, read by the click guard below. A ref, not the
   // props themselves: the map is built once and its handler must always see the
   // current markers without rebinding.
@@ -345,41 +343,84 @@ export default function SeekerMap({
             '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
         })
         .addTo(created);
-      // Moving the pin restarts the search, so a click only counts when it
-      // really was a click on empty map: not the tail of a pan, not half of a
-      // double-click zoom, and not a near-miss on a marker.
+      // Moving the pin restarts the search, so no ordinary click does it: it
+      // takes a deliberate press held for five seconds. A pan, a double-click
+      // zoom and a marker missed by a few pixels are all ordinary clicks, and
+      // none of them can move the search any more.
+      const container = containerRef.current;
+      let pressTimer: ReturnType<typeof setTimeout> | null = null;
       let pressedAt: { x: number; y: number } | null = null;
-      const onPointerDown = (e: PointerEvent) => {
-        pressedAt = { x: e.clientX, y: e.clientY };
+      let ring: HTMLElement | null = null;
+
+      const endPress = () => {
+        if (pressTimer) clearTimeout(pressTimer);
+        pressTimer = null;
+        pressedAt = null;
+        ring?.remove();
+        ring = null;
       };
-      containerRef.current.addEventListener("pointerdown", onPointerDown);
 
-      created.on("click", (e: import("leaflet").LeafletMouseEvent) => {
-        // 1. A pan whose pointer barely moved still ends in a DOM click.
-        const native = e.originalEvent;
-        if (pressedAt && native) {
-          const moved = Math.hypot(native.clientX - pressedAt.x, native.clientY - pressedAt.y);
-          if (moved > DRAG_SLOP) return;
-        }
-
-        // 2. A marker missed by a few pixels means "I wanted that marker",
-        // never "put the search somewhere else".
-        const near = nearestMarker(created!, e.containerPoint, drawn.current);
-        if (near) {
-          if (near.id) handlers.current.onSelect(near.id);
+      const onPointerDown = (e: PointerEvent) => {
+        // Only the map itself: a press that starts on a marker, a popup or the
+        // layer menu belongs to that thing, not to the map underneath.
+        if (e.button !== 0 && e.pointerType === "mouse") return;
+        const target = e.target as HTMLElement;
+        if (target.closest(".leaflet-marker-icon, .leaflet-popup, .leaflet-control, .seeker-map-menu")) {
           return;
         }
+        endPress();
+        const box = container.getBoundingClientRect();
+        pressedAt = { x: e.clientX, y: e.clientY };
 
-        // 3. Double-click zooms; only a click left alone drops the pin.
-        if (pickTimer.current) clearTimeout(pickTimer.current);
-        const { lat, lng } = e.latlng;
-        pickTimer.current = setTimeout(() => handlers.current.onPick(lat, lng), DOUBLE_CLICK_GRACE);
+        // Five seconds is a long time to hold something with no sign that
+        // anything is happening, so the press draws itself as it fills.
+        ring = document.createElement("span");
+        ring.className = "seeker-press";
+        ring.style.left = `${e.clientX - box.left}px`;
+        ring.style.top = `${e.clientY - box.top}px`;
+        container.append(ring);
+
+        const point = new mod.Point(e.clientX - box.left, e.clientY - box.top);
+        pressTimer = setTimeout(() => {
+          const { lat, lng } = created!.containerPointToLatLng(point);
+          endPress();
+          handlers.current.onPick(lat, lng);
+        }, LONG_PRESS_MS);
+      };
+
+      // Any travel means the hand was panning, not pointing.
+      const onPointerMove = (e: PointerEvent) => {
+        if (!pressedAt) return;
+        if (Math.hypot(e.clientX - pressedAt.x, e.clientY - pressedAt.y) > DRAG_SLOP) endPress();
+      };
+
+      container.addEventListener("pointerdown", onPointerDown);
+      container.addEventListener("pointermove", onPointerMove);
+      container.addEventListener("pointerup", endPress);
+      container.addEventListener("pointercancel", endPress);
+      container.addEventListener("pointerleave", endPress);
+      // Touch devices raise the context menu around half a second in, which
+      // would both cancel the press and cover the map with a menu.
+      const onContextMenu = (e: Event) => {
+        if (pressedAt) e.preventDefault();
+      };
+      container.addEventListener("contextmenu", onContextMenu);
+
+      // A plain click still says "that marker there", so a near-miss selects it
+      // rather than doing nothing at all.
+      created.on("click", (e: import("leaflet").LeafletMouseEvent) => {
+        const near = nearestMarker(created!, e.containerPoint, drawn.current);
+        if (near?.id) handlers.current.onSelect(near.id);
       });
-      created.on("dblclick", () => {
-        if (pickTimer.current) clearTimeout(pickTimer.current);
-      });
+
       cleanupClick = () => {
-        containerRef.current?.removeEventListener("pointerdown", onPointerDown);
+        endPress();
+        container.removeEventListener("pointerdown", onPointerDown);
+        container.removeEventListener("pointermove", onPointerMove);
+        container.removeEventListener("pointerup", endPress);
+        container.removeEventListener("pointercancel", endPress);
+        container.removeEventListener("pointerleave", endPress);
+        container.removeEventListener("contextmenu", onContextMenu);
       };
 
       setL(() => mod);
@@ -388,7 +429,6 @@ export default function SeekerMap({
 
     return () => {
       disposed = true;
-      if (pickTimer.current) clearTimeout(pickTimer.current);
       cleanupClick?.();
       created?.remove();
       setMap(null);

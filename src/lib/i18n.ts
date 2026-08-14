@@ -60,10 +60,14 @@ const en = {
     title: "Start your journal",
     username: "Username",
     usernameHint: "lowercase letters, digits, hyphens",
+    usernameRules:
+      "3 to 20 characters, and only lowercase letters, digits and hyphens — no spaces, capitals or accents. This is the name in your public address, cragdiary.com/u/your-name.",
     displayName: "Display name",
     displayNameHint: "How your name appears",
     email: "Email (optional)",
     emailHint: "only used to recover your password",
+    emailWarning:
+      "Optional, and never used for anything else. But it is the only way back in: a forgotten password is reset by a link sent to this address, so an account without one cannot be recovered.",
     password: "Password",
     privacyPre: "We store your username, display name and — if you give one — a recovery email. Nothing else, no trackers. See the ",
     privacyLink: "privacy notice",
@@ -604,7 +608,7 @@ const en = {
     droppedPin: "Pin on the map",
     radius: "Around",
     mapHint:
-      "Hover a marker for the route at a glance. Drag the search pin, or click an empty spot on the map, to search elsewhere.",
+      "Hover a marker for the route at a glance. To search somewhere else, drag the orange pin — or press and hold that spot on the map for five seconds. An ordinary click never moves it.",
     activity: "Activity",
     activities: {
       rock_climbing: "Rock climbing",
@@ -817,10 +821,14 @@ const fr: Dict = {
     title: "Commencez votre carnet",
     username: "Nom d'utilisateur",
     usernameHint: "minuscules, chiffres, tirets",
+    usernameRules:
+      "3 à 20 caractères, uniquement des minuscules, des chiffres et des tirets — ni espaces, ni majuscules, ni accents. C'est le nom qui apparaît dans votre adresse publique, cragdiary.com/u/votre-nom.",
     displayName: "Nom affiché",
     displayNameHint: "Le nom que les autres verront",
     email: "Email (optionnel)",
     emailHint: "sert uniquement à récupérer votre mot de passe",
+    emailWarning:
+      "Optionnel, et jamais utilisé pour autre chose. Mais c'est la seule porte de secours : un mot de passe oublié se réinitialise par un lien envoyé à cette adresse, donc un compte sans email est irrécupérable.",
     password: "Mot de passe",
     privacyPre: "Nous conservons votre nom d'utilisateur, votre nom affiché et — si vous en donnez un — un email de récupération. Rien d'autre, aucun traqueur. Voir la ",
     privacyLink: "note de confidentialité",
@@ -1364,7 +1372,7 @@ const fr: Dict = {
     droppedPin: "Point sur la carte",
     radius: "Dans un rayon de",
     mapHint:
-      "Survolez un point pour voir la voie en un coup d'œil. Faites glisser le point de recherche, ou cliquez sur une zone vide de la carte, pour chercher ailleurs.",
+      "Survolez un point pour voir la voie en un coup d'œil. Pour chercher ailleurs, faites glisser le point orange — ou appuyez cinq secondes sans relâcher à l'endroit voulu. Un simple clic ne le déplace jamais.",
     activity: "Activité",
     activities: {
       rock_climbing: "Escalade",
