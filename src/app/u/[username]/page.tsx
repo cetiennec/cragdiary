@@ -335,6 +335,17 @@ export default async function ProfilePage({
             </p>
           )}
         </div>
+        {/* Far right of the header, on the line where the bio's links end.
+            Absent on a private profile — sharing a door nobody else can open is
+            not sharing. An unlisted one keeps it: a link is the whole point of
+            unlisted. */}
+        {profile.visibility !== "private" && (
+          <ShareButton
+            label={t.profile.share}
+            copied={t.profile.shareCopied}
+            text={`🧗 ${profile.display_name} — ${t.profile.shareTagline}`}
+          />
+        )}
         {user && !isSelf && (
           // One button, three states: asking, waiting, or following. Clicking
           // it always undoes whatever it says.
@@ -356,19 +367,6 @@ export default async function ProfilePage({
           </form>
         )}
       </header>
-
-      {/* Above the settings, hard right. Absent on a private profile — sharing
-          a door nobody else can open is not sharing. An unlisted one keeps it:
-          a link is the whole point of unlisted. */}
-      {profile.visibility !== "private" && (
-        <div className="profile-share-row">
-          <ShareButton
-            label={t.profile.share}
-            copied={t.profile.shareCopied}
-            text={`🧗 ${profile.display_name} — ${t.profile.shareTagline}`}
-          />
-        </div>
-      )}
 
       {isSelf && (
         <details className="profile-settings">

@@ -4387,16 +4387,13 @@ a {
   margin-left: 0;
 }
 
-/* The share button sits on the line above the settings, hard right: the last
-   thing in the header block rather than something floating over the page. */
-.profile-share-row {
-  display: flex;
-  justify-content: flex-end;
-  margin: 0.6rem 0 0.2rem;
-}
-
-.profile-share-row .share-fab {
-  margin: 0;
+/* The share button, pushed to the far right of the header and dropped to the
+   foot of it, so it lines up with the last row of the bio — the website and
+   camptocamp links — rather than with the name. */
+.profile-header > .share-fab {
+  margin: 0 0 0 auto;
+  align-self: flex-end;
+  flex: none;
 }
 
 /* The eye on a password box: inside the field's own frame, so the two read as
