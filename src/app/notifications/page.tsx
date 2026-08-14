@@ -3,9 +3,15 @@ import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
 import { getDict } from "@/lib/i18n";
 import { getNotifications, type Notification } from "@/lib/notifications";
-import { entriesNotOfferable, getFollowRequests } from "@/lib/queries";
-import { answerFollowRequest, copyEntryToJournal } from "@/app/actions";
+import { entriesNotOfferable, getEmailPrefs, getFollowRequests } from "@/lib/queries";
+import { answerFollowRequest, copyEntryToJournal, updateEmailPrefs } from "@/app/actions";
 import MarkNotificationsRead from "@/components/MarkNotificationsRead";
+
+// The dictionary crosses no boundary here, but its counted strings are
+// templates all the same.
+function fill(template: string, key: string, value: string): string {
+  return template.replace(`{${key}}`, value);
+}
 
 function target(n: Notification, selfUsername: string): string {
   switch (n.type) {
@@ -33,9 +39,10 @@ export default async function NotificationsPage() {
   const user = await currentUser();
   if (!user) redirect("/login");
 
-  const [items, requests, { t }] = await Promise.all([
+  const [items, requests, email, { t }] = await Promise.all([
     getNotifications(user.id),
     getFollowRequests(user.id),
+    getEmailPrefs(user.id),
     getDict(),
   ]);
   // Days there is no point offering: already here, or private.
@@ -52,6 +59,45 @@ export default async function NotificationsPage() {
     <div className="page-container narrow">
       <MarkNotificationsRead />
       <h1 className="page-title">{tn.title}</h1>
+
+      {/* The same events, offered where they can reach someone who isn't on
+          the site — a climbing journal is not a daily visit. Folded away: it
+          is a setting, and settings are not what this page is for. */}
+      <details className="notif-email">
+        <summary>{tn.emailTitle}</summary>
+        {email.email ? (
+          <form action={updateEmailPrefs} className="notif-email-form">
+            <label>
+              <input
+                type="checkbox"
+                name="email_tags"
+                value="1"
+                defaultChecked={email.emailTags}
+              />
+              {tn.emailTags}
+            </label>
+            <label>
+              <input
+                type="checkbox"
+                name="email_digest"
+                value="1"
+                defaultChecked={email.emailDigest}
+              />
+              {tn.emailDigest}
+            </label>
+            <p className="form-hint">{fill(tn.emailTo, "email", email.email)}</p>
+            <button type="submit" className="btn-primary">
+              {tn.emailSave}
+            </button>
+          </form>
+        ) : (
+          <p className="form-hint">
+            {tn.emailNonePre}
+            <Link href={`/u/${user.username}`}>{tn.emailNoneLink}</Link>
+            {tn.emailNonePost}
+          </p>
+        )}
+      </details>
 
       {items.length === 0 ? (
         <p className="empty-state">{tn.empty}</p>

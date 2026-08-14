@@ -4381,6 +4381,41 @@ a {
   margin-left: 0;
 }
 
+/* Email preferences on the notifications page: a setting, folded away, beside
+   the events it governs. */
+.notif-email {
+  margin: 0 0 1.2rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: 0.7rem 1rem;
+}
+
+.notif-email summary {
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.notif-email-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.8rem;
+  font-size: 0.88rem;
+}
+
+.notif-email-form label {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+}
+
+.notif-email-form .btn-primary {
+  align-self: flex-start;
+  font-size: 0.85rem;
+  padding: 0.4rem 0.9rem;
+}
+
 /* The nudge a visitor gets after a few searches: a line, a way in, and a way
    out. Quiet enough to ignore, which is the only kind worth showing. */
 .seeker-keep {

@@ -208,6 +208,14 @@ alter table users add column if not exists c2c_profile_id integer;
 -- normalised to an http(s) URL by `updateProfile`.
 alter table users add column if not exists website text;
 
+-- What may be sent by email, and when the last digest went out (migration
+-- 034). Tags default on — it is the notification the site already shows,
+-- arriving where it can be seen; the digest defaults off, being something you
+-- ask for rather than something you are given.
+alter table users add column if not exists email_tags boolean not null default true;
+alter table users add column if not exists email_digest boolean not null default false;
+alter table users add column if not exists digest_sent_at timestamptz;
+
 -- Which camptocamp image a photo came from (migration 028), so re-syncing an
 -- already-imported day adds only what's missing instead of duplicating the
 -- gallery. Null on photos uploaded by hand, and on anything imported before.

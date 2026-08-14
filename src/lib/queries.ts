@@ -455,6 +455,23 @@ export async function getWishesTaggingUser(
 
 // Every list the user may add a route to: the ones they own plus the ones they
 // were invited to collaborate on. Default list first, as elsewhere.
+/** What this account accepts by email, and whether it has an address at all. */
+export async function getEmailPrefs(
+  userId: string
+): Promise<{ email: string | null; emailTags: boolean; emailDigest: boolean }> {
+  const result = await pool.query<{
+    email: string | null;
+    email_tags: boolean;
+    email_digest: boolean;
+  }>("select email, email_tags, email_digest from users where id = $1", [userId]);
+  const row = result.rows[0];
+  return {
+    email: row?.email ?? null,
+    emailTags: row?.email_tags ?? true,
+    emailDigest: row?.email_digest ?? false,
+  };
+}
+
 export async function getEditableWishlists(
   userId: string
 ): Promise<{ id: string; name: string }[]> {

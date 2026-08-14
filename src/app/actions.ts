@@ -386,6 +386,23 @@ function normaliseWebsite(raw: string): string | null {
   }
 }
 
+/**
+ * Which emails this account accepts. Sent from the notifications page, where
+ * the in-app version of the same events already lives — the choice belongs
+ * beside the thing it governs, not buried in profile settings.
+ */
+export async function updateEmailPrefs(formData: FormData): Promise<void> {
+  const user = await currentUser();
+  if (!user) throw new Error("Unauthorized");
+
+  await pool.query("update users set email_tags = $1, email_digest = $2 where id = $3", [
+    formData.get("email_tags") === "1",
+    formData.get("email_digest") === "1",
+    user.id,
+  ]);
+  revalidatePath("/notifications");
+}
+
 export async function updateProfile(formData: FormData): Promise<void> {
   const user = await currentUser();
   if (!user) throw new Error("Unauthorized");
