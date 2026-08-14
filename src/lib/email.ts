@@ -10,6 +10,10 @@ export async function sendEmail(
 ): Promise<boolean> {
   const key = process.env.RESEND_API_KEY;
   const from = process.env.EMAIL_FROM ?? "Cragdiary <noreply@cragdiary.com>";
+  // Sent from an address that cannot receive — cragdiary.com has no MX at the
+  // root, so a reply to it bounces — but a reply should still reach someone.
+  // The same public address the feedback form already goes to.
+  const replyTo = process.env.FEEDBACK_EMAIL;
   if (!key) {
     console.error("email: RESEND_API_KEY not configured");
     return false;
@@ -22,7 +26,14 @@ export async function sendEmail(
         "Content-Type": "application/json",
         Authorization: `Bearer ${key}`,
       },
-      body: JSON.stringify({ from, to, subject, html, ...(headers ? { headers } : {}) }),
+      body: JSON.stringify({
+        from,
+        to,
+        subject,
+        html,
+        ...(replyTo ? { reply_to: replyTo } : {}),
+        ...(headers ? { headers } : {}),
+      }),
       signal: AbortSignal.timeout(10000),
     });
     if (!res.ok) {
