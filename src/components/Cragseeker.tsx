@@ -38,6 +38,12 @@ import {
 import type { Dict, Locale } from "@/lib/i18n";
 
 const RADII = [10, 25, 50, 100, 200];
+
+// How many searches a visitor runs before the page suggests an account, and
+// where the tally and the refusal are kept. Once refused, never asked again.
+const KEEP_PROMPT_AFTER = 3;
+const KEEP_PROMPT_COUNT = "cragdiary-seeker-searches";
+const KEEP_PROMPT_DISMISSED = "cragdiary-seeker-keep-dismissed";
 const PAGE_SIZE = 30;
 const SUMMARY_CHARS = 180;
 
@@ -142,12 +148,15 @@ function initialCentre(params: SeekerParams): Centre | null {
 export default function Cragseeker({
   t,
   locale,
+  signedIn,
   wishlists,
   climbed,
   params,
 }: {
   t: Dict["seeker"];
   locale: Locale;
+  /** Whether anyone is signed in — not the same question as "has a list". */
+  signedIn: boolean;
   wishlists: { id: string; name: string }[];
   /** Camptocamp route ids already logged in the journal. */
   climbed: number[];
@@ -254,6 +263,10 @@ export default function Cragseeker({
   // Confirms the add, which otherwise happens at the foot of a card the eye
   // may already have left.
   const [toast, setToast] = useState<{ text: string; tone: "ok" | "error" } | null>(null);
+  // A visitor who keeps searching is a visitor with something to keep. After a
+  // few searches the page says so, once, and takes no for an answer — the
+  // count and the refusal both live in localStorage, never on the server.
+  const [showKeepPrompt, setShowKeepPrompt] = useState(false);
   // Parking and the outing count, keyed by route id. Only c2c's detail
   // documents carry them, so they arrive after the results and simply appear
   // when they do.
@@ -316,6 +329,11 @@ export default function Cragseeker({
 
   const query = `${search}&lang=${locale}`;
 
+  // Where "come back here afterwards" points: this search, as the address bar
+  // has it. Built from `search` rather than read from `window`, so it is right
+  // on the server render too.
+  const here = search ? `/cragseeker?${search}` : "/cragseeker";
+
   // Shallow routing: update the address bar without re-running the server
   // component, so the URL always describes the current search.
   useEffect(() => {
@@ -325,6 +343,14 @@ export default function Cragseeker({
   // Only the newest request may write to state: filters change faster than
   // camptocamp answers, and a slow early reply must not overwrite a fast late one.
   const requestId = useRef(0);
+
+  // Counted client-side only: a new search, not a "load more".
+  const countSearch = useCallback(() => {
+    if (signedIn || localStorage.getItem(KEEP_PROMPT_DISMISSED)) return;
+    const seen = Number(localStorage.getItem(KEEP_PROMPT_COUNT) ?? "0") + 1;
+    localStorage.setItem(KEEP_PROMPT_COUNT, String(seen));
+    if (seen >= KEEP_PROMPT_AFTER) setShowKeepPrompt(true);
+  }, [signedIn]);
 
   const run = useCallback(
     async (offset: number) => {
@@ -340,6 +366,7 @@ export default function Cragseeker({
         };
         if (id !== requestId.current) return;
         setResults((prev) => (offset === 0 ? data.results : [...prev, ...data.results]));
+        if (offset === 0) countSearch();
         setEstimatedTotal(data.estimatedTotal);
         setMore(data.more);
         setNextOffset(offset + PAGE_SIZE);
@@ -349,7 +376,7 @@ export default function Cragseeker({
         if (id === requestId.current) setLoading(false);
       }
     },
-    [query]
+    [query, countSearch]
   );
 
   // The route's own document — parking, and how many outings it has seen — is
@@ -1108,8 +1135,29 @@ export default function Cragseeker({
         {!centre && activeSources.includes("openbeta") && (
           <span className="seeker-note">{t.openbetaNeedsPin}</span>
         )}
-        {wishlists.length === 0 && <span className="seeker-note">{t.loginToSave}</span>}
+        {!signedIn && <span className="seeker-note">{t.loginToSave}</span>}
       </div>
+
+      {showKeepPrompt && (
+        <aside className="seeker-keep">
+          <p>{t.keepPrompt}</p>
+          <span className="seeker-keep-actions">
+            <a className="btn-primary" href={`/signup?next=${encodeURIComponent(here)}`}>
+              {t.keepCta}
+            </a>
+            <button
+              type="button"
+              className="seeker-keep-dismiss"
+              onClick={() => {
+                localStorage.setItem(KEEP_PROMPT_DISMISSED, "1");
+                setShowKeepPrompt(false);
+              }}
+            >
+              {t.keepDismiss}
+            </button>
+          </span>
+        </aside>
+      )}
 
       {!loading && !failed && results.length === 0 && <p className="empty-state">{t.empty}</p>}
 
@@ -1220,6 +1268,15 @@ export default function Cragseeker({
                 <a href={route.url} target="_blank" rel="noopener noreferrer">
                   {t.openOn[route.source]}
                 </a>
+                {/* A visitor gets the same button, and it takes them to the
+                    signup page carrying this search: the moment someone wants
+                    to keep a route is the only moment an account means
+                    anything. */}
+                {!signedIn && (
+                  <a className="seeker-add-signup" href={`/signup?next=${encodeURIComponent(here)}`}>
+                    + {t.add}
+                  </a>
+                )}
                 {wishlists.length > 0 && (
                   /* Which list, then add — the pair sits together at the foot
                      of the card so the target is never in doubt. */

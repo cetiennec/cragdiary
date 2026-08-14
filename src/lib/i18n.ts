@@ -756,6 +756,10 @@ const en = {
     adding: "Adding…",
     added: "Added ✓",
     addFailed: "Couldn't add — try again.",
+    keepPrompt:
+      "Searching for a while? An account keeps the routes you like, in lists you can share — and remembers what you have climbed.",
+    keepCta: "Create an account",
+    keepDismiss: "Not now",
     loginToSave: "Log in to save routes to a wishlist.",
     attribution:
       "Route data from camptocamp.org (CC BY-SA) and openbeta.io (CC0). Maps and gyms © OpenStreetMap contributors (ODbL)",
@@ -1526,6 +1530,10 @@ const fr: Dict = {
     adding: "Ajout…",
     added: "Ajoutée ✓",
     addFailed: "Échec de l'ajout — réessayez.",
+    keepPrompt:
+      "Vous cherchez depuis un moment ? Un compte garde les voies qui vous plaisent, dans des listes partageables — et retient celles que vous avez déjà faites.",
+    keepCta: "Créer un compte",
+    keepDismiss: "Plus tard",
     loginToSave: "Connectez-vous pour enregistrer des voies dans une liste.",
     attribution:
       "Données de voies : camptocamp.org (CC BY-SA) et openbeta.io (CC0). Cartes et salles © les contributeurs OpenStreetMap (ODbL)",

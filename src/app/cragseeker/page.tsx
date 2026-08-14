@@ -27,5 +27,17 @@ export default async function CragseekerPage({
 
   // A shared link arrives as query params; the component takes it from there
   // and keeps the URL in step from the client.
-  return <Cragseeker t={t.seeker} locale={locale} wishlists={wishlists} climbed={climbed} params={params} />;
+  return (
+    <Cragseeker
+      t={t.seeker}
+      locale={locale}
+      // Distinct from "has no wishlist": a signed-in climber whose lists are
+      // all read-only gets the same empty array, and must not be sent to the
+      // signup page for it.
+      signedIn={Boolean(user)}
+      wishlists={wishlists}
+      climbed={climbed}
+      params={params}
+    />
+  );
 }

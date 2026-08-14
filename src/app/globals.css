@@ -4381,6 +4381,63 @@ a {
   margin-left: 0;
 }
 
+/* The nudge a visitor gets after a few searches: a line, a way in, and a way
+   out. Quiet enough to ignore, which is the only kind worth showing. */
+.seeker-keep {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  margin: 0 0 1rem;
+  padding: 0.8rem 1rem;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-card);
+}
+
+.seeker-keep p {
+  margin: 0;
+  font-size: 0.88rem;
+  max-width: 52ch;
+}
+
+.seeker-keep-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.seeker-keep-actions .btn-primary {
+  text-decoration: none;
+  font-size: 0.85rem;
+  padding: 0.4rem 0.9rem;
+}
+
+.seeker-keep-dismiss {
+  font: inherit;
+  font-size: 0.82rem;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* The same button a signed-in climber gets, for someone who isn't: it looks
+   like "add", it goes to signup, and it carries the search back. */
+.seeker-actions > a.seeker-add-signup {
+  margin-left: auto;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  border-radius: 999px;
+  padding: 0.3rem 0.8rem;
+}
+
+.seeker-actions > a.seeker-add-signup:hover {
+  color: var(--accent-contrast);
+  opacity: 0.9;
+}
+
 /* Multi-pitch / single-pitch: same chips as the orientation row. */
 .seeker-styles legend {
   line-height: 1.6;

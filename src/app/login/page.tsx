@@ -5,14 +5,18 @@ import { getDict } from "@/lib/i18n";
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; next?: string }>;
 }) {
-  const [{ error }, { t }] = await Promise.all([searchParams, getDict()]);
+  const [{ error, next }, { t }] = await Promise.all([searchParams, getDict()]);
+  // Our own paths only — see `safeNext` in app/actions.ts, which refuses the
+  // rest on the way back in.
+  const back = next?.startsWith("/") && !next.startsWith("//") ? next : null;
 
   return (
     <div className="page-container narrow">
       <h1 className="page-title">{t.login.title}</h1>
       <form action={login} className="entry-form">
+        {back && <input type="hidden" name="next" value={back} />}
         <label>
           {t.login.username}
           <input type="text" name="username" required autoFocus autoComplete="username" />
@@ -31,7 +35,10 @@ export default async function LoginPage({
         </button>
         <p className="form-hint">
           {t.login.hintPre}
-          <Link href="/signup">{t.login.hintLink}</Link>.{" "}
+          <Link href={back ? `/signup?next=${encodeURIComponent(back)}` : "/signup"}>
+            {t.login.hintLink}
+          </Link>
+          .{" "}
           <Link href="/forgot">{t.login.forgot}</Link>
         </p>
       </form>

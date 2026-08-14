@@ -252,12 +252,30 @@ function photoFiles(formData: FormData): File[] {
     .filter((f): f is File => f instanceof File && f.size > 0);
 }
 
+/**
+ * Where to send someone once they are in, when they arrived mid-task — from
+ * the "add to a list" button on a search, say. Our own paths only: an absolute
+ * URL in a form field is an open redirect, and a protocol-relative "//host" is
+ * an absolute URL wearing a disguise.
+ */
+function safeNext(raw: FormDataEntryValue | string | null): string | null {
+  const value = String(raw ?? "");
+  if (!value.startsWith("/") || value.startsWith("//")) return null;
+  return value.slice(0, 500);
+}
+
 export async function signup(formData: FormData): Promise<void> {
+  // Kept across every failure below: someone who mistypes a password should
+  // still land back where they came from once they get it right.
+  const next = safeNext(formData.get("next"));
+  const back = (error: string) =>
+    `/signup?error=${error}${next ? `&next=${encodeURIComponent(next)}` : ""}`;
+
   // Login and password reset were limited but signup wasn't, leaving account
   // creation as the one unmetered write an anonymous caller could repeat.
   const signupBucket = `signup:${await clientIp()}`;
   if (await isRateLimited(signupBucket, 5, 60)) {
-    redirect("/signup?error=throttled");
+    redirect(back("throttled"));
   }
   await recordAttempt(signupBucket);
 
@@ -265,12 +283,12 @@ export async function signup(formData: FormData): Promise<void> {
   const displayName = String(formData.get("display_name") ?? "").trim();
   const password = String(formData.get("password") ?? "");
 
-  if (!USERNAME_RE.test(username)) redirect("/signup?error=username");
-  if (!displayName) redirect("/signup?error=name");
-  if (password.length < 8) redirect("/signup?error=password");
+  if (!USERNAME_RE.test(username)) redirect(back("username"));
+  if (!displayName) redirect(back("name"));
+  if (password.length < 8) redirect(back("password"));
 
   const existing = await pool.query("select 1 from users where username = $1", [username]);
-  if (existing.rows.length > 0) redirect("/signup?error=taken");
+  if (existing.rows.length > 0) redirect(back("taken"));
 
   const rawEmail = String(formData.get("email") ?? "").trim().toLowerCase();
   const email = rawEmail && rawEmail.includes("@") ? rawEmail : null;
@@ -284,7 +302,7 @@ export async function signup(formData: FormData): Promise<void> {
     );
   } catch (e) {
     const pgError = e as { code?: string };
-    if (pgError.code === "23505") redirect("/signup?error=email-taken");
+    if (pgError.code === "23505") redirect(back("email-taken"));
     throw e;
   }
 
@@ -295,7 +313,7 @@ export async function signup(formData: FormData): Promise<void> {
   );
 
   await createSession(result.rows[0].id);
-  redirect(`/u/${username}`);
+  redirect(next ?? `/u/${username}`);
 }
 
 // A real scrypt hash of a password nobody has, in the shape verifyPassword
@@ -305,13 +323,17 @@ const DECOY_HASH =
   "0".repeat(128);
 
 export async function login(formData: FormData): Promise<void> {
+  const next = safeNext(formData.get("next"));
+  const back = (error: string) =>
+    `/login?error=${error}${next ? `&next=${encodeURIComponent(next)}` : ""}`;
+
   const username = String(formData.get("username") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
 
   // Throttle brute force by IP: 10 failed tries per 15 min, then a cooldown.
   const bucket = `login:${await clientIp()}`;
   if (await isRateLimited(bucket, 10, 15)) {
-    redirect("/login?error=throttled");
+    redirect(back("throttled"));
   }
 
   const result = await pool.query<{ id: string; password_hash: string }>(
@@ -325,14 +347,14 @@ export async function login(formData: FormData): Promise<void> {
   const ok = verifyPassword(password, hash) && result.rows.length > 0;
   if (!ok) {
     await recordAttempt(bucket);
-    redirect("/login?error=1");
+    redirect(back("1"));
   }
 
   await clearAttempts(bucket);
   await createSession(result.rows[0].id);
   // After the response, so signing in never waits on camptocamp.
   after(() => noteMissingC2cOutings(result.rows[0].id));
-  redirect("/");
+  redirect(next ?? "/");
 }
 
 export async function logout(): Promise<void> {

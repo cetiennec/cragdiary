@@ -5,15 +5,19 @@ import { getDict } from "@/lib/i18n";
 export default async function SignupPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; next?: string }>;
 }) {
-  const [{ error }, { t }] = await Promise.all([searchParams, getDict()]);
+  const [{ error, next }, { t }] = await Promise.all([searchParams, getDict()]);
+  // Only our own paths travel: the action refuses anything else, and echoing a
+  // stranger's URL back into the page would be half an open redirect already.
+  const back = next?.startsWith("/") && !next.startsWith("//") ? next : null;
   const errors = t.signup.errors as Record<string, string>;
 
   return (
     <div className="page-container narrow">
       <h1 className="page-title">{t.signup.title}</h1>
       <form action={signup} className="entry-form">
+        {back && <input type="hidden" name="next" value={back} />}
         <label>
           {t.signup.username}
           <input
@@ -74,7 +78,10 @@ export default async function SignupPage({
         </button>
         <p className="form-hint">
           {t.signup.hintPre}
-          <Link href="/login">{t.signup.hintLink}</Link>.
+          <Link href={back ? `/login?next=${encodeURIComponent(back)}` : "/login"}>
+            {t.signup.hintLink}
+          </Link>
+          .
         </p>
       </form>
     </div>
