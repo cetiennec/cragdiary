@@ -181,8 +181,12 @@ export default function Cragseeker({
   const [facing, setFacing] = useState<string[]>(() =>
     (params.fac ?? "").split(",").filter((o) => (C2C_ORIENTATIONS as readonly string[]).includes(o))
   );
-  const [outdoorType, setOutdoorType] = useState(() =>
-    (C2C_OUTDOOR_TYPES as readonly string[]).includes(params.crtyp ?? "") ? params.crtyp! : ""
+  // Several at once: "multi-pitch or bouldering" is a real Sunday, and
+  // camptocamp reads a comma-separated `crtyp` as exactly that OR.
+  const [outdoorTypes, setOutdoorTypes] = useState<string[]>(() =>
+    (params.crtyp ?? "")
+      .split(",")
+      .filter((type) => (C2C_OUTDOOR_TYPES as readonly string[]).includes(type))
   );
 
   // Switching to an activity none of the ticked sources cover would otherwise
@@ -289,7 +293,7 @@ export default function Cragseeker({
     if (elevation.min) sp.set("emin", elevation.min);
     if (elevation.max) sp.set("emax", elevation.max);
     if (facing.length) sp.set("fac", facing.join(","));
-    if (outdoorType && showOutdoorType) sp.set("crtyp", outdoorType);
+    if (outdoorTypes.length && showOutdoorType) sp.set("crtyp", outdoorTypes.join(","));
     if (showHuts) sp.set("huts", "1");
     if (showGyms) sp.set("gyms", "1");
     return sp.toString();
@@ -304,7 +308,7 @@ export default function Cragseeker({
     height,
     elevation,
     facing,
-    outdoorType,
+    outdoorTypes,
     showOutdoorType,
     showHuts,
     showGyms,
@@ -570,7 +574,7 @@ export default function Cragseeker({
     setHeight({ min: "", max: "" });
     setElevation({ min: "", max: "" });
     setFacing([]);
-    setOutdoorType("");
+    setOutdoorTypes([]);
   }
 
   async function save(route: SeekerResult) {
@@ -857,15 +861,31 @@ export default function Cragseeker({
           {showOutdoorType && (
             <fieldset className="seeker-facing seeker-styles">
               <legend className="seeker-field-label">{t.routeStyle}</legend>
-              {["", ...C2C_OUTDOOR_TYPES].map((type) => (
-                <label key={type || "any"} className="seeker-chip">
+              {/* "Any" is the empty selection rather than a fourth style —
+                  ticking every box and ticking none ask the same question, and
+                  this way the control says which one you are in. */}
+              <label className="seeker-chip">
+                <input
+                  type="checkbox"
+                  name="crtyp"
+                  checked={outdoorTypes.length === 0}
+                  onChange={() => setOutdoorTypes([])}
+                />
+                <span>{t.anyStyle}</span>
+              </label>
+              {C2C_OUTDOOR_TYPES.map((type) => (
+                <label key={type} className="seeker-chip">
                   <input
-                    type="radio"
+                    type="checkbox"
                     name="crtyp"
-                    checked={outdoorType === type}
-                    onChange={() => setOutdoorType(type)}
+                    checked={outdoorTypes.includes(type)}
+                    onChange={() =>
+                      setOutdoorTypes((prev) =>
+                        prev.includes(type) ? prev.filter((s) => s !== type) : [...prev, type]
+                      )
+                    }
                   />
-                  <span>{type ? t.outdoorTypes[type] : t.anyStyle}</span>
+                  <span>{t.outdoorTypes[type]}</span>
                 </label>
               ))}
             </fieldset>

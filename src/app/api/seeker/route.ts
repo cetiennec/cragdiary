@@ -103,11 +103,14 @@ export async function GET(req: Request) {
     if (pair) ranges[key] = pair;
   }
 
-  const crtyp = sp.get("crtyp");
-  const outdoorType =
-    activity === "rock_climbing" && (C2C_OUTDOOR_TYPES as readonly string[]).includes(crtyp ?? "")
-      ? (crtyp as string)
-      : undefined;
+  // A comma-separated list, since the styles are ticked rather than picked;
+  // unknown values are dropped rather than passed upstream.
+  const outdoorTypes =
+    activity === "rock_climbing"
+      ? (sp.get("crtyp") ?? "")
+          .split(",")
+          .filter((type) => (C2C_OUTDOOR_TYPES as readonly string[]).includes(type))
+      : [];
 
   const orientations = (sp.get("fac") ?? "")
     .split(",")
@@ -124,7 +127,7 @@ export async function GET(req: Request) {
     elevationM: metres(sp.get("emin"), sp.get("emax"), 9000),
     heightParam: ACTIVITY_HEIGHT_PARAM[activity],
     orientations,
-    outdoorType,
+    outdoorTypes,
     limit: PAGE_SIZE,
     offset,
   };
@@ -138,7 +141,7 @@ export async function GET(req: Request) {
     // without a pin it has nothing to answer — a name search alone can't reach
     // it. The UI says so rather than quietly returning less than it looks like.
     sources.includes("openbeta") && near
-      ? searchOpenBeta(near, { q, outdoorType })
+      ? searchOpenBeta(near, { q, outdoorTypes })
       : Promise.resolve([] as SeekerResult[]),
   ]);
 

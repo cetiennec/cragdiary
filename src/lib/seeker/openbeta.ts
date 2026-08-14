@@ -138,7 +138,7 @@ export type OpenBetaFilters = {
   /** Name contains — matched locally, the API offers no text filter on crags. */
   q?: string;
   /** c2c's `climbing_outdoor_type`, translated to OpenBeta's disciplines. */
-  outdoorType?: string;
+  outdoorTypes?: string[];
 };
 
 /**
@@ -189,7 +189,7 @@ export async function searchOpenBeta(
       // user actually asked for — the same trim c2c's bbox search needs.
       if (result.distance_km != null && result.distance_km > radiusKm) return [];
       if (needle && !result.title.toLowerCase().includes(needle)) return [];
-      if (!matchesStyle(result, filters.outdoorType)) return [];
+      if (!matchesStyle(result, filters.outdoorTypes)) return [];
       return [result];
     })
     .sort((a, b) => (a.distance_km ?? Infinity) - (b.distance_km ?? Infinity));
@@ -198,14 +198,12 @@ export async function searchOpenBeta(
 // c2c's three styles map onto OpenBeta's disciplines only roughly: it records
 // whether a climb is bouldered or roped, never whether a roped one runs to a
 // second pitch, so "single" and "multi" both mean "not a boulder" here.
-function matchesStyle(result: SeekerResult, outdoorType: string | undefined): boolean {
-  if (!outdoorType) return true;
+function matchesStyle(result: SeekerResult, outdoorTypes: string[] | undefined): boolean {
+  if (!outdoorTypes?.length) return true;
   const has = (d: string) => result.disciplines.includes(d);
-  if (outdoorType === "bloc") return has("boulder");
-  if (outdoorType === "single" || outdoorType === "multi") {
-    return has("sport") || has("trad") || has("tr");
-  }
-  return true;
+  const roped = has("sport") || has("trad") || has("tr");
+  // Any one of the chosen styles is enough — the same OR camptocamp applies.
+  return outdoorTypes.some((type) => (type === "bloc" ? has("boulder") : roped));
 }
 
 

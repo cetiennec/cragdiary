@@ -4949,19 +4949,23 @@ a {
   color: var(--accent);
 }
 
-/* Linked camptocamp account, under the bio, and its sync control. */
+/* Personal site and linked camptocamp account, under the bio, and the sync
+   control that goes with the latter. */
 
+.profile-website,
 .profile-c2c {
   margin: 0.3rem 0 0;
   font-size: 0.85rem;
 }
 
+.profile-website a,
 .profile-c2c a {
   color: var(--text-muted);
   text-decoration: none;
   border-bottom: 1px solid var(--border);
 }
 
+.profile-website a:hover,
 .profile-c2c a:hover {
   color: var(--accent);
   border-color: var(--accent);

@@ -254,6 +254,9 @@ const en = {
     coverRemove: "Remove the cover",
     emailLabel: "Email (optional)",
     emailHint: "Only used to recover your password. Never shown, never shared.",
+    websiteLabel: "Personal website",
+    websiteHint:
+      "Optional — your blog, topo or homepage. Shown on your profile as a link anyone reading it can follow.",
     c2cAccountFieldLabel: "Camptocamp account",
     c2cAccountFieldHint:
       "Your profile link or its number. Shown under your bio, and it's what \"sync with c2c\" imports from. Leave empty to unlink.",
@@ -1015,6 +1018,9 @@ const fr: Dict = {
     coverRemove: "Retirer la couverture",
     emailLabel: "Email (optionnel)",
     emailHint: "Sert uniquement à récupérer votre mot de passe. Jamais affiché, jamais partagé.",
+    websiteLabel: "Site personnel",
+    websiteHint:
+      "Optionnel — votre blog, votre topo, votre page perso. Affiché sur votre profil sous forme de lien, visible par ceux qui le consultent.",
     c2cAccountFieldLabel: "Compte Camptocamp",
     c2cAccountFieldHint:
       "Le lien de votre profil ou son numéro. Affiché sous votre bio, et c'est de là que « synchroniser avec c2c » importe. Laissez vide pour délier.",

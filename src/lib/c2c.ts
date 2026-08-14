@@ -388,7 +388,8 @@ export type C2cRouteFilters = {
   /** Altitude of the route's high point, metres — camptocamp's `ele`. */
   elevationM?: [number, number];
   orientations?: string[];
-  outdoorType?: string;
+  /** Route styles to accept, ORed together; empty or absent means all. */
+  outdoorTypes?: string[];
   offset?: number;
   limit?: number;
 };
@@ -410,7 +411,7 @@ export async function searchRoutes(
   if (filters.heightM) params.set(filters.heightParam ?? "dhei", filters.heightM.join(","));
   if (filters.elevationM) params.set("ele", filters.elevationM.join(","));
   if (filters.orientations?.length) params.set("fac", filters.orientations.join(","));
-  if (filters.outdoorType) params.set("crtyp", filters.outdoorType);
+  if (filters.outdoorTypes?.length) params.set("crtyp", filters.outdoorTypes.join(","));
   params.set("limit", String(filters.limit ?? 30));
   params.set("offset", String(filters.offset ?? 0));
 
