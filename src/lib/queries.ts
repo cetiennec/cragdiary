@@ -522,6 +522,25 @@ export async function getClimbedRouteIds(userId: string): Promise<number[]> {
 // journal (same date, same crag — what copying refuses to do twice), or private,
 // which the copy refuses outright. A tags B, B takes the day and so tags A back:
 // A must not then be offered the day A wrote.
+/**
+ * Which of these outings no longer exist. A notification outlives the day it
+ * points at — deleting an entry doesn't reach back into anyone's list — so the
+ * row has to be able to say so rather than offering a button that quietly does
+ * nothing.
+ */
+export async function entriesGone(entryIds: string[]): Promise<Set<string>> {
+  if (entryIds.length === 0) return new Set();
+  const result = await pool.query<{ id: string }>(
+    // The column is aliased, and the comparison qualified: an unqualified `id`
+    // inside the subquery would bind to `entries.id` — `e.id = e.id`, true for
+    // every row, and the answer would always be "nothing is missing".
+    `select t.id::text as id from unnest($1::uuid[]) as t(id)
+     where not exists (select 1 from entries e where e.id = t.id)`,
+    [entryIds]
+  );
+  return new Set(result.rows.map((r) => r.id));
+}
+
 export async function entriesNotOfferable(
   userId: string,
   entryIds: string[]

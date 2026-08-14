@@ -4381,6 +4381,14 @@ a {
   margin-left: 0;
 }
 
+/* A notification whose day is gone: same shape, no pointer, no hover — there
+   is nothing behind it any more. */
+.notif-link.is-gone {
+  display: flex;
+  cursor: default;
+  opacity: 0.75;
+}
+
 /* Email preferences on the notifications page: a setting, folded away, beside
    the events it governs. */
 .notif-email {

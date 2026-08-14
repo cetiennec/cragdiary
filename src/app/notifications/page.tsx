@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
 import { getDict } from "@/lib/i18n";
 import { getNotifications, type Notification } from "@/lib/notifications";
-import { entriesNotOfferable, getEmailPrefs, getFollowRequests } from "@/lib/queries";
+import { entriesGone, entriesNotOfferable, getEmailPrefs, getFollowRequests } from "@/lib/queries";
 import { answerFollowRequest, copyEntryToJournal } from "@/app/actions";
 import EmailPrefsForm from "@/components/EmailPrefsForm";
 import MarkNotificationsRead from "@/components/MarkNotificationsRead";
@@ -47,10 +47,13 @@ export default async function NotificationsPage() {
     getDict(),
   ]);
   // Days there is no point offering: already here, or private.
-  const known = await entriesNotOfferable(
-    user.id,
-    items.flatMap((n) => (n.type === "tagged" && n.data?.entry_id ? [n.data.entry_id] : []))
+  const tagged = items.flatMap((n) =>
+    n.type === "tagged" && n.data?.entry_id ? [n.data.entry_id] : []
   );
+  const [known, gone] = await Promise.all([
+    entriesNotOfferable(user.id, tagged),
+    entriesGone(tagged),
+  ]);
   const tn = t.notifications;
   // A request already answered leaves its notification behind; only the ones
   // still waiting get buttons.
@@ -107,7 +110,14 @@ export default async function NotificationsPage() {
               message = tn.c2cNew.replace("{n}", String(n.data?.count ?? 0));
             return (
               <li key={n.id} className={`notif-row${n.read ? "" : " unread"}`}>
-                <Link href={target(n, user.username)} className="notif-link">
+                {/* A deleted day has nowhere to lead: the row still says what
+                    happened, but stops pretending to be a link. */}
+                {(() => {
+                  const missing = n.type === "tagged" && n.data?.entry_id
+                    ? gone.has(n.data.entry_id)
+                    : false;
+                  const inner = (
+                  <>
                   <span className="profile-avatar profile-avatar-sm" aria-hidden>
                     {n.type === "c2c_new" ? (
                       "🏔️"
@@ -125,11 +135,24 @@ export default async function NotificationsPage() {
                       <span className="notif-sub"> — {n.data.wish_title}</span>
                     ) : null}
                     <span className="notif-date">{n.created_at}</span>
+                    {missing && <span className="notif-sub"> — {tn.entryGone}</span>}
                   </span>
-                </Link>
+                  </>
+                  );
+                  return missing ? (
+                    <span className="notif-link is-gone">{inner}</span>
+                  ) : (
+                    <Link href={target(n, user.username)} className="notif-link">
+                      {inner}
+                    </Link>
+                  );
+                })()}
                 {/* Their day, in your journal: the facts copied, the story
                     left to you. */}
-                {n.type === "tagged" && n.data?.entry_id && !known.has(n.data.entry_id) && (
+                {n.type === "tagged" &&
+                  n.data?.entry_id &&
+                  !known.has(n.data.entry_id) &&
+                  !gone.has(n.data.entry_id) && (
                   <span className="follower-actions">
                     <form action={copyEntryToJournal}>
                       <input type="hidden" name="entry_id" value={n.data.entry_id} />
