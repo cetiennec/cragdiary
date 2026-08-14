@@ -4396,7 +4396,12 @@ a {
    a pencil sits in the corner so the photograph reads as something you can
    press. */
 .avatar-picker {
-  display: block;
+  position: relative;
+  /* Only as wide as the photograph: as a plain block it filled the header's
+     width, and the badge anchored to its right edge ended up beside the name. */
+  display: inline-block;
+  width: max-content;
+  line-height: 0;
   flex: none;
 }
 
@@ -4416,8 +4421,11 @@ a {
 
 .avatar-picker-hint {
   position: absolute;
-  right: -2px;
-  bottom: -2px;
+  right: -3px;
+  bottom: -3px;
+  z-index: 2;
+  /* Decoration only — the photograph underneath is the button. */
+  pointer-events: none;
   width: 22px;
   height: 22px;
   border-radius: 50%;
@@ -4430,7 +4438,7 @@ a {
   justify-content: center;
 }
 
-.avatar-picker .profile-avatar:hover .avatar-picker-hint {
+.avatar-picker:hover .avatar-picker-hint {
   color: var(--accent);
   border-color: var(--accent);
 }

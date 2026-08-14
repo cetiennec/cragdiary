@@ -62,10 +62,12 @@ export default function AvatarPicker({
             formRef.current?.requestSubmit();
           }}
         />
-        <span className="avatar-picker-hint" aria-hidden>
-          {busy ? "…" : "✎"}
-        </span>
       </label>
+      {/* Outside the photograph, not inside it: the avatar clips whatever it
+          contains to a circle, which swallowed the badge's own edge. */}
+      <span className="avatar-picker-hint" aria-hidden>
+        {busy ? "…" : "✎"}
+      </span>
     </form>
   );
 }
