@@ -612,7 +612,7 @@ const en = {
     droppedPin: "Pin on the map",
     radius: "Around",
     mapHint:
-      "Hover a marker to see the route. To search elsewhere, drag the orange pin, or hold a spot on the map for two seconds.",
+      "Press and hold to set a point.",
     activity: "Activity",
     activities: {
       rock_climbing: "Rock climbing",
@@ -1385,7 +1385,7 @@ const fr: Dict = {
     droppedPin: "Point sur la carte",
     radius: "Dans un rayon de",
     mapHint:
-      "Survolez un point pour voir la voie. Pour chercher ailleurs, glissez le point orange, ou appuyez 2 secondes sur la carte.",
+      "Restez appuyé pour fixer un point.",
     activity: "Activité",
     activities: {
       rock_climbing: "Escalade",

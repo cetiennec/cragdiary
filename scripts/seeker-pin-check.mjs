@@ -93,7 +93,7 @@ await page.mouse.dblclick(map.x + 400, map.y + 380);
 await page.waitForTimeout(700);
 check("double-clicking to zoom never drops the pin", (await centre()) === start);
 
-// 4. A press held for two seconds moves the search — and a short one does
+// 4. A press held for a second moves the search — and a shorter one does
 // not. The spot is found rather than guessed: a fixed corner is not reliably
 // clear of markers once a popup's auto-pan has slid the map about.
 const empty = await page.evaluate(() => {
@@ -120,21 +120,21 @@ check("a single click never moves the pin", (await centre()) === start);
 
 await page.mouse.move(empty.x, empty.y);
 await page.mouse.down();
-await page.waitForTimeout(800);
+await page.waitForTimeout(400);
 check("the press draws itself while held", await page.locator(".seeker-press").isVisible());
 await page.mouse.up();
 await page.waitForTimeout(800);
 check("a press let go early leaves the pin alone", (await centre()) === start);
 check("the press mark is gone once released", (await page.locator(".seeker-press").count()) === 0);
 
-// And the whole two seconds.
+// And the whole second.
 await page.mouse.move(empty.x, empty.y);
 await page.mouse.down();
-await page.waitForTimeout(2600);
+await page.waitForTimeout(1400);
 await page.mouse.up();
 await page.waitForTimeout(1200);
 const afterPress = await centre();
-check("a two-second press moves the pin there", afterPress !== start);
+check("a one-second press moves the pin there", afterPress !== start);
 
 // 5. And the pin can be dragged.
 const before = await pinAt();

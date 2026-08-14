@@ -4566,7 +4566,7 @@ a {
 /* Shelters on the map: a square, where every result is a circle. Colour alone
    would not survive a colour-blind eye, and the two mean quite different
    things — one you climb, the other you sleep in. */
-/* The two-second press that moves the search, drawn while it is held: an
+/* The one-second press that moves the search, drawn while it is held: an
    outline that says where, and a disc that fills to say how far along. Nothing
    about it is clickable — it is a picture of a gesture already in progress. */
 .seeker-press {
@@ -4589,7 +4589,7 @@ a {
   background: var(--accent);
   opacity: 0.35;
   transform: scale(0);
-  animation: seeker-press-fill 2s linear forwards;
+  animation: seeker-press-fill 1s linear forwards;
 }
 
 @keyframes seeker-press-fill {

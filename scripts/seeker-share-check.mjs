@@ -23,7 +23,7 @@ await page.goto(`${base}/cragseeker`);
 await page.waitForSelector(".seeker-map");
 
 // 1. Filters are written into the address bar.
-await page.getByPlaceholder("Verdon, Chamonix, Siurana…").fill("Chamonix");
+await page.locator("input[name=\"place\"], .combobox input").first().fill("Chamonix");
 await page.waitForSelector(".combobox-list button");
 await page.locator(".combobox-list button").first().click();
 await page.getByLabel(/^Free grade min$/).selectOption("6a");
@@ -49,20 +49,19 @@ const fresh = await ctx.newPage();
 await fresh.goto(shared);
 await fresh.waitForSelector(".seeker-result");
 await fresh.waitForTimeout(1500);
-console.log("restored place:", await fresh.getByPlaceholder("Verdon, Chamonix, Siurana…").inputValue());
+console.log("restored place:", await fresh.locator("input[name=\"place\"], .combobox input").first().inputValue());
 console.log("restored grade:", await fresh.getByLabel(/^Free grade min$/).inputValue(), "→", await fresh.getByLabel(/^Free grade max$/).inputValue());
 console.log("restored status:", (await fresh.locator(".seeker-status").first().innerText()).split("\n")[0]);
 await fresh.close();
 
-// 4. Travel time replaces distances with driving estimates.
-await page.getByRole("button", { name: /Travel time/ }).click();
+// 4. Several route styles at once, since they are checkboxes and not a choice
+// of one — and "Any" is the empty selection rather than a fourth style.
+await page.locator(".seeker-styles label").nth(1).click();
+await page.locator(".seeker-styles label").nth(3).click();
 await page.waitForTimeout(1500);
-console.log("button now:", await page.getByRole("button", { name: /Travel time|Hide travel/ }).innerText());
-console.log("note:", await page.locator(".seeker-controls .seeker-note").allInnerTexts());
 console.log("style chips:", (await page.locator(".seeker-styles").innerText()).replace(/\n/g, " "));
-const times = await page.locator(".seeker-travel").allInnerTexts();
-console.log("travel estimates:", times.slice(0, 5).join(" · ") || "(none)");
-await page.screenshot({ path: `${out}/seeker-6-travel.png`, fullPage: false });
+console.log("crtyp in the URL:", new URL(page.url()).searchParams.get("crtyp"));
+await page.screenshot({ path: `${out}/seeker-6-styles.png`, fullPage: false });
 
 // 5. The filter set follows the activity.
 for (const [act, label] of [["rock_climbing", "Rock climbing"], ["ice_climbing", "Ice climbing"], ["hiking", "Hiking"], ["skitouring", "Ski touring"]]) {

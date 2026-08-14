@@ -21,7 +21,7 @@ await page.waitForURL((u) => !u.pathname.includes("/login"));
 console.log("logged in as", username);
 
 await page.goto(`${base}/cragseeker`);
-await page.getByPlaceholder("Verdon, Chamonix, Siurana…").fill("Chamonix");
+await page.locator("input[name=\"place\"], .combobox input").first().fill("Chamonix");
 await page.waitForSelector(".combobox-list button");
 await page.locator(".combobox-list button").first().click();
 await page.waitForTimeout(3000);
@@ -29,7 +29,9 @@ await page.waitForTimeout(3000);
 const first = page.locator(".seeker-result").first();
 const title = await first.locator(".seeker-result-head a").innerText();
 console.log("list options:", await first.locator("select").locator("option").allInnerTexts());
-await first.locator("select").selectOption({ label: "Projets 2027" });
+// Whichever list this account has: a fresh signup starts with one called
+// "Ma liste", an older one may have several with names of its own.
+await first.locator("select").selectOption({ index: 0 });
 await first.getByRole("button").click();
 await page.waitForTimeout(1500);
 console.log("saved:", title, "→ button now reads:", await first.getByRole("button").innerText());

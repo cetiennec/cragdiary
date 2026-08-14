@@ -204,6 +204,10 @@ alter table users alter column approve_followers set default true;
 -- bio, and what "sync with c2c" imports from.
 alter table users add column if not exists c2c_profile_id integer;
 
+-- A personal site linked from the profile (migration 033), stored already
+-- normalised to an http(s) URL by `updateProfile`.
+alter table users add column if not exists website text;
+
 -- Which camptocamp image a photo came from (migration 028), so re-syncing an
 -- already-imported day adds only what's missing instead of duplicating the
 -- gallery. Null on photos uploaded by hand, and on anything imported before.
@@ -227,6 +231,11 @@ create table if not exists climbing_gyms (
   -- Bouldering only, when OSM says so; null otherwise (see lib/seeker/gyms.ts).
   bouldering boolean,
   website text,
+  -- What a gym's card shows beside its name (migration 032). Assembled from
+  -- OSM's own tags at refresh time; null where OSM had nothing to say.
+  address text,
+  opening_hours text,
+  phone text,
   updated_at timestamptz not null default now()
 );
 -- Not a real spatial index, just enough to narrow a box before the app

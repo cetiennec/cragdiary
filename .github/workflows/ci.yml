@@ -139,6 +139,11 @@ jobs:
         run: node scripts/seeker-tip-check.mjs http://localhost:3111 /tmp
       - name: The gyms layer toggles, fetches once, and clears
         run: node scripts/seeker-gyms-check.mjs http://localhost:3111 /tmp
+      # The pin moves on a held press and on a drag, and on nothing else —
+      # a pan, a double-click zoom and a near-miss on a marker all used to
+      # move it by accident.
+      - name: The search pin only moves when asked
+        run: node scripts/seeker-pin-check.mjs http://localhost:3111 /tmp
 
   # Is the live database ready for what is about to be deployed? Three times
   # this week a deploy went out ahead of its migration and the only warning was
