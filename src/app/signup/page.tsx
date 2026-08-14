@@ -29,10 +29,11 @@ export default async function SignupPage({
             title={t.signup.usernameRules}
           />
         </label>
-        {/* Spelled out, and not only in the placeholder: a placeholder is gone
-            the moment someone starts typing, which is exactly when the rule
-            matters. */}
-        <p className="form-hint">{t.signup.usernameRules}</p>
+        {/* Only once the browser says the name is wrong — the rules are noise
+            to everyone who types a plain name, and the answer to the question
+            for the one who doesn't. `title` puts the same words in the
+            browser's own bubble. */}
+        <p className="form-hint form-rule">{t.signup.usernameRules}</p>
         <label>
           {t.signup.displayName}
           <input type="text" name="display_name" required placeholder={t.signup.displayNameHint} />
@@ -41,10 +42,11 @@ export default async function SignupPage({
           {t.signup.email}
           <input type="email" name="email" autoComplete="email" placeholder={t.signup.emailHint} />
         </label>
-        {/* Said plainly at the point of the choice: password recovery sends a
-            link to this address and has no other route in, so an account
-            without one cannot be recovered at all. */}
-        <p className="form-hint">{t.signup.emailWarning}</p>
+        {/* Said plainly at the point of the choice, and marked: an account
+            with no email has no way back in at all. */}
+        <p className="form-hint form-warn">
+          <span aria-hidden>⚠️</span> {t.signup.emailWarning}
+        </p>
         <label>
           {t.signup.password}
           <input

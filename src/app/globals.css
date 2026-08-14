@@ -4949,6 +4949,32 @@ a {
   color: var(--accent);
 }
 
+/* A rule nobody needs until they break it: hidden until the browser itself
+   calls the field invalid, which `:user-invalid` only does once the field has
+   been filled in and left — never while someone is still typing. */
+.form-hint.form-rule {
+  display: none;
+}
+
+label:has(input:user-invalid) + .form-hint.form-rule {
+  display: block;
+  color: var(--danger, #b3492b);
+}
+
+/* A hint that is a warning: the same quiet type, but it earns a mark and a
+   little more contrast than the hints around it. Shown only while the field it
+   warns about is still empty — which is exactly when it is true. */
+.form-hint.form-warn {
+  display: none;
+  color: var(--text);
+  align-items: baseline;
+  gap: 0.35rem;
+}
+
+label:has(input:placeholder-shown) + .form-hint.form-warn {
+  display: flex;
+}
+
 /* Personal site and linked camptocamp account, under the bio, and the sync
    control that goes with the latter. */
 

@@ -61,13 +61,13 @@ const en = {
     username: "Username",
     usernameHint: "lowercase letters, digits, hyphens",
     usernameRules:
-      "3 to 20 characters, and only lowercase letters, digits and hyphens — no spaces, capitals or accents. This is the name in your public address, cragdiary.com/u/your-name.",
+      "3 to 20 characters: lowercase letters, digits, hyphens. It becomes your address, cragdiary.com/u/your-name.",
     displayName: "Display name",
     displayNameHint: "How your name appears",
     email: "Email (optional)",
     emailHint: "only used to recover your password",
     emailWarning:
-      "Optional, and never used for anything else. But it is the only way back in: a forgotten password is reset by a link sent to this address, so an account without one cannot be recovered.",
+      "Never used for anything else — but without it, a forgotten password cannot be reset and the account is lost.",
     password: "Password",
     privacyPre: "We store your username, display name and — if you give one — a recovery email. Nothing else, no trackers. See the ",
     privacyLink: "privacy notice",
@@ -825,13 +825,13 @@ const fr: Dict = {
     username: "Nom d'utilisateur",
     usernameHint: "minuscules, chiffres, tirets",
     usernameRules:
-      "3 à 20 caractères, uniquement des minuscules, des chiffres et des tirets — ni espaces, ni majuscules, ni accents. C'est le nom qui apparaît dans votre adresse publique, cragdiary.com/u/votre-nom.",
+      "3 à 20 caractères : minuscules, chiffres, tirets. Ce sera votre adresse, cragdiary.com/u/votre-nom.",
     displayName: "Nom affiché",
     displayNameHint: "Le nom que les autres verront",
     email: "Email (optionnel)",
     emailHint: "sert uniquement à récupérer votre mot de passe",
     emailWarning:
-      "Optionnel, et jamais utilisé pour autre chose. Mais c'est la seule porte de secours : un mot de passe oublié se réinitialise par un lien envoyé à cette adresse, donc un compte sans email est irrécupérable.",
+      "Jamais utilisé pour autre chose — mais sans lui, un mot de passe oublié ne peut pas être réinitialisé et le compte est perdu.",
     password: "Mot de passe",
     privacyPre: "Nous conservons votre nom d'utilisateur, votre nom affiché et — si vous en donnez un — un email de récupération. Rien d'autre, aucun traqueur. Voir la ",
     privacyLink: "note de confidentialité",
