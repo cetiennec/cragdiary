@@ -37,6 +37,18 @@ const en = {
     emailNoneLink: "Add one in your profile",
     emailNonePost: " if you want to be told when you're away.",
   },
+  unsubscribe: {
+    title: "Stop these emails?",
+    whatTags: "You will no longer be emailed when someone adds you to an outing. The notification stays on the site.",
+    whatDigest: "You will no longer get the monthly summary of what the people you follow have climbed.",
+    confirm: "Yes, stop them",
+    rest: "Everything else stays as it is, and you can turn it back on at any time from your notifications page.",
+    doneTitle: "Done — nothing more will be sent",
+    doneText: "That kind of email is switched off for your account. The notifications themselves are still on the site.",
+    badTitle: "This link no longer works",
+    badText: "It may have been cut in half by your mail app. Your notification settings are on the site, and can be changed there.",
+    preferences: "Notification settings",
+  },
   footer: "Cragdiary — a shared climbing journal. Free, no tracking, just days on rock.",
   themes: { scrapbook: "Scrapbook", minimal: "Minimal" },
   feed: {
@@ -531,15 +543,15 @@ const en = {
     title: "Privacy",
     intro:
       "Cragdiary stores the minimum needed to run a shared climbing journal. No ads, no trackers, no analytics scripts. This page is the information notice required by the GDPR (Articles 13 and 14).",
-    updated: "Last updated: 10 August 2026",
+    updated: "Last updated: 14 August 2026",
     sections: [
       { name: "Who is responsible", text: "Cragdiary is the data controller for everything described here. For any question about your data, or to exercise the rights listed below, write to cragdiary@pm.me — that address reaches the person who runs the site.", url: "mailto:cragdiary@pm.me" },
       { name: "What we store", text: "Your account (username, display name, password hash — never the password itself, optional recovery email), your entries, photos, and profile pictures. That's all." },
-      { name: "Why, and on what legal basis", text: "To provide the journal you signed up for — that is performance of a contract (GDPR Article 6(1)(b)). The recovery email is optional and used only to reset your password. Rate-limiting login attempts relies on our legitimate interest in keeping accounts safe (Article 6(1)(f))." },
+      { name: "Why, and on what legal basis", text: "To provide the journal you signed up for — that is performance of a contract (GDPR Article 6(1)(b)). The recovery email is optional; besides resetting your password, it is used only for the email notifications you switch on yourself, on your notifications page, which is your consent (Article 6(1)(a)) and which every such email carries a one-click link to withdraw. Rate-limiting login attempts relies on our legitimate interest in keeping accounts safe (Article 6(1)(f))." },
       { name: "How long we keep it", text: "Your account and its contents stay for as long as the account exists. Delete the account and everything goes with it, immediately and permanently — there is no grace period and no backup copy kept for later. Login-attempt records are pruned automatically. Emails you send us are kept only as long as needed to answer them." },
       { name: "Cookies", text: "Two cookies, both needed for the site to work: one keeps you logged in (90 days), the other remembers your language. Your browser also stores two preferences locally (localStorage), which never reach us: the visual theme, and whether you have seen the welcome tour. No analytics, no advertising, nothing shared with anyone — all of it is strictly necessary, which is why there is no cookie banner to click through." },
       { name: "Photos", text: "Photos are recompressed in your browser before upload, which strips camera metadata such as GPS position. They belong to you." },
-      { name: "Who else processes it", text: "Vercel hosts the site (a US company; the EU–US Data Privacy Framework and standard contractual clauses cover the transfer). Neon runs the database, in Frankfurt. Resend sends password-reset and feedback emails. Nobody else receives your data, and none of them may use it for their own purposes.", links: [
+      { name: "Who else processes it", text: "Vercel hosts the site (a US company; the EU–US Data Privacy Framework and standard contractual clauses cover the transfer). Neon runs the database, in Frankfurt. Resend sends password-reset, feedback and notification emails. Nobody else receives your data, and none of them may use it for their own purposes.", links: [
         { name: "Vercel — privacy", url: "https://vercel.com/legal/privacy-policy" },
         { name: "Neon — privacy", url: "https://neon.com/privacy-policy" },
         { name: "Resend — privacy", url: "https://resend.com/legal/privacy-policy" },
@@ -814,6 +826,18 @@ const fr: Dict = {
     emailNonePre: "Ce compte n'a pas d'adresse email. ",
     emailNoneLink: "Ajoutez-en une dans votre profil",
     emailNonePost: " pour être prévenu même quand vous n'êtes pas sur le site.",
+  },
+  unsubscribe: {
+    title: "Ne plus recevoir ces emails ?",
+    whatTags: "Vous ne recevrez plus d'email quand quelqu'un vous ajoute à une sortie. La notification reste sur le site.",
+    whatDigest: "Vous ne recevrez plus le résumé mensuel des sorties des personnes que vous suivez.",
+    confirm: "Oui, arrêter",
+    rest: "Le reste ne change pas, et vous pouvez tout réactiver quand vous voulez depuis vos notifications.",
+    doneTitle: "C'est fait — plus rien ne partira",
+    doneText: "Ce type d'email est désactivé pour votre compte. Les notifications, elles, restent sur le site.",
+    badTitle: "Ce lien ne fonctionne plus",
+    badText: "Il a peut-être été coupé en deux par votre messagerie. Vos préférences de notification sont sur le site, et modifiables à tout moment.",
+    preferences: "Préférences de notification",
   },
   footer: "Cragdiary — un carnet de grimpe partagé. Gratuit, sans tracking, juste des journées sur le rocher.",
   themes: { scrapbook: "Carnet", minimal: "Minimal" },
@@ -1312,15 +1336,15 @@ const fr: Dict = {
     title: "Confidentialité",
     intro:
       "Cragdiary conserve le minimum nécessaire pour faire tourner un carnet de grimpe partagé. Pas de publicité, pas de traqueurs, pas de scripts d'analyse. Cette page est la note d'information exigée par le RGPD (articles 13 et 14).",
-    updated: "Dernière mise à jour : 10 août 2026",
+    updated: "Dernière mise à jour : 14 août 2026",
     sections: [
       { name: "Responsable du traitement", text: "Cragdiary est responsable de tout ce qui est décrit ici. Pour toute question sur vos données, ou pour exercer les droits listés plus bas, écrivez à cragdiary@pm.me — cette adresse arrive chez la personne qui fait tourner le site.", url: "mailto:cragdiary@pm.me" },
       { name: "Ce que nous stockons", text: "Votre compte (nom d'utilisateur, nom affiché, empreinte du mot de passe — jamais le mot de passe lui-même, email de récupération optionnel), vos entrées, vos photos et votre photo de profil. C'est tout." },
-      { name: "Pourquoi, et sur quelle base légale", text: "Pour fournir le carnet auquel vous vous êtes inscrit·e : c'est l'exécution d'un contrat (article 6.1.b du RGPD). L'email de récupération est optionnel et sert uniquement à réinitialiser votre mot de passe. La limitation des tentatives de connexion repose sur notre intérêt légitime à protéger les comptes (article 6.1.f)." },
+      { name: "Pourquoi, et sur quelle base légale", text: "Pour fournir le carnet auquel vous vous êtes inscrit·e : c'est l'exécution d'un contrat (article 6.1.b du RGPD). L'email de récupération est optionnel ; en dehors de la réinitialisation du mot de passe, il ne sert qu'aux notifications par email que vous activez vous-même, depuis votre page de notifications — c'est votre consentement (article 6.1.a), et chaque email de ce type porte un lien pour le retirer en un clic. La limitation des tentatives de connexion repose sur notre intérêt légitime à protéger les comptes (article 6.1.f)." },
       { name: "Combien de temps", text: "Votre compte et son contenu restent tant que le compte existe. Supprimez le compte et tout part avec, immédiatement et définitivement — pas de délai de grâce, pas de copie de sauvegarde gardée de côté. Les enregistrements de tentatives de connexion sont purgés automatiquement. Les emails que vous nous envoyez ne sont gardés que le temps d'y répondre." },
       { name: "Cookies", text: "Deux cookies, tous deux nécessaires au fonctionnement du site : l'un vous garde connecté·e (90 jours), l'autre retient votre langue. Votre navigateur conserve aussi deux préférences en local (localStorage), qui ne nous parviennent jamais : le thème visuel, et le fait que vous ayez vu le guide de bienvenue. Aucune mesure d'audience, aucune publicité, rien de partagé avec qui que ce soit — tout cela est strictement nécessaire, d'où l'absence de bandeau à cliquer." },
       { name: "Photos", text: "Les photos sont recompressées dans votre navigateur avant l'envoi, ce qui retire les métadonnées de l'appareil comme la position GPS. Elles vous appartiennent." },
-      { name: "Qui d'autre les traite", text: "Vercel héberge le site (société américaine ; le cadre de protection des données UE–États-Unis et les clauses contractuelles types encadrent le transfert). Neon fait tourner la base de données, à Francfort. Resend envoie les emails de réinitialisation et de retour. Personne d'autre ne reçoit vos données, et aucun d'eux ne peut les utiliser à ses propres fins.", links: [
+      { name: "Qui d'autre les traite", text: "Vercel héberge le site (société américaine ; le cadre de protection des données UE–États-Unis et les clauses contractuelles types encadrent le transfert). Neon fait tourner la base de données, à Francfort. Resend envoie les emails de réinitialisation, de retour et de notification. Personne d'autre ne reçoit vos données, et aucun d'eux ne peut les utiliser à ses propres fins.", links: [
         { name: "Vercel — confidentialité", url: "https://vercel.com/legal/privacy-policy" },
         { name: "Neon — confidentialité", url: "https://neon.com/privacy-policy" },
         { name: "Resend — confidentialité", url: "https://resend.com/legal/privacy-policy" },

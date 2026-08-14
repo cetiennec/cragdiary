@@ -8,6 +8,12 @@ import sharp from "sharp";
 import { pool, type Visibility } from "@/lib/db";
 import { LOCALE_COOKIE, getLocale } from "@/lib/i18n";
 import { sendEmail } from "@/lib/email";
+import {
+  emailTagged,
+  maybeSendDigest,
+  unsubscribe,
+  verifyUnsubscribe,
+} from "@/lib/email-notifications";
 import { lookupCountry } from "@/lib/geo";
 import { createHash, randomBytes } from "crypto";
 import {
@@ -149,6 +155,33 @@ async function notifyTaggedPartners(
   await Promise.all(
     users.map((u) => notify({ userId: u.id, actorId, type: "tagged", data: { entry_id: entryId } }))
   );
+
+  // And by email, for whoever asked for that too. After the response: saving an
+  // outing must never wait on a mail server, and a bounced email is not a
+  // reason for the save to fail.
+  after(async () => {
+    const [actor, entry] = await Promise.all([
+      pool.query<{ username: string; display_name: string }>(
+        "select username, display_name from users where id = $1",
+        [actorId]
+      ),
+      // The crag is the outing's name here: `entries` has no title column,
+      // and a day is remembered by where it was.
+      pool.query<{ crag: string }>("select crag from entries where id = $1", [entryId]),
+    ]);
+    if (!actor.rows[0]) return;
+    const title = entry.rows[0]?.crag || "une sortie";
+    await Promise.all(
+      users.map((u) =>
+        emailTagged(
+          u.id,
+          { username: actor.rows[0].username, displayName: actor.rows[0].display_name },
+          entryId,
+          title
+        ).catch((e) => console.error("tag email failed —", e instanceof Error ? e.message : e))
+      )
+    );
+  });
 }
 
 type ProcessedPhoto = {
@@ -352,8 +385,11 @@ export async function login(formData: FormData): Promise<void> {
 
   await clearAttempts(bucket);
   await createSession(result.rows[0].id);
-  // After the response, so signing in never waits on camptocamp.
+  // After the response, so signing in never waits on camptocamp — nor on a
+  // mail server for the monthly digest, which is due at most once a month and
+  // decides for itself whether this is the visit that owes one.
   after(() => noteMissingC2cOutings(result.rows[0].id));
+  after(() => maybeSendDigest(result.rows[0].id));
   redirect(next ?? "/");
 }
 
@@ -391,6 +427,20 @@ function normaliseWebsite(raw: string): string | null {
  * the in-app version of the same events already lives — the choice belongs
  * beside the thing it governs, not buried in profile settings.
  */
+/**
+ * The button at the end of an unsubscribe link. Signed out on purpose: leaving
+ * must never require signing in, and the signature is what stands in for a
+ * session here — it names the account and the one kind being stopped.
+ */
+export async function confirmUnsubscribe(formData: FormData): Promise<void> {
+  const userId = String(formData.get("u") ?? "");
+  const kind = String(formData.get("k") ?? "");
+  const sig = String(formData.get("s") ?? "");
+  if (!verifyUnsubscribe(userId, kind, sig)) redirect("/unsubscribe");
+  await unsubscribe(userId, kind);
+  redirect("/unsubscribe?done=1");
+}
+
 export async function updateEmailPrefs(formData: FormData): Promise<void> {
   const user = await currentUser();
   if (!user) throw new Error("Unauthorized");

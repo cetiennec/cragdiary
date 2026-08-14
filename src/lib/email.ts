@@ -3,7 +3,10 @@ const RESEND_API = "https://api.resend.com/emails";
 export async function sendEmail(
   to: string,
   subject: string,
-  html: string
+  html: string,
+  /** Extra headers — `List-Unsubscribe` and friends, which belong to the
+      message rather than to its body. */
+  headers?: Record<string, string>
 ): Promise<boolean> {
   const key = process.env.RESEND_API_KEY;
   const from = process.env.EMAIL_FROM ?? "Cragdiary <noreply@cragdiary.com>";
@@ -19,7 +22,7 @@ export async function sendEmail(
         "Content-Type": "application/json",
         Authorization: `Bearer ${key}`,
       },
-      body: JSON.stringify({ from, to, subject, html }),
+      body: JSON.stringify({ from, to, subject, html, ...(headers ? { headers } : {}) }),
       signal: AbortSignal.timeout(10000),
     });
     if (!res.ok) {
