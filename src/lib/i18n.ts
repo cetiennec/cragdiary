@@ -611,7 +611,7 @@ const en = {
     droppedPin: "Pin on the map",
     radius: "Around",
     mapHint:
-      "Hover a marker for the route at a glance. To search somewhere else, drag the orange pin — or press and hold that spot on the map for five seconds. An ordinary click never moves it.",
+      "Hover a marker to see the route. To search elsewhere, drag the orange pin, or hold a spot on the map for three seconds.",
     activity: "Activity",
     activities: {
       rock_climbing: "Rock climbing",
@@ -1378,7 +1378,7 @@ const fr: Dict = {
     droppedPin: "Point sur la carte",
     radius: "Dans un rayon de",
     mapHint:
-      "Survolez un point pour voir la voie en un coup d'œil. Pour chercher ailleurs, faites glisser le point orange — ou appuyez cinq secondes sans relâcher à l'endroit voulu. Un simple clic ne le déplace jamais.",
+      "Survolez un point pour voir la voie. Pour chercher ailleurs, glissez le point orange, ou appuyez 3 secondes sur la carte.",
     activity: "Activité",
     activities: {
       rock_climbing: "Escalade",

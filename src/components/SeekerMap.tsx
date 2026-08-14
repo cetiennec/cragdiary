@@ -223,10 +223,10 @@ const DRAG_SLOP = 6;
 // having the whole search jump elsewhere is the annoyance being fixed.
 const MARKER_SLOP = 20;
 
-// How long the map has to be held before the search moves there. Long on
-// purpose: nothing about panning, zooming or reading the map lasts this long,
-// so the gesture can only be meant.
-const LONG_PRESS_MS = 5000;
+// How long the map has to be held before the search moves there. Long enough
+// that no pan, zoom or moment of reading the map reaches it, short enough to
+// hold without wondering whether anything is happening.
+const LONG_PRESS_MS = 3000;
 
 /**
  * The nearest marker to a click, within `MARKER_SLOP` pixels — results,
@@ -344,7 +344,7 @@ export default function SeekerMap({
         })
         .addTo(created);
       // Moving the pin restarts the search, so no ordinary click does it: it
-      // takes a deliberate press held for five seconds. A pan, a double-click
+      // takes a deliberate press held for three seconds. A pan, a double-click
       // zoom and a marker missed by a few pixels are all ordinary clicks, and
       // none of them can move the search any more.
       const container = containerRef.current;
@@ -372,8 +372,8 @@ export default function SeekerMap({
         const box = container.getBoundingClientRect();
         pressedAt = { x: e.clientX, y: e.clientY };
 
-        // Five seconds is a long time to hold something with no sign that
-        // anything is happening, so the press draws itself as it fills.
+        // Three seconds is long enough to wonder, so the press draws itself as
+        // it fills.
         ring = document.createElement("span");
         ring.className = "seeker-press";
         ring.style.left = `${e.clientX - box.left}px`;
