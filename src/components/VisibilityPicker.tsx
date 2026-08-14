@@ -29,20 +29,28 @@ export default function VisibilityPicker({
   t: VisibilityLabels;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
-  // Local echo so the pill updates instantly, before the server round-trip.
-  const [value, setValue] = useState<Visibility>(visibility);
+  // Local echo so the pill's colour changes under the pointer, before the
+  // server has answered.
+  const [shown, setShown] = useState<Visibility>(visibility);
 
   return (
     <form ref={formRef} action={action} className={`visibility-picker ${className}`}>
       {entryId && <input type="hidden" name="id" value={entryId} />}
+      {/* Uncontrolled, and keyed on what the server says. A controlled select
+          inside a form the server re-renders came back showing the old value
+          while the rest of the page showed the new one: the browser's own
+          selection and React's state had drifted apart. Keyed, the answer
+          replaces the control outright — and until it arrives the browser
+          shows what was just picked, which is the same thing. */}
       <select
+        key={visibility}
         name="visibility"
-        value={value}
+        defaultValue={visibility}
         aria-label={t.picker}
         title={t.picker}
-        className={`visibility-select ${value}`}
+        className={`visibility-select ${shown}`}
         onChange={(e) => {
-          setValue(e.target.value as Visibility);
+          setShown(e.target.value as Visibility);
           formRef.current?.requestSubmit();
         }}
       >
