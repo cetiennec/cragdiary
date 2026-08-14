@@ -13,6 +13,7 @@ import {
   maybeSendDigest,
   unsubscribe,
   verifyUnsubscribe,
+  type TaggedEntry,
 } from "@/lib/email-notifications";
 import { lookupCountry } from "@/lib/geo";
 import { createHash, randomBytes } from "crypto";
@@ -165,19 +166,23 @@ async function notifyTaggedPartners(
         "select username, display_name from users where id = $1",
         [actorId]
       ),
-      // The crag is the outing's name here: `entries` has no title column,
-      // and a day is remembered by where it was.
-      pool.query<{ crag: string }>("select crag from entries where id = $1", [entryId]),
+      // Enough of the outing for the email to show a card of it — the crag is
+      // its name here, `entries` having no title column.
+      pool.query<TaggedEntry>(
+        `select crag, location, to_char(entry_date, 'YYYY-MM-DD') as entry_date, month_only,
+                style, grade_max, pitches, height_m, routes, notes
+         from entries where id = $1`,
+        [entryId]
+      ),
     ]);
-    if (!actor.rows[0]) return;
-    const title = entry.rows[0]?.crag || "une sortie";
+    if (!actor.rows[0] || !entry.rows[0]) return;
     await Promise.all(
       users.map((u) =>
         emailTagged(
           u.id,
           { username: actor.rows[0].username, displayName: actor.rows[0].display_name },
           entryId,
-          title
+          entry.rows[0]
         ).catch((e) => console.error("tag email failed —", e instanceof Error ? e.message : e))
       )
     );
@@ -441,7 +446,13 @@ export async function confirmUnsubscribe(formData: FormData): Promise<void> {
   redirect("/unsubscribe?done=1");
 }
 
-export async function updateEmailPrefs(formData: FormData): Promise<void> {
+// Returns rather than redirecting, so the panel it lives in can say "saved"
+// instead of re-rendering into its closed state and looking like nothing
+// happened at all.
+export async function updateEmailPrefs(
+  _previous: { saved: boolean },
+  formData: FormData
+): Promise<{ saved: boolean }> {
   const user = await currentUser();
   if (!user) throw new Error("Unauthorized");
 
@@ -451,6 +462,7 @@ export async function updateEmailPrefs(formData: FormData): Promise<void> {
     user.id,
   ]);
   revalidatePath("/notifications");
+  return { saved: true };
 }
 
 export async function updateProfile(formData: FormData): Promise<void> {

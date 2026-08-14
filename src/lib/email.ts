@@ -1,4 +1,6 @@
-const RESEND_API = "https://api.resend.com/emails";
+// Overridable so an email can be caught and read locally without a Resend key
+// — an email nobody ever looks at is an email nobody has proofread.
+const RESEND_API = process.env.RESEND_API_URL ?? "https://api.resend.com/emails";
 
 export async function sendEmail(
   to: string,

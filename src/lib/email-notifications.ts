@@ -92,12 +92,91 @@ async function sendTo(userId: string, kind: EmailKind, subject: string, body: st
   });
 }
 
+/** The outing itself, as much of it as a card needs. */
+export type TaggedEntry = {
+  crag: string;
+  location: string | null;
+  entry_date: string;
+  month_only: boolean;
+  style: string | null;
+  grade_max: string | null;
+  pitches: number | null;
+  height_m: number | null;
+  routes: string | null;
+  notes: string | null;
+};
+
+const NOTES_CHARS = 220;
+
+/**
+ * A card of the day, so the email answers "which outing?" on its own. Only
+ * what the person is being told about anyway — they are named on it, and the
+ * link goes to the full entry. No photograph: the images sit behind the same
+ * access check as the entry, and a broken picture in an email is worse than
+ * none.
+ */
+function entryCard(entry: TaggedEntry, link: string): string {
+  const facts = [
+    entry.style,
+    entry.grade_max,
+    entry.pitches ? `${entry.pitches} L` : null,
+    entry.height_m ? `${entry.height_m} m` : null,
+  ]
+    .filter(Boolean)
+    .map((f) => escape(String(f)))
+    .join(" · ");
+
+  const date = entry.month_only
+    ? formatMonth(entry.entry_date)
+    : formatDate(entry.entry_date);
+
+  const notes = entry.notes?.trim()
+    ? `<p style="margin:8px 0 0;color:#444">${escape(
+        entry.notes.trim().length > NOTES_CHARS
+          ? `${entry.notes.trim().slice(0, NOTES_CHARS).trimEnd()}…`
+          : entry.notes.trim()
+      )}</p>`
+    : "";
+
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+      style="border:1px solid #e2d9cc;border-radius:10px;margin:16px 0">
+      <tr><td style="padding:14px 16px">
+        <p style="margin:0;font-size:17px;font-weight:600">
+          <a href="${link}" style="color:#bc5b2e;text-decoration:none">${escape(entry.crag)}</a>
+        </p>
+        <p style="margin:4px 0 0;color:#666;font-size:14px">
+          ${date}${entry.location ? ` — ${escape(entry.location)}` : ""}
+        </p>
+        ${facts ? `<p style="margin:8px 0 0;color:#444;font-size:14px">${facts}</p>` : ""}
+        ${entry.routes ? `<p style="margin:8px 0 0;color:#444;font-size:14px">${escape(entry.routes)}</p>` : ""}
+        ${notes}
+      </td></tr>
+    </table>`;
+}
+
+// Dates come out of Postgres as YYYY-MM-DD; an email has no locale of its own
+// to lean on, so they are written the way the site writes them in French.
+const MONTHS = [
+  "janvier", "février", "mars", "avril", "mai", "juin",
+  "juillet", "août", "septembre", "octobre", "novembre", "décembre",
+];
+
+function formatDate(iso: string): string {
+  const [y, m, d] = iso.split("-");
+  return `${Number(d)} ${MONTHS[Number(m) - 1] ?? ""} ${y}`;
+}
+
+function formatMonth(iso: string): string {
+  const [y, m] = iso.split("-");
+  return `${MONTHS[Number(m) - 1] ?? ""} ${y}`;
+}
+
 /** Someone named you on their outing. */
 export async function emailTagged(
   userId: string,
   actor: { username: string; displayName: string },
   entryId: string,
-  title: string
+  entry: TaggedEntry
 ): Promise<void> {
   const link = `${siteUrl()}/entries/${entryId}`;
   await sendTo(
@@ -105,9 +184,10 @@ export async function emailTagged(
     "tags",
     `${actor.displayName} vous a ajouté à une sortie`,
     `<p><strong>${escape(actor.displayName)}</strong> (@${escape(actor.username)}) vous a ajouté
-      à une sortie sur Cragdiary : <a href="${link}">${escape(title)}</a>.</p>
-     <p>Vous pouvez la reprendre dans votre propre carnet depuis
-       <a href="${siteUrl()}/notifications">vos notifications</a>.</p>`
+      à une sortie sur Cragdiary.</p>
+     ${entryCard(entry, link)}
+     <p><a href="${link}">Voir la sortie</a> — vous pouvez la reprendre dans votre propre carnet
+       depuis <a href="${siteUrl()}/notifications">vos notifications</a>.</p>`
   );
 }
 

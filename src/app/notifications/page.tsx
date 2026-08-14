@@ -4,7 +4,8 @@ import { currentUser } from "@/lib/auth";
 import { getDict } from "@/lib/i18n";
 import { getNotifications, type Notification } from "@/lib/notifications";
 import { entriesNotOfferable, getEmailPrefs, getFollowRequests } from "@/lib/queries";
-import { answerFollowRequest, copyEntryToJournal, updateEmailPrefs } from "@/app/actions";
+import { answerFollowRequest, copyEntryToJournal } from "@/app/actions";
+import EmailPrefsForm from "@/components/EmailPrefsForm";
 import MarkNotificationsRead from "@/components/MarkNotificationsRead";
 
 // The dictionary crosses no boundary here, but its counted strings are
@@ -66,30 +67,17 @@ export default async function NotificationsPage() {
       <details className="notif-email">
         <summary>{tn.emailTitle}</summary>
         {email.email ? (
-          <form action={updateEmailPrefs} className="notif-email-form">
-            <label>
-              <input
-                type="checkbox"
-                name="email_tags"
-                value="1"
-                defaultChecked={email.emailTags}
-              />
-              {tn.emailTags}
-            </label>
-            <label>
-              <input
-                type="checkbox"
-                name="email_digest"
-                value="1"
-                defaultChecked={email.emailDigest}
-              />
-              {tn.emailDigest}
-            </label>
-            <p className="form-hint">{fill(tn.emailTo, "email", email.email)}</p>
-            <button type="submit" className="btn-primary">
-              {tn.emailSave}
-            </button>
-          </form>
+          <EmailPrefsForm
+            tags={email.emailTags}
+            digest={email.emailDigest}
+            labels={{
+              tags: tn.emailTags,
+              digest: tn.emailDigest,
+              to: fill(tn.emailTo, "email", email.email),
+              save: tn.emailSave,
+              saved: tn.emailSaved,
+            }}
+          />
         ) : (
           <p className="form-hint">
             {tn.emailNonePre}

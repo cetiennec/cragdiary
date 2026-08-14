@@ -4410,10 +4410,20 @@ a {
   gap: 0.45rem;
 }
 
+.notif-email-save {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
 .notif-email-form .btn-primary {
-  align-self: flex-start;
   font-size: 0.85rem;
   padding: 0.4rem 0.9rem;
+}
+
+.notif-email-saved {
+  font-size: 0.85rem;
+  color: var(--accent);
 }
 
 /* The nudge a visitor gets after a few searches: a line, a way in, and a way
