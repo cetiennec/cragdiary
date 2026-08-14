@@ -42,11 +42,18 @@ export default async function SignupPage({
           {t.signup.email}
           <input type="email" name="email" autoComplete="email" placeholder={t.signup.emailHint} />
         </label>
-        {/* Said plainly at the point of the choice, and marked: an account
-            with no email has no way back in at all. */}
-        <p className="form-hint form-warn">
-          <span aria-hidden>⚠️</span> {t.signup.emailWarning}
-        </p>
+        {/* Said at the point of the choice, and only while the box is still
+            empty: what the address buys, then what its absence costs. */}
+        <div className="form-hint form-warn">
+          <p>{t.signup.emailUses}</p>
+          <ul>
+            <li>{t.signup.emailUseReset}</li>
+            <li>{t.signup.emailUseDigest}</li>
+          </ul>
+          <p className="form-warn-line">
+            <span aria-hidden>⚠️</span> {t.signup.emailWarning}
+          </p>
+        </div>
         <label>
           {t.signup.password}
           <input

@@ -4961,18 +4961,33 @@ label:has(input:user-invalid) + .form-hint.form-rule {
   color: var(--danger, #b3492b);
 }
 
-/* A hint that is a warning: the same quiet type, but it earns a mark and a
-   little more contrast than the hints around it. Shown only while the field it
-   warns about is still empty — which is exactly when it is true. */
+/* A hint that is a warning: the same quiet type, but the last line earns a
+   mark and more contrast. Shown only while the field it warns about is still
+   empty — which is exactly when it is true. */
 .form-hint.form-warn {
   display: none;
-  color: var(--text);
-  align-items: baseline;
-  gap: 0.35rem;
 }
 
 label:has(input:placeholder-shown) + .form-hint.form-warn {
+  display: block;
+}
+
+.form-hint.form-warn p {
+  margin: 0;
+}
+
+.form-hint.form-warn ul {
+  margin: 0.15rem 0 0.35rem;
+  padding-left: 1.1rem;
+  /* The site's reset drops list markers; here they are the point. */
+  list-style: disc;
+}
+
+.form-hint.form-warn .form-warn-line {
   display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  color: var(--text);
 }
 
 /* Personal site and linked camptocamp account, under the bio, and the sync

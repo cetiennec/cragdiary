@@ -65,9 +65,11 @@ const en = {
     displayName: "Display name",
     displayNameHint: "How your name appears",
     email: "Email (optional)",
-    emailHint: "only used to recover your password",
-    emailWarning:
-      "Never used for anything else — but without it, a forgotten password cannot be reset and the account is lost.",
+    emailHint: "optional",
+    emailUses: "An email address is what lets you:",
+    emailUseReset: "reset your password if you forget it",
+    emailUseDigest: "get a monthly digest, if you ask for one",
+    emailWarning: "Without one, an account can never be recovered.",
     password: "Password",
     privacyPre: "We store your username, display name and — if you give one — a recovery email. Nothing else, no trackers. See the ",
     privacyLink: "privacy notice",
@@ -692,7 +694,8 @@ const en = {
     // results of their own.
     hutsOn: "Show shelters",
     hutsOff: "Hide shelters",
-    hutsHint: "Guarded refuges, unguarded cabins and gîtes around the pin, from refuges.info.",
+    hutsHint:
+      "Somewhere to sleep around the pin, from refuges.info: guarded refuges, gîtes and unguarded cabins, nearest first, refuges and gîtes favoured. Shelters with nowhere to lie down are left out.",
     hutsLegend: "Refuges & cabins",
     mapLayers: "On the map",
     hutBeds: "places",
@@ -829,9 +832,11 @@ const fr: Dict = {
     displayName: "Nom affiché",
     displayNameHint: "Le nom que les autres verront",
     email: "Email (optionnel)",
-    emailHint: "sert uniquement à récupérer votre mot de passe",
-    emailWarning:
-      "Jamais utilisé pour autre chose — mais sans lui, un mot de passe oublié ne peut pas être réinitialisé et le compte est perdu.",
+    emailHint: "optionnel",
+    emailUses: "L'email sert à :",
+    emailUseReset: "récupérer votre mot de passe en cas d'oubli",
+    emailUseDigest: "recevoir un résumé mensuel, si vous le demandez",
+    emailWarning: "Sans email, aucune récupération de compte n'est possible.",
     password: "Mot de passe",
     privacyPre: "Nous conservons votre nom d'utilisateur, votre nom affiché et — si vous en donnez un — un email de récupération. Rien d'autre, aucun traqueur. Voir la ",
     privacyLink: "note de confidentialité",
@@ -1458,7 +1463,8 @@ const fr: Dict = {
     // résultats, et non des résultats à part entière.
     hutsOn: "Afficher les refuges",
     hutsOff: "Masquer les refuges",
-    hutsHint: "Refuges gardés, cabanes non gardées et gîtes autour du point, d'après refuges.info.",
+    hutsHint:
+      "Où dormir autour du point, d'après refuges.info : refuges gardés, gîtes et cabanes non gardées, les plus proches d'abord, refuges et gîtes privilégiés. Les abris sans couchage ne sont pas affichés.",
     hutsLegend: "Refuges & cabanes",
     mapLayers: "Sur la carte",
     hutBeds: "places",
