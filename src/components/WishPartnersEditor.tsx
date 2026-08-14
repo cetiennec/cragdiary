@@ -12,11 +12,16 @@ export default function WishPartnersEditor({
   wishId,
   partners,
   partnersNode,
+  people,
   t,
 }: {
   wishId: string;
   partners: string;
   partnersNode?: React.ReactNode;
+  /** Everyone this list is already shared with. On a shared list they are the
+      partners nine times out of ten, so they are offered as one tap rather
+      than as something to type out again. */
+  people?: { username: string; display_name: string }[];
   t: {
     placeholder: string;
     save: string;
@@ -26,6 +31,7 @@ export default function WishPartnersEditor({
   };
 }) {
   const [editing, setEditing] = useState(false);
+  const [text, setText] = useState(partners);
   const [pending, setPending] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
 
@@ -76,13 +82,46 @@ export default function WishPartnersEditor({
       <input type="hidden" name="id" value={wishId} />
       <MentionInput
         name="partners"
-        defaultValue={partners}
+        value={text}
+        onChange={setText}
         placeholder={t.placeholder}
         autoFocus
       />
       <button type="submit" className="wish-partners-save" disabled={pending}>
         {pending ? "…" : t.save}
       </button>
+      {/* The people already on the list, one tap each. Typing still works —
+          this is a shortcut, not a fence. */}
+      {people && people.length > 0 && (
+        <span className="wish-partners-people">
+          {people.map((person) => {
+            const already = new RegExp(`@${person.username}([^a-z0-9-]|$)`, "i").test(text);
+            return (
+              <button
+                key={person.username}
+                type="button"
+                className={`wish-partner-chip${already ? " is-on" : ""}`}
+                aria-pressed={already}
+                onClick={() =>
+                  setText((current) =>
+                    already
+                      ? current
+                          .replace(new RegExp(`@${person.username}(?![a-z0-9-])`, "i"), "")
+                          .replace(/\s*,\s*,/g, ",")
+                          .replace(/^[\s,]+|[\s,]+$/g, "")
+                      : current.trim()
+                        ? `${current.replace(/[\s,]+$/, "")}, @${person.username}`
+                        : `@${person.username}`
+                  )
+                }
+              >
+                {already ? "✓ " : "+ "}
+                {person.display_name}
+              </button>
+            );
+          })}
+        </span>
+      )}
     </form>
   );
 }

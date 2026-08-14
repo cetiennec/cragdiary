@@ -3,35 +3,24 @@
 import { useState } from "react";
 
 /**
- * The mark on the button: the site's own summit, with the ridge carrying on
- * past the frame — sharing is this journal leaving the page it lives on.
- * Drawn rather than borrowed, because a chain link is every website's share
- * button and none of them are about mountains.
- *
- * `currentColor` throughout, so it takes the accent from the button around it
- * and needs no second version for a dark background.
+ * The ordinary share mark — a box with an arrow leaving it, the one every
+ * phone puts on its share sheet. Drawn rather than an emoji so it takes the
+ * button's own colour and stays the same on every platform, where 🔗 is a
+ * chain on one and a paperclip on the next.
  */
 function ShareMark() {
   return (
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden focusable="false">
-      {/* The skyline of the app icon: two summits and the notch between them. */}
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" aria-hidden focusable="false">
+      <path d="M12 3.5 L12 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
       <path
-        d="M2.5 19 L8 10 L11.5 15 L13.5 11.5 L17 17"
+        d="M8.6 6.9 L12 3.4 L15.4 6.9"
         stroke="currentColor"
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      {/* The same line, carrying on out of the frame — and its head. That is
-          the whole idea: the journal leaving the page it lives on. */}
       <path
-        d="M20.5 4.5 L13.5 11.5"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-      <path
-        d="M14.5 4.5 L20.5 4.5 L20.5 10.5"
+        d="M6.5 10.5 H5.5 A1.5 1.5 0 0 0 4 12 v7 A1.5 1.5 0 0 0 5.5 20.5 h13 A1.5 1.5 0 0 0 20 19 v-7 A1.5 1.5 0 0 0 18.5 10.5 h-1"
         stroke="currentColor"
         strokeWidth="2"
         strokeLinecap="round"

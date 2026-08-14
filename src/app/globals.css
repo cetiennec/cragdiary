@@ -4387,17 +4387,17 @@ a {
   margin-left: 0;
 }
 
+/* The drawn mark takes the button's colour rather than an emoji's. */
+.share-fab {
+  color: var(--accent);
+}
+
 /* The name and its share button on one line, the button quieter than the name
    it belongs to. */
 .profile-name-row {
   display: flex;
   align-items: center;
   gap: 0.6rem;
-}
-
-/* The drawn mark takes the button's colour rather than an emoji's. */
-.share-fab {
-  color: var(--accent);
 }
 
 .share-fab-sm {
@@ -4436,6 +4436,37 @@ a {
 
 .password-reveal:hover {
   opacity: 1;
+}
+
+/* The people already on a shared list, offered as one tap each in the partners
+   field. Ticked ones read as already written down, because they are. */
+.wish-partners-people {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.35rem;
+}
+
+.wish-partner-chip {
+  font: inherit;
+  font-size: 0.78rem;
+  padding: 0.15rem 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.wish-partner-chip:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.wish-partner-chip.is-on {
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
 }
 
 /* The ✕ that retires a hint for good: quiet, and inside the sentence it ends. */

@@ -585,6 +585,7 @@ export default async function ProfilePage({
               <WishlistSection
                 key={list.id}
                 list={list}
+                viewerUsername={user?.username}
                 wishes={filterSortWishes(list.wishes)}
                 isOwner={list.owner_id === user?.id}
                 partnerNodes={wishPartnerNodes}
@@ -645,6 +646,7 @@ export default async function ProfilePage({
                   <WishlistSection
                     key={list.id}
                     list={list}
+                    viewerUsername={user?.username}
                     wishes={filterSortWishes(list.wishes)}
                     isOwner={false}
                     partnerNodes={wishPartnerNodes}

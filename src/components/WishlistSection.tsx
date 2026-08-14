@@ -20,6 +20,7 @@ export default function WishlistSection({
   list,
   wishes,
   isOwner,
+  viewerUsername,
   partnerNodes,
   locale,
   t,
@@ -30,6 +31,8 @@ export default function WishlistSection({
   list: WishlistFull;
   wishes: Wish[];
   isOwner: boolean;
+  /** Who is looking, so they are not offered as their own partner. */
+  viewerUsername?: string;
   partnerNodes: Map<string, ReactNode>;
   locale: Locale;
   t: WishlistDict;
@@ -154,6 +157,12 @@ export default function WishlistSection({
                 wishId={wish.id}
                 partners={wish.partners ?? ""}
                 partnersNode={partnerNodes.get(wish.id)}
+                // The owner and the collaborators, minus whoever is looking:
+                // on a shared list, these are the partners.
+                people={[
+                  { username: list.owner_username, display_name: list.owner_display_name },
+                  ...list.members,
+                ].filter((p) => p.username !== viewerUsername)}
                 t={{
                   placeholder: t.partnersPlaceholder,
                   save: t.savePartners,
