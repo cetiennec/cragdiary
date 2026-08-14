@@ -222,7 +222,42 @@ type DigestEntry = {
   entry_date: string;
   display_name: string;
   username: string;
+  has_photo: boolean;
 };
+
+/**
+ * One line per outing: its photo when it has one, its name, who climbed it and
+ * when. A table rather than a list, because a table is the one layout every
+ * mail client still agrees on.
+ */
+function digestRows(entries: DigestEntry[]): string {
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+      style="margin:12px 0">
+      ${entries
+        .map(
+          (e) => `<tr>
+        <td width="80" valign="top" style="padding:6px 12px 6px 0">
+          ${
+            e.has_photo
+              ? `<a href="${siteUrl()}/entries/${e.id}"><img
+                   src="${siteUrl()}/api/entries/${e.id}/preview?s=thumb"
+                   width="80" height="60" alt=""
+                   style="display:block;width:80px;height:60px;object-fit:cover;border-radius:6px"></a>`
+              : `<span style="display:block;width:80px;height:60px;border-radius:6px;background:#efe7db"></span>`
+          }
+        </td>
+        <td valign="top" style="padding:6px 0">
+          <a href="${siteUrl()}/entries/${e.id}"
+             style="color:#bc5b2e;text-decoration:none;font-weight:600">${escape(e.crag)}</a>
+          <span style="display:block;color:#666;font-size:14px">
+            ${escape(e.display_name)} — ${e.entry_date}
+          </span>
+        </td>
+      </tr>`
+        )
+        .join("")}
+    </table>`;
+}
 
 /**
  * A month of the outings of the people you follow, in one email — never one
@@ -232,7 +267,8 @@ type DigestEntry = {
 export async function emailDigest(userId: string): Promise<boolean> {
   const entries = await pool.query<DigestEntry>(
     `select e.id, e.crag, to_char(e.entry_date, 'DD/MM') as entry_date,
-            u.display_name, u.username
+            u.display_name, u.username,
+            exists (select 1 from photos p where p.entry_id = e.id) as has_photo
      from entries e
      join users u on u.id = e.user_id
      where e.user_id in (select followee_id from follows
@@ -245,20 +281,14 @@ export async function emailDigest(userId: string): Promise<boolean> {
   );
   if (entries.rows.length === 0) return false;
 
-  const lines = entries.rows
-    .map(
-      (e) =>
-        `<li><a href="${siteUrl()}/entries/${e.id}">${escape(e.crag)}</a>
-          — ${escape(e.display_name)}, ${e.entry_date}</li>`
-    )
-    .join("");
+  const lines = digestRows(entries.rows);
 
   return sendTo(
     userId,
     "digest",
     "Cragdiary — le mois de vos cordées",
     `<p>Ce que les personnes que vous suivez ont grimpé ce mois-ci :</p>
-     <ul>${lines}</ul>
+     ${lines}
      <p><a href="${siteUrl()}/">Ouvrir le fil</a></p>`
   );
 }

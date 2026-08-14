@@ -15,12 +15,16 @@ import { pool } from "@/lib/db";
  */
 
 // Wide enough for the card in a mail client, small enough that a mail server
-// isn't asked to proxy half a megabyte.
-const WIDTH = 560;
+// isn't asked to proxy half a megabyte. The small one is for the digest, which
+// shows a dozen at once and wants a thumbnail rather than a picture.
+const WIDTHS = { card: 560, thumb: 160 };
 const QUALITY = 78;
 
-export async function GET(_req: Request, ctx: RouteContext<"/api/entries/[id]/preview">) {
+export async function GET(req: Request, ctx: RouteContext<"/api/entries/[id]/preview">) {
   const { id } = await ctx.params;
+  // Two sizes, named rather than free: an open-ended `?w=` invites a stranger
+  // to ask for a thousand different resizes of the same photo.
+  const width = new URL(req.url).searchParams.get("s") === "thumb" ? WIDTHS.thumb : WIDTHS.card;
 
   const result = await pool.query<{ data: Buffer; thumb: Buffer | null }>(
     `select p.data, p.thumb
@@ -37,7 +41,7 @@ export async function GET(_req: Request, ctx: RouteContext<"/api/entries/[id]/pr
 
   try {
     const jpeg = await sharp(row.thumb ?? row.data)
-      .resize({ width: WIDTH, withoutEnlargement: true })
+      .resize({ width, withoutEnlargement: true })
       .jpeg({ quality: QUALITY })
       .toBuffer();
 
