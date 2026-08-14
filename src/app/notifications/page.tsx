@@ -79,6 +79,10 @@ export default async function NotificationsPage() {
               to: fill(tn.emailTo, "email", email.email),
               save: tn.emailSave,
               saved: tn.emailSaved,
+              sendNow: tn.digestNow,
+              sent: tn.digestSent,
+              empty: tn.digestEmpty,
+              throttled: tn.digestThrottled,
             }}
           />
         ) : (

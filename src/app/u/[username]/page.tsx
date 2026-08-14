@@ -357,6 +357,19 @@ export default async function ProfilePage({
         )}
       </header>
 
+      {/* Above the settings, hard right. Absent on a private profile — sharing
+          a door nobody else can open is not sharing. An unlisted one keeps it:
+          a link is the whole point of unlisted. */}
+      {profile.visibility !== "private" && (
+        <div className="profile-share-row">
+          <ShareButton
+            label={t.profile.share}
+            copied={t.profile.shareCopied}
+            text={`🧗 ${profile.display_name} — ${t.profile.shareTagline}`}
+          />
+        </div>
+      )}
+
       {isSelf && (
         <details className="profile-settings">
           <summary>{t.profile.settingsTitle}</summary>
@@ -647,19 +660,6 @@ export default async function ProfilePage({
         </section>
       )}
       </div>
-      {/* Bottom right, floating clear of the page: sharing is something you do
-          once you have read a journal, not the first thing you are offered.
-          Absent on a private profile — sharing a door nobody else can open is
-          not sharing. An unlisted one keeps it: a link is the whole point. */}
-      {profile.visibility !== "private" && (
-        <div className="profile-share-corner">
-          <ShareButton
-            label={t.profile.share}
-            copied={t.profile.shareCopied}
-            text={`🧗 ${profile.display_name} — ${t.profile.shareTagline}`}
-          />
-        </div>
-      )}
     </>
   );
 }

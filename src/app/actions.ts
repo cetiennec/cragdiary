@@ -9,6 +9,7 @@ import { pool, type Visibility } from "@/lib/db";
 import { LOCALE_COOKIE, getLocale } from "@/lib/i18n";
 import { sendEmail } from "@/lib/email";
 import {
+  emailDigest,
   emailTagged,
   maybeSendDigest,
   unsubscribe,
@@ -465,6 +466,29 @@ export async function confirmUnsubscribe(formData: FormData): Promise<void> {
   if (!verifyUnsubscribe(userId, kind, sig)) redirect("/unsubscribe");
   await unsubscribe(userId, kind);
   redirect("/unsubscribe?done=1");
+}
+
+/**
+ * "Send me this month's digest now" — the same email the monthly job sends,
+ * asked for on purpose. Useful for seeing what it looks like, and the only way
+ * to see it without waiting for a month and a sign-in.
+ *
+ * An explicit press outranks the standing preference, so it works with the
+ * switch off; it is limited to a few an hour, since a button that emails you
+ * is a button that can be leant on.
+ */
+export async function sendDigestNow(): Promise<{ status: "sent" | "empty" | "throttled" }> {
+  const user = await currentUser();
+  if (!user) throw new Error("Unauthorized");
+
+  const bucket = `digest-now:${user.id}`;
+  if (await isRateLimited(bucket, 3, 60)) return { status: "throttled" };
+  await recordAttempt(bucket);
+
+  const sent = await emailDigest(user.id, true);
+  // "Empty" is an answer, not a failure: a month in which nobody you follow
+  // climbed produces no email, by design.
+  return { status: sent ? "sent" : "empty" };
 }
 
 // Returns rather than redirecting, so the panel it lives in can say "saved"

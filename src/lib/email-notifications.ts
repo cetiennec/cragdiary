@@ -76,13 +76,22 @@ function footer(userId: string, kind: EmailKind): string {
  * The check is here rather than at each call site: a caller that forgets is a
  * caller that spams, and there is no reason for two of them to remember.
  */
-async function sendTo(userId: string, kind: EmailKind, subject: string, body: string) {
+async function sendTo(
+  userId: string,
+  kind: EmailKind,
+  subject: string,
+  body: string,
+  /** Set only when the person asked for this exact email, by pressing a button
+      that says so: an explicit request outranks the standing preference, and
+      the address is still required. */
+  asked = false
+) {
   const result = await pool.query<{ email: string | null; wants: boolean }>(
     `select email, ${EMAIL_KINDS[kind]} as wants from users where id = $1`,
     [userId]
   );
   const row = result.rows[0];
-  if (!row?.email || !row.wants) return false;
+  if (!row?.email || (!row.wants && !asked)) return false;
 
   return sendEmail(row.email, subject, `${body}${footer(userId, kind)}`, {
     // One-click unsubscribe, for the mail clients that offer it themselves —
@@ -264,7 +273,7 @@ function digestRows(entries: DigestEntry[]): string {
  * per outing. Sent at most monthly, and only when there is something to say:
  * an empty month is a month with no email.
  */
-export async function emailDigest(userId: string): Promise<boolean> {
+export async function emailDigest(userId: string, asked = false): Promise<boolean> {
   const entries = await pool.query<DigestEntry>(
     `select e.id, e.crag, to_char(e.entry_date, 'DD/MM') as entry_date,
             u.display_name, u.username,
@@ -289,7 +298,8 @@ export async function emailDigest(userId: string): Promise<boolean> {
     "Cragdiary — le mois de vos cordées",
     `<p>Ce que les personnes que vous suivez ont grimpé ce mois-ci :</p>
      ${lines}
-     <p><a href="${siteUrl()}/">Ouvrir le fil</a></p>`
+     <p><a href="${siteUrl()}/">Ouvrir le fil</a></p>`,
+    asked
   );
 }
 

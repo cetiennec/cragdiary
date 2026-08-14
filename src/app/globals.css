@@ -1913,8 +1913,14 @@ a {
   color: var(--text-muted);
 }
 
+/* Every kind of box the forms actually use. `email` and `url` were missing,
+   which is why the address fields in the profile settings looked like bare
+   text on the page while the ones beside them had a frame. */
 .entry-form input[type="text"],
 .entry-form input[type="date"],
+.entry-form input[type="email"],
+.entry-form input[type="url"],
+.entry-form input[type="number"],
 .entry-form input[type="password"],
 .entry-form select,
 .entry-form textarea {
@@ -4381,20 +4387,16 @@ a {
   margin-left: 0;
 }
 
-/* The share button, parked in the corner of the profile — above the page and
-   out of the way of it. Stacked above the feedback pill, which already owns
-   that exact corner. */
-.profile-share-corner {
-  position: fixed;
-  right: 1.1rem;
-  bottom: 4.4rem;
-  z-index: 1199;
+/* The share button sits on the line above the settings, hard right: the last
+   thing in the header block rather than something floating over the page. */
+.profile-share-row {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0.6rem 0 0.2rem;
 }
 
-.profile-share-corner .share-fab {
+.profile-share-row .share-fab {
   margin: 0;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
-  background: var(--bg-elevated);
 }
 
 /* The eye on a password box: inside the field's own frame, so the two read as
@@ -4492,6 +4494,14 @@ a {
 .notif-email-form .btn-primary {
   font-size: 0.85rem;
   padding: 0.4rem 0.9rem;
+}
+
+.notif-email-send {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-top: 0.2rem;
 }
 
 .notif-email-saved {
