@@ -104,6 +104,10 @@ export type TaggedEntry = {
   height_m: number | null;
   routes: string | null;
   notes: string | null;
+  /** Whether to show a picture at all: true when the outing is not private
+      and had a photo by the time the email was written. The picture itself is
+      fetched from the outing's own preview URL when the email is opened. */
+  has_photo: boolean;
 };
 
 const NOTES_CHARS = 220;
@@ -111,11 +115,14 @@ const NOTES_CHARS = 220;
 /**
  * A card of the day, so the email answers "which outing?" on its own. Only
  * what the person is being told about anyway — they are named on it, and the
- * link goes to the full entry. No photograph: the images sit behind the same
- * access check as the entry, and a broken picture in an email is worse than
- * none.
+ * link goes to the full entry.
+ *
+ * The photograph is the outing's first, converted to JPEG on the way out (the
+ * stored AVIF renders nowhere in email) and never for a private outing.
+ * Nothing is lost when a mail client blocks remote images: the card reads the
+ * same without it.
  */
-function entryCard(entry: TaggedEntry, link: string): string {
+function entryCard(entry: TaggedEntry, entryId: string, link: string): string {
   const facts = [
     entry.style,
     entry.grade_max,
@@ -138,8 +145,17 @@ function entryCard(entry: TaggedEntry, link: string): string {
       )}</p>`
     : "";
 
+  const photo = entry.has_photo
+    ? `<tr><td style="padding:0">
+         <a href="${link}"><img src="${siteUrl()}/api/entries/${entryId}/preview"
+           width="560" alt=""
+           style="display:block;width:100%;max-width:560px;height:auto;border-radius:9px 9px 0 0"></a>
+       </td></tr>`
+    : "";
+
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0"
       style="border:1px solid #e2d9cc;border-radius:10px;margin:16px 0">
+      ${photo}
       <tr><td style="padding:14px 16px">
         <p style="margin:0;font-size:17px;font-weight:600">
           <a href="${link}" style="color:#bc5b2e;text-decoration:none">${escape(entry.crag)}</a>
@@ -185,7 +201,7 @@ export async function emailTagged(
     `${actor.displayName} vous a ajouté à une sortie`,
     `<p><strong>${escape(actor.displayName)}</strong> (@${escape(actor.username)}) vous a ajouté
       à une sortie sur Cragdiary.</p>
-     ${entryCard(entry, link)}
+     ${entryCard(entry, entryId, link)}
      <p><a href="${link}">Voir la sortie</a> — vous pouvez la reprendre dans votre propre carnet
        depuis <a href="${siteUrl()}/notifications">vos notifications</a>.</p>`
   );

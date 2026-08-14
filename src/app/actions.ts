@@ -141,6 +141,11 @@ export async function setLocale(formData: FormData): Promise<void> {
   });
 }
 
+// How long the tag email waits for the outing to settle before it is written.
+// Long enough for a photo or two to land, short enough that the serverless
+// function it rides on is still alive.
+const PHOTO_SETTLE_MS = 4000;
+
 // Notify climbers newly @-tagged as partners on an entry. `previousPartners`
 // lets updates skip people who were already tagged.
 async function notifyTaggedPartners(
@@ -161,6 +166,12 @@ async function notifyTaggedPartners(
   // outing must never wait on a mail server, and a bounced email is not a
   // reason for the save to fail.
   after(async () => {
+    // A breath before reading the outing: the photos arrive in their own
+    // requests just after the entry is saved (see `uploadPhotos` in
+    // EntryForm), so an email written the same instant would decide there was
+    // no picture. Nothing about this email is urgent.
+    await new Promise((resolve) => setTimeout(resolve, PHOTO_SETTLE_MS));
+
     const [actor, entry] = await Promise.all([
       pool.query<{ username: string; display_name: string }>(
         "select username, display_name from users where id = $1",
@@ -170,7 +181,9 @@ async function notifyTaggedPartners(
       // its name here, `entries` having no title column.
       pool.query<TaggedEntry>(
         `select crag, location, to_char(entry_date, 'YYYY-MM-DD') as entry_date, month_only,
-                style, grade_max, pitches, height_m, routes, notes
+                style, grade_max, pitches, height_m, routes, notes,
+                visibility <> 'private'
+                  and exists (select 1 from photos p where p.entry_id = entries.id) as has_photo
          from entries where id = $1`,
         [entryId]
       ),
