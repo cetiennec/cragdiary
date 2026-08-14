@@ -2,7 +2,11 @@ create extension if not exists pgcrypto;
 
 create table if not exists users (
   id uuid primary key default gen_random_uuid(),
-  username text not null unique,
+  -- Unique without regard to case (migration 035): "Etienne" is kept as typed
+  -- and "etienne" is then refused, since two accounts differing only in case
+  -- would be an impersonation waiting to happen. The index is below, beside
+  -- the email one it is modelled on.
+  username text not null,
   display_name text not null,
   password_hash text not null,
   bio text,
@@ -16,6 +20,9 @@ create table if not exists users (
   wishlist_public boolean not null default true,
   created_at timestamptz not null default now()
 );
+-- The username, unique whatever its case (migration 035).
+create unique index if not exists users_username_unique on users (lower(username));
+
 -- Recovery email is unique (case-insensitive); nulls allowed for accounts
 -- without one. Signup relies on this to reject duplicate emails.
 create unique index if not exists users_email_unique

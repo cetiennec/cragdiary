@@ -66,7 +66,9 @@ const GALLERY_QUALITY = 52;
 // on a real photo at the same quality: 175 kB at 900 px against 95 kB at 640,
 // on a feed that was downloading 2 MB of covers.
 const THUMB_WIDTH = 640;
-const USERNAME_RE = /^[a-z0-9-]{3,20}$/;
+// Capitals allowed, and kept as typed — the account is unique without regard
+// to case (migration 035), so `Etienne` and `etienne` can never both exist.
+const USERNAME_RE = /^[A-Za-z0-9-]{3,20}$/;
 
 function parseVisibility(value: FormDataEntryValue | null): Visibility {
   return value === "unlisted" || value === "private" ? value : "public";
@@ -330,7 +332,7 @@ export async function signup(formData: FormData): Promise<void> {
   }
   await recordAttempt(signupBucket);
 
-  const username = String(formData.get("username") ?? "").trim().toLowerCase();
+  const username = String(formData.get("username") ?? "").trim();
   const displayName = String(formData.get("display_name") ?? "").trim();
   const password = String(formData.get("password") ?? "");
 
@@ -338,7 +340,9 @@ export async function signup(formData: FormData): Promise<void> {
   if (!displayName) redirect(back("name"));
   if (password.length < 8) redirect(back("password"));
 
-  const existing = await pool.query("select 1 from users where username = $1", [username]);
+  const existing = await pool.query("select 1 from users where lower(username) = lower($1)", [
+    username,
+  ]);
   if (existing.rows.length > 0) redirect(back("taken"));
 
   const rawEmail = String(formData.get("email") ?? "").trim().toLowerCase();
@@ -352,8 +356,12 @@ export async function signup(formData: FormData): Promise<void> {
       [username, displayName, hashPassword(password), email]
     );
   } catch (e) {
-    const pgError = e as { code?: string };
-    if (pgError.code === "23505") redirect(back("email-taken"));
+    // Two unique indexes can raise this now, and they mean different things to
+    // whoever is filling the form: the name is taken, or the address is.
+    const pgError = e as { code?: string; constraint?: string };
+    if (pgError.code === "23505") {
+      redirect(back(pgError.constraint === "users_username_unique" ? "taken" : "email-taken"));
+    }
     throw e;
   }
 
@@ -378,7 +386,7 @@ export async function login(formData: FormData): Promise<void> {
   const back = (error: string) =>
     `/login?error=${error}${next ? `&next=${encodeURIComponent(next)}` : ""}`;
 
-  const username = String(formData.get("username") ?? "").trim().toLowerCase();
+  const username = String(formData.get("username") ?? "").trim();
   const password = String(formData.get("password") ?? "");
 
   // Throttle brute force by IP: 10 failed tries per 15 min, then a cooldown.
@@ -388,7 +396,7 @@ export async function login(formData: FormData): Promise<void> {
   }
 
   const result = await pool.query<{ id: string; password_hash: string }>(
-    "select id, password_hash from users where username = $1",
+    "select id, password_hash from users where lower(username) = lower($1)",
     [username]
   );
   // An unknown username used to answer before scrypt had run, so the reply time
@@ -1312,7 +1320,7 @@ export async function requestPasswordReset(formData: FormData): Promise<void> {
 
   if (identifier) {
     const result = await pool.query<{ id: string; email: string | null; username: string }>(
-      "select id, email, username from users where username = $1 or lower(email) = $1",
+      "select id, email, username from users where lower(username) = $1 or lower(email) = $1",
       [identifier]
     );
     const user = result.rows[0];
@@ -1400,7 +1408,7 @@ export async function toggleFollow(formData: FormData): Promise<void> {
 
   const username = String(formData.get("username") ?? "").trim().toLowerCase();
   const target = await pool.query<{ id: string; visibility: string; approve_followers: boolean }>(
-    "select id, visibility, approve_followers from users where username = $1",
+    "select id, visibility, approve_followers from users where lower(username) = lower($1)",
     [username]
   );
   const followee = target.rows[0];
@@ -1439,9 +1447,10 @@ export async function answerFollowRequest(formData: FormData): Promise<void> {
 
   const username = String(formData.get("username") ?? "").trim().toLowerCase();
   const accept = formData.get("decision") === "accept";
-  const asker = await pool.query<{ id: string }>("select id from users where username = $1", [
-    username,
-  ]);
+  const asker = await pool.query<{ id: string }>(
+    "select id from users where lower(username) = lower($1)",
+    [username]
+  );
   const follower = asker.rows[0];
   if (!follower) return;
 
@@ -1476,7 +1485,7 @@ export async function removeFollower(formData: FormData): Promise<void> {
   await pool.query(
     `delete from follows
      where followee_id = $1
-       and follower_id = (select id from users where username = $2)`,
+       and follower_id = (select id from users where lower(username) = lower($2))`,
     [user.id, username]
   );
 
@@ -1723,7 +1732,7 @@ export async function addWishlistMember(formData: FormData): Promise<void> {
     // unlisted ones must be typed in full — enforced by search filtering, this
     // is the manual-entry guard.
     const target = await pool.query<{ id: string }>(
-      "select id from users where username = $1 and visibility <> 'private'",
+      "select id from users where lower(username) = lower($1) and visibility <> 'private'",
       [username]
     );
     const memberId = target.rows[0]?.id;

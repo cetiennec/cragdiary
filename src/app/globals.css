@@ -4381,6 +4381,52 @@ a {
   margin-left: 0;
 }
 
+/* The share button, parked in the corner of the profile — above the page and
+   out of the way of it. Stacked above the feedback pill, which already owns
+   that exact corner. */
+.profile-share-corner {
+  position: fixed;
+  right: 1.1rem;
+  bottom: 4.4rem;
+  z-index: 1199;
+}
+
+.profile-share-corner .share-fab {
+  margin: 0;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
+  background: var(--bg-elevated);
+}
+
+/* The eye on a password box: inside the field's own frame, so the two read as
+   one control rather than a box with a button parked beside it. */
+.password-field {
+  position: relative;
+  display: block;
+}
+
+.password-field input {
+  width: 100%;
+  padding-right: 2.6rem;
+}
+
+.password-reveal {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  padding: 0.2rem;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.65;
+}
+
+.password-reveal:hover {
+  opacity: 1;
+}
+
 /* The ✕ that retires a hint for good: quiet, and inside the sentence it ends. */
 .hint-dismiss {
   margin-left: 0.4rem;

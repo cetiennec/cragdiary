@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import {
   getEntriesByUser,
   getEntryYears,
@@ -118,6 +118,9 @@ export default async function ProfilePage({
     getDict(),
   ]);
   if (!profile) notFound();
+  // One spelling per journal: /u/Etienne and /u/etienne find the same account,
+  // and the address bar settles on the one its owner chose.
+  if (profile.username !== username) redirect(`/u/${profile.username}`);
 
   const isSelf = user?.id === profile.id;
   if (profile.visibility === "private" && !isSelf) notFound();
@@ -332,17 +335,6 @@ export default async function ProfilePage({
             </p>
           )}
         </div>
-        {/* Sharing a private profile would be sharing a door nobody else can
-            open, so the button only exists where the link leads somewhere —
-            which includes an unlisted profile, since a link is the whole point
-            of unlisted. */}
-        {profile.visibility !== "private" && (
-          <ShareButton
-            label={t.profile.share}
-            copied={t.profile.shareCopied}
-            text={`🧗 ${profile.display_name} — ${t.profile.shareTagline}`}
-          />
-        )}
         {user && !isSelf && (
           // One button, three states: asking, waiting, or following. Clicking
           // it always undoes whatever it says.
@@ -655,6 +647,19 @@ export default async function ProfilePage({
         </section>
       )}
       </div>
+      {/* Bottom right, floating clear of the page: sharing is something you do
+          once you have read a journal, not the first thing you are offered.
+          Absent on a private profile — sharing a door nobody else can open is
+          not sharing. An unlisted one keeps it: a link is the whole point. */}
+      {profile.visibility !== "private" && (
+        <div className="profile-share-corner">
+          <ShareButton
+            label={t.profile.share}
+            copied={t.profile.shareCopied}
+            text={`🧗 ${profile.display_name} — ${t.profile.shareTagline}`}
+          />
+        </div>
+      )}
     </>
   );
 }

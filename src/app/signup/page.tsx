@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { signup } from "@/app/actions";
 import { getDict } from "@/lib/i18n";
+import PasswordField from "@/components/PasswordField";
 
 export default async function SignupPage({
   searchParams,
@@ -26,7 +27,7 @@ export default async function SignupPage({
             required
             autoFocus
             autoComplete="username"
-            pattern="[a-z0-9\-]{3,20}"
+            pattern="[A-Za-z0-9\-]{3,20}"
             placeholder={t.signup.usernameHint}
             // The browser's own "does not match the requested format" says
             // nothing about the format; `title` is what it shows underneath.
@@ -56,16 +57,14 @@ export default async function SignupPage({
             <li>{t.signup.emailUseDigest}</li>
           </ul>
         </div>
-        <label>
-          {t.signup.password}
-          <input
-            type="password"
-            name="password"
-            required
-            minLength={8}
-            autoComplete="new-password"
-          />
-        </label>
+        <PasswordField
+          name="password"
+          label={t.signup.password}
+          minLength={8}
+          autoComplete="new-password"
+          show={t.signup.passwordShow}
+          hide={t.signup.passwordHide}
+        />
         {error && <p className="form-error">{errors[error] ?? t.signup.errors.generic}</p>}
         {/* GDPR Art. 13 wants the notice where the data is collected, not
             merely somewhere on the site. */}

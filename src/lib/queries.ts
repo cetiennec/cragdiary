@@ -150,7 +150,7 @@ export async function getEntry(id: string): Promise<EntryWithAuthor | null> {
 
 export async function getUserByUsername(username: string): Promise<User | null> {
   const result = await pool.query<User>(
-    "select id, username, display_name, bio, visibility, email, avatar is not null as has_avatar, cover is not null as has_cover, wishlist_public, approve_followers, c2c_profile_id, website, created_at from users where username = $1",
+    "select id, username, display_name, bio, visibility, email, avatar is not null as has_avatar, cover is not null as has_cover, wishlist_public, approve_followers, c2c_profile_id, website, created_at from users where lower(username) = lower($1)",
     [username]
   );
   return result.rows[0] ?? null;
@@ -626,7 +626,7 @@ export async function findLinkableDays(
                             or e.location ilike '%' || q || '%')) as same_place
      from entries e
      join users u on u.id = e.user_id
-     where u.username = $1
+     where lower(u.username) = lower($1)
        and u.visibility <> 'private'
        and u.id <> $2
        and (abs(e.entry_date - $4::date) <= $5
@@ -722,7 +722,8 @@ export async function getDaysWith(
   const result = await pool.query<
     Entry & { username: string; display_name: string; author_visibility: Visibility; side: string }
   >(
-    `with them as (select id, username, display_name, visibility from users where username = $3)
+    `with them as (select id, username, display_name, visibility from users
+                   where lower(username) = lower($3))
      select e.*, u.username, u.display_name, u.visibility as author_visibility,
             case when e.user_id = $1 then 'mine' else 'theirs' end as side
      from entries e
@@ -812,11 +813,15 @@ export async function getAllUsers(): Promise<(User & { entry_count: number })[]>
   return result.rows;
 }
 
-export async function getExistingUsernames(usernames: string[]): Promise<Set<string>> {
-  if (usernames.length === 0) return new Set();
+export async function getExistingUsernames(usernames: string[]): Promise<Map<string, string>> {
+  if (usernames.length === 0) return new Map();
   const result = await pool.query<{ username: string }>(
-    "select username from users where username = any($1) and visibility = 'public'",
+    // The list arrives lowercased — a mention is written however its author
+    // felt, and the account it points at may be spelled another way entirely.
+    "select username from users where lower(username) = any($1) and visibility = 'public'",
     [usernames]
   );
-  return new Set(result.rows.map((r) => r.username));
+  // Keyed by the lowercase form the mention was matched on, valued by the
+  // spelling the account actually uses — which is where the link must point.
+  return new Map(result.rows.map((r) => [r.username.toLowerCase(), r.username]));
 }

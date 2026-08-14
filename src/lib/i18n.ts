@@ -81,9 +81,9 @@ const en = {
   signup: {
     title: "Start your journal",
     username: "Username",
-    usernameHint: "lowercase letters, digits, hyphens",
+    usernameHint: "letters, digits, hyphens",
     usernameRules:
-      "3 to 20 characters: lowercase letters, digits, hyphens. It becomes your address, cragdiary.com/u/your-name.",
+      "3 to 20 characters: letters, digits, hyphens. It becomes your address, cragdiary.com/u/your-name — and two accounts can't differ by capitals alone.",
     displayName: "Display name",
     displayNameHint: "How your name appears",
     email: "Email (optional)",
@@ -93,6 +93,8 @@ const en = {
     emailUseTags: "hear about it when someone adds you to an outing",
     emailUseDigest: "get a monthly digest, if you ask for one",
     password: "Password",
+    passwordShow: "Show the password",
+    passwordHide: "Hide the password",
     privacyPre: "We store your username, display name and — if you give one — a recovery email. Nothing else, no trackers. See the ",
     privacyLink: "privacy notice",
     privacyPost: ". Cragdiary isn't intended for under-15s.",
@@ -878,9 +880,9 @@ const fr: Dict = {
   signup: {
     title: "Commencez votre carnet",
     username: "Nom d'utilisateur",
-    usernameHint: "minuscules, chiffres, tirets",
+    usernameHint: "lettres, chiffres, tirets",
     usernameRules:
-      "3 à 20 caractères : minuscules, chiffres, tirets. Ce sera votre adresse, cragdiary.com/u/votre-nom.",
+      "3 à 20 caractères : lettres, chiffres, tirets. Ce sera votre adresse, cragdiary.com/u/votre-nom — et deux comptes ne peuvent pas différer par les seules majuscules.",
     displayName: "Nom affiché",
     displayNameHint: "Le nom que les autres verront",
     email: "Email (optionnel)",
@@ -890,6 +892,8 @@ const fr: Dict = {
     emailUseTags: "être prévenu quand quelqu'un vous ajoute à une sortie",
     emailUseDigest: "recevoir un résumé mensuel, si vous le demandez",
     password: "Mot de passe",
+    passwordShow: "Afficher le mot de passe",
+    passwordHide: "Masquer le mot de passe",
     privacyPre: "Nous conservons votre nom d'utilisateur, votre nom affiché et — si vous en donnez un — un email de récupération. Rien d'autre, aucun traqueur. Voir la ",
     privacyLink: "note de confidentialité",
     privacyPost: ". Cragdiary ne s'adresse pas aux moins de 15 ans.",

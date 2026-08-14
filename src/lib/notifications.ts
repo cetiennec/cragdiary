@@ -107,8 +107,10 @@ export async function userIdsByUsernames(
   usernames: string[]
 ): Promise<{ id: string; username: string }[]> {
   if (usernames.length === 0) return [];
+  usernames = usernames.map((u) => u.toLowerCase());
   const r = await pool.query<{ id: string; username: string }>(
-    "select id, username from users where username = any($1)",
+    // Lowercased on the way in: @Etienne and @etienne are the same climber.
+    "select id, username from users where lower(username) = any($1)",
     [usernames]
   );
   return r.rows;
