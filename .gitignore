@@ -43,6 +43,4 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# retired platform link (see docs/self-hosting.md)
-.nanocorp/
 .env.vercel

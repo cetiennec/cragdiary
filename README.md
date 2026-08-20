@@ -36,8 +36,7 @@ Postgres client.
 ## Deploy
 
 Push to `main` on `origin` (`github.com/cetiennec/cragdiary`); Vercel auto-deploys
-to https://cragdiary.com. The `nanocorp` remote is the retired platform mirror — pushing
-there deploys nothing you own and triggers "deployment blocked" mail.
+to https://cragdiary.com.
 
 ## Visual theme
 
