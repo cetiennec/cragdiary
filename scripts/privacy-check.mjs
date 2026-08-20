@@ -165,6 +165,26 @@ await db.query("update users set visibility = 'private' where username = $1", [a
 check("a by-link profile opens for whoever has the link", await status(anon, `/u/${author}`), 200);
 await anon.goto(`${base}/climbers`);
 check("but is not listed among climbers", !(await anon.locator("body").innerText()).includes(author));
+
+// The face and the cover come with the page. Withholding them left a by-link
+// journal open but blank, which is how this was found in the wild: the two
+// image routes still read "private" in its old sense long after the word had
+// changed meaning under them.
+await db.query(
+  `update users set avatar = $2, avatar_type = 'image/avif',
+                    cover = $2, cover_type = 'image/avif'
+   where username = $1`,
+  [author, pixels]
+);
+check("its avatar is served with it", await status(anon, `/api/avatars/${author}`), 200);
+check("and its cover", await status(anon, `/api/covers/${author}`), 200);
+
+// And it can be followed — the person standing at the link is exactly the one
+// who might want to.
+await B.goto(`${base}/u/${author}`);
+await B.waitForTimeout(400);
+const followable = await B.locator("form[action] button, .follow-button").count();
+check("a by-link journal can still be followed", followable > 0, followable);
 await anon.goto(base);
 await anon.waitForTimeout(500);
 check(

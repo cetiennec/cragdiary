@@ -1,5 +1,4 @@
 import { pool } from "@/lib/db";
-import { currentUser } from "@/lib/auth";
 
 export async function GET(
   _req: Request,
@@ -22,12 +21,10 @@ export async function GET(
     return new Response("Not found", { status: 404 });
   }
 
-  if (row.visibility === "private") {
-    const user = await currentUser();
-    if (user?.id !== row.id) {
-      return new Response("Not found", { status: 404 });
-    }
-  }
+  // No gate: since migration 037 a profile is either listed or reached by its
+  // link, and both open the page to whoever is standing at it — so withholding
+  // the avatar would leave that page with a hole in it rather than keep
+  // anything. What a *day* shows is still the day's own business.
 
   return new Response(new Uint8Array(row.avatar), {
     headers: {

@@ -95,7 +95,10 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { id } = await params;
   const entry = await getEntry(id);
-  if (!entry || entry.visibility === "private") return {};
+  // A day nobody may open has nothing to preview; a by-link day is the one
+  // kind you send to someone, so it keeps its preview and merely asks not to
+  // be indexed (see the profile's own metadata for the same reasoning).
+  if (!entry) return {};
 
   const cover = entry.photos.find((p) => !p.align) ?? entry.photos[0];
   const bits = [
@@ -112,6 +115,9 @@ export async function generateMetadata({
   return {
     title: `${entry.crag} — Cragdiary`,
     description,
+    // Only a public day belongs in a search index. The other two are reached
+    // by a link someone was handed, or by following the person who wrote it.
+    robots: entry.visibility === "public" ? undefined : { index: false, follow: false },
     openGraph: {
       title: entry.crag,
       description,

@@ -18,7 +18,9 @@ export default async function DaysWithPage({
   if (!user) redirect("/login");
 
   const [other, { locale, t }] = await Promise.all([getUserByUsername(username), getDict()]);
-  if (!other || other.visibility === "private" || other.id === user.id) notFound();
+  // A by-link journal still shares its days with the people who were there
+  // (migration 037) — what each day shows is settled on the day itself.
+  if (!other || other.id === user.id) notFound();
 
   const days = await getDaysWith(user.id, user.username, other.username);
 

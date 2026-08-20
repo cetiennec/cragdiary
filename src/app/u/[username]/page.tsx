@@ -63,12 +63,16 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { username } = await params;
   const profile = await getUserByUsername(username);
-  if (!profile || profile.visibility === "private") return {};
+  if (!profile) return {};
 
   const description = profile.bio ?? `@${profile.username} on Cragdiary`;
   return {
     title: `${profile.display_name} — Cragdiary`,
     description,
+    // A by-link journal is meant to be sent to someone, so the link gets its
+    // preview — but /u/<username> is an address a crawler can guess, which is
+    // the one way an unlisted page could still end up found (migration 037).
+    robots: profile.visibility === "public" ? undefined : { index: false, follow: false },
     openGraph: {
       title: profile.display_name,
       description,

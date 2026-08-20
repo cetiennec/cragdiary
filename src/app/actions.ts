@@ -1476,7 +1476,10 @@ export async function toggleFollow(formData: FormData): Promise<void> {
     [username]
   );
   const followee = target.rows[0];
-  if (!followee || followee.id === user.id || followee.visibility === "private") return;
+  // No test on their visibility: since migration 037 a profile is listed or
+  // reached by link, and the person standing at the link is exactly the one
+  // who might want to follow it.
+  if (!followee || followee.id === user.id) return;
 
   const deleted = await pool.query(
     "delete from follows where follower_id = $1 and followee_id = $2",
