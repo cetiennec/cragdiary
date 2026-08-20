@@ -2,8 +2,8 @@ import {
   pool,
   type Entry,
   type Photo,
+  type ProfileVisibility,
   type User,
-  type Visibility,
   type Wish,
   type Wishlist,
   type WishlistFull,
@@ -13,7 +13,7 @@ import {
 export type EntryWithAuthor = Entry & {
   username: string;
   display_name: string;
-  author_visibility: Visibility;
+  author_visibility: ProfileVisibility;
   photos: Photo[];
 };
 
@@ -85,6 +85,16 @@ export async function getFeed(
     const pid = params.length;
     params.push(cordeesOf.username);
     const pu = params.length;
+    // Among your rope party the days you may read are wider than the world's:
+    // what a followee writes for their followers, and any day at all that
+    // names you — you were there, whatever level it was filed under.
+    conds[0] = `(
+      e.visibility = 'public'
+      or (e.visibility = 'followers'
+          and e.user_id in (select followee_id from follows
+                            where follower_id = $${pid} and status = 'accepted'))
+      or e.partners ~* ('@' || $${pu} || '([^a-z0-9-]|$)')
+    )`;
     // A rope party: someone you follow, someone you tagged as a partner,
     // or someone who tagged you as a partner.
     conds.push(`(
@@ -98,7 +108,9 @@ export async function getFeed(
                    and theirs.partners ~* ('@' || $${pu} || '([^a-z0-9-]|$)'))
     )`);
     conds.push(`e.user_id != $${pid}`);
-    conds.push("u.visibility != 'private'");
+    // No test on the author's own visibility: a profile is either listed or
+    // reached by link (migration 037), and neither hides these days from the
+    // rope party they were climbed with.
   } else {
     conds.push("u.visibility = 'public'");
   }
@@ -117,7 +129,7 @@ export async function getFeed(
     Entry & {
       username: string;
       display_name: string;
-      author_visibility: Visibility;
+      author_visibility: ProfileVisibility;
       feed_total: string;
     }
   >(
@@ -136,7 +148,7 @@ export async function getFeed(
 }
 
 export async function getEntry(id: string): Promise<EntryWithAuthor | null> {
-  const result = await pool.query<Entry & { username: string; display_name: string; author_visibility: Visibility }>(
+  const result = await pool.query<Entry & { username: string; display_name: string; author_visibility: ProfileVisibility }>(
     `select e.*, u.username, u.display_name, u.visibility as author_visibility
      from entries e
      join users u on u.id = e.user_id
@@ -160,12 +172,22 @@ export async function getEntriesByUser(
   userId: string,
   {
     includeNonPublic = false,
+    viewerFollows = false,
     filters = {},
     limit = null,
-  }: { includeNonPublic?: boolean; filters?: EntryFilters; limit?: number | null } = {}
+  }: {
+    includeNonPublic?: boolean;
+    /** Whether the reader is an accepted follower — see `EntryVisibility`. */
+    viewerFollows?: boolean;
+    filters?: EntryFilters;
+    limit?: number | null;
+  } = {}
 ): Promise<{ entries: EntryWithAuthor[]; total: number }> {
-  const params: unknown[] = [userId, includeNonPublic];
-  const conds = ["e.user_id = $1", "($2 or e.visibility = 'public')"];
+  const params: unknown[] = [userId, includeNonPublic, viewerFollows];
+  const conds = [
+    "e.user_id = $1",
+    "($2 or e.visibility = 'public' or ($3 and e.visibility = 'followers'))",
+  ];
   filterConditions(filters, params, conds);
 
   // A journal grows without bound; the page shows a screenful. The window
@@ -180,7 +202,7 @@ export async function getEntriesByUser(
     Entry & {
       username: string;
       display_name: string;
-      author_visibility: Visibility;
+      author_visibility: ProfileVisibility;
       feed_total: string;
     }
   >(
@@ -293,7 +315,7 @@ export async function getCordees(userId: string, username: string): Promise<Cord
                    and th.partners ~* ('@' || $2 || '([^a-z0-9-]|$)'))
             )::int as climbed_count
      from users u
-     where u.visibility != 'private' and u.id <> $1
+     where u.id <> $1
        and (
          exists (select 1 from follows f where f.follower_id = $1 and f.followee_id = u.id
                    and f.status = 'accepted')
@@ -328,11 +350,13 @@ export async function getCoverPhotoIds(entryIds: string[]): Promise<Map<string, 
 
 export async function getPinCollection(
   userId: string,
-  { includeNonPublic = false } = {}
+  { includeNonPublic = false, viewerFollows = false } = {}
 ): Promise<Entry[]> {
   const result = await pool.query<Entry>(
-    "select * from entries where user_id = $1 and ($2 or visibility = 'public')",
-    [userId, includeNonPublic]
+    `select * from entries
+     where user_id = $1
+       and ($2 or visibility = 'public' or ($3 and visibility = 'followers'))`,
+    [userId, includeNonPublic, viewerFollows]
   );
   return result.rows;
 }
@@ -444,7 +468,6 @@ export async function getWishesTaggingUser(
      where wi.user_id <> $1
        and w.owner_id <> $1
        and w.visibility <> 'private'
-       and u.visibility <> 'private'
        and wi.partners ~* ('@' || $2 || '([^a-z0-9-]|$)')
      order by wi.created_at desc
      limit 50`,
@@ -627,7 +650,6 @@ export async function findLinkableDays(
      from entries e
      join users u on u.id = e.user_id
      where lower(u.username) = lower($1)
-       and u.visibility <> 'private'
        and u.id <> $2
        and (abs(e.entry_date - $4::date) <= $5
             or (cardinality($6::text[]) > 0
@@ -637,7 +659,8 @@ export async function findLinkableDays(
             -- Already listed on their day: linked whatever the date says.
             or e.partners ~* ('@' || $3 || '([^a-z0-9-]|$)'))
        and (e.visibility = 'public'
-            or (e.visibility = 'unlisted'
+            or e.partners ~* ('@' || $3 || '([^a-z0-9-]|$)')
+            or (e.visibility = 'followers'
                 and exists (select 1 from follows f
                             where f.follower_id = $2 and f.followee_id = u.id
                               and f.status = 'accepted')))
@@ -720,7 +743,7 @@ export async function getDaysWith(
   otherUsername: string
 ): Promise<SharedDayPair[]> {
   const result = await pool.query<
-    Entry & { username: string; display_name: string; author_visibility: Visibility; side: string }
+    Entry & { username: string; display_name: string; author_visibility: ProfileVisibility; side: string }
   >(
     `with them as (select id, username, display_name, visibility from users
                    where lower(username) = lower($3))
@@ -728,13 +751,13 @@ export async function getDaysWith(
             case when e.user_id = $1 then 'mine' else 'theirs' end as side
      from entries e
      join users u on u.id = e.user_id
-     where u.visibility <> 'private'
-       and (
+     where (
          -- your day, naming them
          (e.user_id = $1 and e.partners ~* ('@' || $3 || '([^a-z0-9-]|$)'))
-         -- or their public day, naming you
+         -- or their day naming you, which is written to be read by you: an
+         -- @ on the day is the invitation, so the level it is filed under
+         -- does not withhold it from the person named on it.
          or (e.user_id = (select id from them)
-             and e.visibility = 'public'
              and e.partners ~* ('@' || $2 || '([^a-z0-9-]|$)'))
        )
      order by e.entry_date desc, e.created_at desc`,
@@ -784,7 +807,10 @@ export type UserStats = {
 
 export async function getUserStats(
   userId: string,
-  { includeNonPublic = false }: { includeNonPublic?: boolean } = {}
+  {
+    includeNonPublic = false,
+    viewerFollows = false,
+  }: { includeNonPublic?: boolean; viewerFollows?: boolean } = {}
 ): Promise<UserStats> {
   const result = await pool.query<UserStats>(
     `select count(*)::int as total,
@@ -793,8 +819,8 @@ export async function getUserStats(
             count(*) filter (where entry_date >= date_trunc('month', current_date))::int as this_month
      from entries
      where user_id = $1
-       and ($2 or visibility = 'public')`,
-    [userId, includeNonPublic]
+       and ($2 or visibility = 'public' or ($3 and visibility = 'followers'))`,
+    [userId, includeNonPublic, viewerFollows]
   );
   return result.rows[0];
 }

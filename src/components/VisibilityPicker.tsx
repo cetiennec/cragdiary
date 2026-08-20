@@ -1,13 +1,15 @@
 "use client";
 
 import { useRef, useState } from "react";
-import type { Visibility } from "@/lib/db";
 
-const ORDER: Visibility[] = ["public", "unlisted", "private"];
-
+/**
+ * The levels themselves come from the labels: a day's three words are not a
+ * profile's two (see `EntryVisibility` in lib/db), and each caller passes its
+ * own set, listed openest first — which is the order they are offered in.
+ */
 export type VisibilityLabels = {
   picker: string;
-  short: Record<Visibility, string>;
+  short: Record<string, string>;
 };
 
 // Small pill that changes one thing's visibility in place — an entry card's
@@ -24,14 +26,14 @@ export default function VisibilityPicker({
   action: (formData: FormData) => Promise<void>;
   /** Omitted for the profile picker — the action derives the user from the session. */
   entryId?: string;
-  visibility: Visibility;
+  visibility: string;
   className?: string;
   t: VisibilityLabels;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
   // Local echo so the pill's colour changes under the pointer, before the
   // server has answered.
-  const [shown, setShown] = useState<Visibility>(visibility);
+  const [shown, setShown] = useState(visibility);
 
   return (
     <form ref={formRef} action={action} className={`visibility-picker ${className}`}>
@@ -50,13 +52,13 @@ export default function VisibilityPicker({
         title={t.picker}
         className={`visibility-select ${shown}`}
         onChange={(e) => {
-          setShown(e.target.value as Visibility);
+          setShown(e.target.value);
           formRef.current?.requestSubmit();
         }}
       >
-        {ORDER.map((v) => (
-          <option key={v} value={v}>
-            {t.short[v]}
+        {Object.entries(t.short).map(([value, label]) => (
+          <option key={value} value={value}>
+            {label}
           </option>
         ))}
       </select>

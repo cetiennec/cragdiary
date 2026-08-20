@@ -11,9 +11,9 @@ export async function GET(req: Request) {
   const limited = await limitPublicApi("users");
   if (limited) return limited;
 
-  // Who is asking decides how far the answer reaches: an unlisted climber is
+  // Who is asking decides how far the answer reaches: a by-link climber is
   // findable by the people they have accepted as followers, and by nobody
-  // else. Being unlisted means "not in the directory", not "unreachable by my
+  // else. Being by-link means "not in the directory", not "unreachable by my
   // own rope party".
   const user = await currentUser();
 
@@ -32,7 +32,7 @@ export async function GET(req: Request) {
          u.visibility = 'public'
          or (
            $2::uuid is not null
-           and u.visibility = 'unlisted'
+           and u.visibility = 'private'
            and exists (select 1 from follows f
                        where f.follower_id = $2 and f.followee_id = u.id
                          and f.status = 'accepted')

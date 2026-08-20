@@ -125,28 +125,40 @@ export default async function ProfilePage({
   if (profile.username !== username) redirect(`/u/${profile.username}`);
 
   const isSelf = user?.id === profile.id;
-  if (profile.visibility === "private" && !isSelf) notFound();
+  // No gate on the page itself: a profile is either listed or reached by its
+  // link (migration 037), and this is someone standing at the link. What each
+  // day shows is the day's own business.
+  //
+  // Asked before the rest: what a reader may see of this journal depends on
+  // whether they follow it (see `EntryVisibility` in lib/db), so the answer is
+  // needed to ask the questions below.
+  const follow =
+    user && !isSelf ? await followState(user.id, profile.id) : ("none" as const);
+  const viewerFollows = follow === "accepted";
   const [
     page,
     stats,
     years,
     wishlists,
     sharedWishlists,
-    follow,
     pinEntries,
     followers,
     followRequests,
     taggedWishes,
   ] = await Promise.all([
-    getEntriesByUser(profile.id, { includeNonPublic: isSelf, filters, limit: show }),
-    getUserStats(profile.id, { includeNonPublic: isSelf }),
+    getEntriesByUser(profile.id, {
+      includeNonPublic: isSelf,
+      viewerFollows,
+      filters,
+      limit: show,
+    }),
+    getUserStats(profile.id, { includeNonPublic: isSelf, viewerFollows }),
     getEntryYears(profile.id),
     getOwnedWishlists(profile.id, user?.id ?? null),
     isSelf ? getSharedWishlists(profile.id) : Promise.resolve([]),
-    user && !isSelf ? followState(user.id, profile.id) : Promise.resolve("none" as const),
     // Every day that has coordinates, for the map — the rows are small and
     // carry no photos, so this stays cheap however long the journal is.
-    getPinCollection(profile.id, { includeNonPublic: isSelf }),
+    getPinCollection(profile.id, { includeNonPublic: isSelf, viewerFollows }),
     isSelf ? getFollowers(profile.id) : Promise.resolve([]),
     isSelf ? getFollowRequests(profile.id) : Promise.resolve([]),
     // Routes someone else tagged you on: not yours, but meant for you.
@@ -297,19 +309,17 @@ export default async function ProfilePage({
         )}
         <div>
           {/* Beside the name, and smaller than it: what you share is this
-              person's journal, so the button belongs to their name. Absent on a
-              private profile — sharing a door nobody else can open is not
-              sharing. An unlisted one keeps it: a link is the whole point. */}
+              person's journal, so the button belongs to their name. On every
+              profile now (migration 037): a by-link journal is exactly the one
+              a link is the whole point of. */}
           <div className="profile-name-row">
             <h1 className="profile-name">{profile.display_name}</h1>
-            {profile.visibility !== "private" && (
-              <ShareButton
-                label={t.profile.share}
-                copied={t.profile.shareCopied}
-                text={`🧗 ${profile.display_name} — ${t.profile.shareTagline}`}
-                small
-              />
-            )}
+            <ShareButton
+              label={t.profile.share}
+              copied={t.profile.shareCopied}
+              text={`🧗 ${profile.display_name} — ${t.profile.shareTagline}`}
+              small
+            />
           </div>
           <p className="profile-sub">
             @{profile.username} · {t.profile.entryCount(page.total)}
@@ -320,7 +330,7 @@ export default async function ProfilePage({
               <VisibilityPicker
                 action={setProfileVisibility}
                 visibility={profile.visibility}
-                t={{ picker: t.profile.visibilityLabel, short: t.entry.visibilityShort }}
+                t={{ picker: t.profile.visibilityLabel, short: t.profile.visibilityShort }}
               />
             </div>
           )}
@@ -329,7 +339,7 @@ export default async function ProfilePage({
           {isSelf && profile.visibility !== "public" && (
             <VisibilityHint
               value={profile.visibility}
-              text={profile.visibility === "private" ? t.profile.privateHint : t.profile.unlistedHint}
+              text={t.profile.privateHint}
               dismissLabel={t.profile.hintDismiss}
             />
           )}

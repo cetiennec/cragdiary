@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
-export type Visibility = "public" | "unlisted" | "private";
+// A day's levels, not a profile's — see `EntryVisibility` in lib/db.
+export type Visibility = "public" | "followers" | "private";
 
 export type ImportOptionsLabels = {
   title: string;
@@ -13,7 +14,7 @@ export type ImportOptionsLabels = {
   introComplete: string;
   visibilityLabel: string;
   public: string;
-  unlisted: string;
+  followers: string;
   private: string;
   photos: string;
   /** "Complete the {n} days already imported…" — offered when there are any. */
@@ -31,7 +32,7 @@ export default function ImportOptionsDialog({
   count,
   existingCount = 0,
   askComplete = false,
-  defaultVisibility = "unlisted",
+  defaultVisibility = "private",
   defaultPhotos = true,
   t,
   onCancel,
@@ -71,7 +72,7 @@ export default function ImportOptionsDialog({
 
   const options: [Visibility, string][] = [
     ["public", t.public],
-    ["unlisted", t.unlisted],
+    ["followers", t.followers],
     ["private", t.private],
   ];
 

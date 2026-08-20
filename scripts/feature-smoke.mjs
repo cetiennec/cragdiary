@@ -1,10 +1,13 @@
 import { chromium } from "playwright";
 
 const SHOTS = process.env.SHOTS;
-const base = "http://localhost:3417";
+const base = process.env.BASE ?? "http://localhost:3417";
 const browser = await chromium.launch();
 const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 }, locale: "fr-FR" });
 const page = await ctx.newPage();
+// The welcome tour opens over the page for a brand-new account and swallows
+// the clicks below — dismissed in advance, exactly as privacy-check.mjs does.
+await page.addInitScript(() => localStorage.setItem("cragdiary-welcome-v1", "1"));
 
 const uname = "smoketest" + Math.floor(Math.random() * 9000 + 1000);
 await page.goto(base + "/signup");

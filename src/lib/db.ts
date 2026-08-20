@@ -57,7 +57,7 @@ export type User = {
   username: string;
   display_name: string;
   bio: string | null;
-  visibility: Visibility;
+  visibility: ProfileVisibility;
   has_avatar: boolean;
   has_cover: boolean;
   email: string | null;
@@ -72,7 +72,29 @@ export type User = {
   created_at: string;
 };
 
+/** Who may read a wishlist. */
 export type Visibility = "public" | "unlisted" | "private";
+
+/**
+ * Who may read a profile (migration 037): two levels, because a journal page
+ * lives at /u/<username>, an address anyone can type. "Private" there could
+ * never mean what it means on a day — the honest question is only whether you
+ * are listed among climbers, findable with @, and on the main feed, or whether
+ * your page is simply there for whoever you hand the link to.
+ */
+export type ProfileVisibility = "public" | "private";
+
+/**
+ * Who may read one day of the journal (migration 036).
+ *
+ * An entry's address is an unguessable id, which is what lets "private" mean
+ * "whoever I hand the link to" rather than "nobody" — and with it, whoever is
+ * named with an @ on the day itself, since they were there. The rung that
+ * used to be "unlisted" went to the people who follow you: the ones who read
+ * the journal as it is written, without the whole internet reading over their
+ * shoulder.
+ */
+export type EntryVisibility = "public" | "followers" | "private";
 
 export type Entry = {
   id: string;
@@ -98,7 +120,7 @@ export type Entry = {
   pitch_notes: Record<string, string> | null;
   lat: number | null;
   lon: number | null;
-  visibility: Visibility;
+  visibility: EntryVisibility;
   show_pins: boolean;
   star_level: number;
   country: string | null;

@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getEntry, getSharedDay } from "@/lib/queries";
+import { followState, getEntry, getSharedDay } from "@/lib/queries";
 import { currentUser } from "@/lib/auth";
 import { formatDate, getDict } from "@/lib/i18n";
 import { renderMentions, renderMentionsAll } from "@/lib/mentions";
@@ -137,7 +137,17 @@ export default async function EntryPage({
   if (!entry) notFound();
 
   const isAuthor = user?.id === entry.user_id;
-  if (entry.visibility === "private" && !isAuthor) notFound();
+  // A day written for followers is closed to everyone else — except whoever is
+  // named on it with an @, who was there and is not a stranger to it. A
+  // "private" day asks nothing of the reader beyond the link: its id is
+  // unguessable, so holding it is the permission.
+  const named =
+    user != null &&
+    new RegExp(`@${user.username}([^a-z0-9-]|$)`, "i").test(entry.partners ?? "");
+  if (entry.visibility === "followers" && !isAuthor && !named) {
+    const follow = user ? await followState(user.id, entry.user_id) : "none";
+    if (follow !== "accepted") notFound();
+  }
 
   const badge =
     isAuthor && entry.visibility !== "public" ? t.entry.badges[entry.visibility] : null;
@@ -306,11 +316,9 @@ export default async function EntryPage({
           <div className="notion-prop">
             <dt>{t.entry.journal}</dt>
             <dd>
-              {entry.author_visibility !== "private" || isAuthor ? (
-                <Link href={`/u/${entry.username}`}>{entry.display_name}</Link>
-              ) : (
-                entry.display_name
-              )}
+              {/* Always a link now: both levels a profile has left open the
+                  page to whoever is standing at it (migration 037). */}
+              <Link href={`/u/${entry.username}`}>{entry.display_name}</Link>
             </dd>
           </div>
         </dl>

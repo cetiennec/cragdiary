@@ -1384,7 +1384,7 @@ export default function EntryForm({
             <label htmlFor="visibility">{t.visibility}</label>
             <select id="visibility" name="visibility" defaultValue={entry?.visibility ?? "public"}>
               <option value="public">{t.visibilityOptions.public}</option>
-              <option value="unlisted">{t.visibilityOptions.unlisted}</option>
+              <option value="followers">{t.visibilityOptions.followers}</option>
               <option value="private">{t.visibilityOptions.private}</option>
             </select>
           </div>

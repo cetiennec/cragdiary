@@ -5,7 +5,7 @@ import { after } from "next/server";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import sharp from "sharp";
-import { pool, type Visibility } from "@/lib/db";
+import { pool, type EntryVisibility, type ProfileVisibility } from "@/lib/db";
 import { LOCALE_COOKIE, getLocale } from "@/lib/i18n";
 import { sendEmail } from "@/lib/email";
 import {
@@ -71,8 +71,16 @@ const THUMB_WIDTH = 640;
 // to case (migration 035), so `Etienne` and `etienne` can never both exist.
 const USERNAME_RE = /^[A-Za-z0-9-]{3,20}$/;
 
-function parseVisibility(value: FormDataEntryValue | null): Visibility {
-  return value === "unlisted" || value === "private" ? value : "public";
+// A profile's own two — see `ProfileVisibility` in lib/db. "unlisted" is what
+// "private" was called before migration 037, and still arrives from a form
+// rendered by an older tab.
+function parseProfileVisibility(value: FormDataEntryValue | null): ProfileVisibility {
+  return value === "private" || value === "unlisted" ? "private" : "public";
+}
+
+// A day's three levels are not a profile's — see `EntryVisibility` in lib/db.
+function parseEntryVisibility(value: FormDataEntryValue | null): EntryVisibility {
+  return value === "followers" || value === "private" ? value : "public";
 }
 
 function parseEntryDate(formData: FormData): { date: string; monthOnly: boolean } {
@@ -549,10 +557,10 @@ export async function updateProfile(formData: FormData): Promise<void> {
   const rawEmail = String(formData.get("email") ?? "").trim().toLowerCase();
   const email = rawEmail && rawEmail.includes("@") ? rawEmail : null;
   // Visibility lives in the profile header now (setProfileVisibility), so it is
-  // normally absent here — coalesce rather than let parseVisibility's "public"
+  // normally absent here — coalesce rather than let the parser's "public"
   // default silently un-hide a private profile on every settings save.
   const profileVisibility = formData.has("profile_visibility")
-    ? parseVisibility(formData.get("profile_visibility"))
+    ? parseProfileVisibility(formData.get("profile_visibility"))
     : null;
   // Accepts a profile URL or a bare id; anything else clears the link rather
   // than storing something we can't call the API with.
@@ -627,7 +635,7 @@ export async function createEntry(formData: FormData): Promise<string | void> {
 
   const { date: entryDate, monthOnly } = parseEntryDate(formData);
   const crag = String(formData.get("crag") ?? "").trim();
-  const visibility = parseVisibility(formData.get("visibility"));
+  const visibility = parseEntryVisibility(formData.get("visibility"));
 
   if (!entryDate || !crag) {
     throw new Error("Date and title are required");
@@ -798,9 +806,10 @@ async function addC2cPhotos(
 export async function importOneC2cOuting(
   id: number,
   withPhotos: boolean,
-  // Imported days default to link-only: shareable with whoever you send the
-  // link to, but off the public feed until you decide otherwise.
-  visibility: string = "unlisted",
+  // Imported days default to link-only — 'private' in a day's own vocabulary:
+  // shareable with whoever you send the link to, but off the public feed until
+  // you decide otherwise.
+  visibility: string = "private",
   {
     revalidate = true,
     // What to do when the outing is already in the journal: leave it alone, or
@@ -827,7 +836,7 @@ export async function importOneC2cOuting(
   const existingId = found.rows[0]?.id ?? null;
   if (existingId && onExisting === "skip") return { ok: true, skipped: true };
 
-  const vis = parseVisibility(visibility);
+  const vis = parseEntryVisibility(visibility);
   const lang = await getLocale();
   const o = await importOuting(id, lang);
   if (!o || !o.date || !o.title) return { ok: false };
@@ -950,7 +959,7 @@ export async function updateEntry(formData: FormData): Promise<void> {
   const id = String(formData.get("id") ?? "");
   const { date: entryDate, monthOnly } = parseEntryDate(formData);
   const crag = String(formData.get("crag") ?? "").trim();
-  const visibility = parseVisibility(formData.get("visibility"));
+  const visibility = parseEntryVisibility(formData.get("visibility"));
 
   if (!id || !entryDate || !crag) {
     throw new Error("Date and title are required");
@@ -1145,7 +1154,7 @@ export async function autosaveEntry(formData: FormData): Promise<void> {
   const id = String(formData.get("id") ?? "");
   const { date: entryDate, monthOnly } = parseEntryDate(formData);
   const crag = String(formData.get("crag") ?? "").trim();
-  const visibility = parseVisibility(formData.get("visibility"));
+  const visibility = parseEntryVisibility(formData.get("visibility"));
 
   if (!id || !entryDate || !crag) return;
 
@@ -1273,7 +1282,7 @@ export async function copyEntryToJournal(formData: FormData): Promise<void> {
        (user_id, entry_date, month_only, crag, location, style, grade_max, rating,
         orientation, equipment, pitches, height_m, routes, notes, pitch_notes,
         partners, c2c_url, c2c_route_url, c2c_summary, lat, lon, country, visibility)
-     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,'unlisted')
+     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,'private')
      returning id`,
     [
       user.id,
@@ -1329,7 +1338,7 @@ export async function setProfileVisibility(formData: FormData): Promise<void> {
   if (!user) throw new Error("Unauthorized");
 
   await pool.query("update users set visibility = $1 where id = $2", [
-    parseVisibility(formData.get("visibility")),
+    parseProfileVisibility(formData.get("visibility")),
     user.id,
   ]);
 
@@ -1349,7 +1358,7 @@ export async function setEntryVisibility(formData: FormData): Promise<void> {
 
   await pool.query(
     "update entries set visibility = $1 where id = $2 and user_id = $3",
-    [parseVisibility(formData.get("visibility")), id, user.id]
+    [parseEntryVisibility(formData.get("visibility")), id, user.id]
   );
 
   revalidatePath("/");
@@ -1937,8 +1946,11 @@ export async function importEntries(formData: FormData): Promise<void> {
           partners: importText(e.partners, 300),
           notes: importText(e.notes, 20000),
           c2c_url: typeof e.c2c_url === "string" && /^https:\/\//.test(e.c2c_url) ? e.c2c_url.slice(0, 500) : null,
+          // An export written before migration 036 still says "unlisted";
+          // that is what 'private' means now, which is also where anything
+          // unrecognised lands.
           visibility:
-            e.visibility === "public" || e.visibility === "unlisted" ? e.visibility : "private",
+            e.visibility === "public" || e.visibility === "followers" ? e.visibility : "private",
         },
       ];
     });

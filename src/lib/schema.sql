@@ -10,8 +10,11 @@ create table if not exists users (
   display_name text not null,
   password_hash text not null,
   bio text,
+  -- Two levels only (migration 037): listed, or reached by its link. A
+  -- journal lives at /u/<username>, an address anyone can type, so a third
+  -- "nobody at all" was never something the address could keep.
   visibility text not null default 'public'
-    check (visibility in ('public','unlisted','private')),
+    check (visibility in ('public','private')),
   avatar bytea,
   avatar_type text,
   cover bytea,
@@ -63,8 +66,11 @@ create table if not exists entries (
   starred boolean not null default false, -- legacy, superseded by star_level
   star_level integer not null default 0,
   country text,
+  -- Not the same three words as a profile's (migration 036): a day is reached
+  -- by an unguessable id, so 'private' can mean "whoever I send the link to,
+  -- and whoever I named with an @", and the middle rung goes to followers.
   visibility text not null default 'public'
-    check (visibility in ('public','unlisted','private')),
+    check (visibility in ('public','followers','private')),
   created_at timestamptz not null default now()
 );
 
