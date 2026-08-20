@@ -277,7 +277,6 @@ export default function Cragseeker({
   // fresh search.
   const [sort, setSort] = useState<Sort>("near");
   const [minLogged, setMinLogged] = useState(0);
-  const [gradedOnly, setGradedOnly] = useState(false);
 
   const [results, setResults] = useState<SeekerResult[]>([]);
   // c2c counts its bounding box; the circle keeps only ~π/4 of it, so this is an
@@ -838,7 +837,6 @@ export default function Cragseeker({
   // same list, so a point never outlives the card it belongs to.
   const shown = useMemo(() => {
     const kept = results.filter((r) => {
-      if (gradedOnly && difficultyRank(r, activity) == null) return false;
       if (minLogged > 0) {
         // OpenBeta catalogues crags camptocamp has never counted, so a minimum
         // number of c2c outings is a question they cannot answer at all.
@@ -865,7 +863,7 @@ export default function Cragseeker({
     else if (sort === "logged") sorted.sort(by(logged, -1));
     else sorted.sort(by((r) => r.distance_km, 1));
     return sorted;
-  }, [results, sort, minLogged, gradedOnly, activity, outings]);
+  }, [results, sort, minLogged, activity, outings]);
 
   const refined = shown.length !== results.length;
 
@@ -1269,14 +1267,6 @@ export default function Cragseeker({
                 </option>
               ))}
             </select>
-          </label>
-          <label className="seeker-refine-check">
-            <input
-              type="checkbox"
-              checked={gradedOnly}
-              onChange={(e) => setGradedOnly(e.target.checked)}
-            />
-            {t.gradedOnly}
           </label>
         </div>
       )}

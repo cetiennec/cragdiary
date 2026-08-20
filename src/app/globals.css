@@ -4260,13 +4260,6 @@ a {
   color: var(--text);
 }
 
-.seeker-refine-check {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  cursor: pointer;
-}
-
 .seeker-updating {
   display: inline-flex;
   align-items: center;
