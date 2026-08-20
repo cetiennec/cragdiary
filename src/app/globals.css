@@ -4231,6 +4231,42 @@ a {
 
 /* A new search is in flight while the list below still shows the old one —
    camptocamp alone can take a few seconds — so this is the only sign of it. */
+/* Refining the answer, as opposed to asking a different question: a quiet row
+   between the count and the list, not part of the search panel above the map. */
+.seeker-refine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1.1rem;
+  margin: 0 0 1rem;
+  padding-bottom: 0.7rem;
+  border-bottom: 1px dashed var(--border);
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.seeker-refine-field {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.seeker-refine-field select {
+  font-size: 0.82rem;
+  padding: 0.2rem 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-elevated);
+  color: var(--text);
+}
+
+.seeker-refine-check {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+}
+
 .seeker-updating {
   display: inline-flex;
   align-items: center;

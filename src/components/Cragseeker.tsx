@@ -29,6 +29,7 @@ import {
   type C2cActivity,
   type C2cRangeKey,
 } from "@/lib/c2c";
+import { gradeRank } from "@/lib/seeker/grades";
 import {
   DEFAULT_SOURCES,
   SEEKER_SOURCES,
@@ -38,6 +39,49 @@ import {
 import type { Dict, Locale } from "@/lib/i18n";
 
 const RADII = [10, 25, 50, 100, 200];
+
+// How the results may be reordered once they are in — no second request, since
+// everything these read has already arrived.
+type Sort = "near" | "easy" | "hard" | "logged";
+
+// How often a route must have been climbed, as camptocamp counts it.
+const LOGGED_STEPS = [0, 1, 5, 20] as const;
+
+const clamp01 = (n: number) => Math.max(0, Math.min(1, n));
+
+/**
+ * Where a result stands on its own grade scale, 0 (easiest) to 1 (hardest),
+ * or null when it carries no grade at all.
+ *
+ * Deliberately not a conversion between systems: a French 6a and a YDS 5.10a
+ * are placed by how far along their own ladder they stand, which is all an
+ * ordering needs and is honest about what it knows. The activity's own scales
+ * are consulted first, so a mountaineering route is read as a global rating
+ * rather than matching some free-climbing label by coincidence.
+ */
+function difficultyRank(r: SeekerResult, activity: C2cActivity): number | null {
+  if (r.source === "openbeta") {
+    const span = r.grade_spans[0];
+    const rank = span ? gradeRank(span.min) : null;
+    if (!rank) return null;
+    return rank.scale === "yds"
+      ? clamp01((rank.value - 5) / 10) // 5.5 … 5.15
+      : clamp01((rank.value + 1) / 18); // V-easy … V17
+  }
+  const keys: C2cRangeKey[] = [
+    ...ACTIVITY_RANGE_FILTERS[activity],
+    ...(Object.keys(C2C_RANGE_SCALES) as C2cRangeKey[]),
+  ];
+  for (const label of [r.required_grade, r.grade]) {
+    if (!label) continue;
+    for (const key of keys) {
+      const scale = C2C_RANGE_SCALES[key] as readonly string[];
+      const i = scale.indexOf(label);
+      if (i >= 0) return scale.length > 1 ? i / (scale.length - 1) : 0;
+    }
+  }
+  return null;
+}
 
 // How many searches a visitor runs before the page suggests an account, and
 // where the tally and the refusal are kept. Once refused, never asked again.
@@ -226,6 +270,14 @@ export default function Cragseeker({
   // Multi-pitch vs single-pitch is a rock-climbing distinction; c2c doesn't
   // record it for mountaineering or ski touring.
   const showOutdoorType = activity === "rock_climbing";
+
+  // Refining what came back, rather than asking for something else. These stay
+  // out of `search` on purpose: that string is also the upstream query, so
+  // putting them there would send every reordering back to camptocamp as a
+  // fresh search.
+  const [sort, setSort] = useState<Sort>("near");
+  const [minLogged, setMinLogged] = useState(0);
+  const [gradedOnly, setGradedOnly] = useState(false);
 
   const [results, setResults] = useState<SeekerResult[]>([]);
   // c2c counts its bounding box; the circle keeps only ~π/4 of it, so this is an
@@ -782,11 +834,46 @@ export default function Cragseeker({
     [activity, activeSources, centre, showHuts, showGyms, t]
   );
 
+  // What is actually on screen: the answer, refined. The map is fed from the
+  // same list, so a point never outlives the card it belongs to.
+  const shown = useMemo(() => {
+    const kept = results.filter((r) => {
+      if (gradedOnly && difficultyRank(r, activity) == null) return false;
+      if (minLogged > 0) {
+        // OpenBeta catalogues crags camptocamp has never counted, so a minimum
+        // number of c2c outings is a question they cannot answer at all.
+        if (r.source !== "c2c") return false;
+        const n = outings[Number(r.id)];
+        if (n == null || n < minLogged) return false;
+      }
+      return true;
+    });
+    // Anything the sort cannot read about goes last rather than to one end of
+    // the scale: "no grade recorded" is not "easy".
+    const by = (pick: (r: SeekerResult) => number | null, dir: 1 | -1) => (a: SeekerResult, b: SeekerResult) => {
+      const [x, y] = [pick(a), pick(b)];
+      if (x == null && y == null) return 0;
+      if (x == null) return 1;
+      if (y == null) return -1;
+      return (x - y) * dir;
+    };
+    const grade = (r: SeekerResult) => difficultyRank(r, activity);
+    const logged = (r: SeekerResult) => (r.source === "c2c" ? outings[Number(r.id)] ?? null : null);
+    const sorted = [...kept];
+    if (sort === "easy") sorted.sort(by(grade, 1));
+    else if (sort === "hard") sorted.sort(by(grade, -1));
+    else if (sort === "logged") sorted.sort(by(logged, -1));
+    else sorted.sort(by((r) => r.distance_km, 1));
+    return sorted;
+  }, [results, sort, minLogged, gradedOnly, activity, outings]);
+
+  const refined = shown.length !== results.length;
+
   // A marker carries the same overview as its list card, so hovering a point on
   // the map answers "what is this route?" without hunting for it further down.
   const points: SeekerPoint[] = useMemo(
     () =>
-      results.flatMap((r) => {
+      shown.flatMap((r) => {
         if (r.lat == null || r.lon == null) return [];
         return [
           {
@@ -805,7 +892,7 @@ export default function Cragseeker({
           },
         ];
       }),
-    [results, isClimbed, tagsFor, t]
+    [shown, isClimbed, tagsFor, t]
   );
 
   return (
@@ -1119,6 +1206,9 @@ export default function Cragseeker({
           <span>{t.searching}</span>
         ) : failed ? (
           <span>{t.error}</span>
+        ) : refined ? (
+          // Say both numbers: "3 of 41" answers "where did the rest go?"
+          <span>{fill(fill(t.refineCount, "n", shown.length), "total", results.length)}</span>
         ) : (
           <span>{countLabel}</span>
         )}
@@ -1159,10 +1249,45 @@ export default function Cragseeker({
         </aside>
       )}
 
+      {results.length > 0 && (
+        <div className="seeker-refine" role="group" aria-label={t.refine}>
+          <label className="seeker-refine-field">
+            <span>{t.sortLabel}</span>
+            <select value={sort} onChange={(e) => setSort(e.target.value as Sort)}>
+              <option value="near">{t.sortNear}</option>
+              <option value="easy">{t.sortEasy}</option>
+              <option value="hard">{t.sortHard}</option>
+              <option value="logged">{t.sortLogged}</option>
+            </select>
+          </label>
+          <label className="seeker-refine-field">
+            <span>{t.loggedLabel}</span>
+            <select value={minLogged} onChange={(e) => setMinLogged(Number(e.target.value))}>
+              {LOGGED_STEPS.map((n) => (
+                <option key={n} value={n}>
+                  {n === 0 ? t.loggedAny : n === 1 ? t.loggedOnce : n === 5 ? t.loggedFew : t.loggedMany}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="seeker-refine-check">
+            <input
+              type="checkbox"
+              checked={gradedOnly}
+              onChange={(e) => setGradedOnly(e.target.checked)}
+            />
+            {t.gradedOnly}
+          </label>
+        </div>
+      )}
+
       {!loading && !failed && results.length === 0 && <p className="empty-state">{t.empty}</p>}
+      {!loading && !failed && results.length > 0 && shown.length === 0 && (
+        <p className="empty-state">{t.empty}</p>
+      )}
 
       <ul className="seeker-results">
-        {results.map((route) => {
+        {shown.map((route) => {
           const state = saved[route.key] ?? "idle";
           const parking = route.source === "c2c" ? access[Number(route.id)] : undefined;
           return (
