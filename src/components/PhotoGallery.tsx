@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useZoomPan } from "@/lib/use-zoom-pan";
 
 export type GalleryPhoto = {
   id: string;
@@ -26,34 +27,20 @@ export default function PhotoGallery({
   banner?: string;
 }) {
   const [open, setOpen] = useState<number | null>(null);
-  // Fullscreen shows the whole photo; zoomed fills the frame and scrolls.
-  const [zoomed, setZoomed] = useState(false);
   const touchX = useRef<number | null>(null);
-  // Drag-to-pan while zoomed: a scrollable box alone leaves a mouse with
-  // nothing to grab, and on a phone the swipe below would change photo instead
-  // of moving across this one.
-  const frameRef = useRef<HTMLElement | null>(null);
-  const drag = useRef<{ x: number; y: number; left: number; top: number } | null>(null);
-  const moved = useRef(false);
-  const imgRef = useRef<HTMLImageElement | null>(null);
-  // Zooming is measured against what you actually see, not against the screen:
-  // a tall photo is fitted to the height, so "150% of the window's width" was
-  // nearly tripling it. Twice the displayed size is what a zoom means.
-  const [zoomWidth, setZoomWidth] = useState<number | null>(null);
-
-  function toggleZoom() {
-    setZoomed((was) => {
-      if (!was && imgRef.current) {
-        setZoomWidth(Math.round(imgRef.current.getBoundingClientRect().width * 2));
-      }
-      return !was;
-    });
-  }
-
-  const stepReset = () => {
-    setZoomed(false);
-    setZoomWidth(null);
-  };
+  // Fullscreen shows the whole photo; zoomed fills the frame and scrolls, and
+  // a mouse or a thumb can drag it around — see useZoomPan, which the profile
+  // photograph borrows word for word.
+  const {
+    zoomed,
+    zoomWidth,
+    frameRef,
+    imgRef,
+    panHandlers,
+    toggle: toggleZoom,
+    reset: stepReset,
+    wasDrag,
+  } = useZoomPan();
 
   const step = useCallback(
     (delta: number) => {
@@ -122,39 +109,10 @@ export default function PhotoGallery({
             onClick={(e) => {
               e.stopPropagation();
               // A drag ends with a click; only a still pointer toggles.
-              if (moved.current) {
-                moved.current = false;
-                return;
-              }
+              if (wasDrag()) return;
               toggleZoom();
             }}
-            onPointerDown={(e) => {
-              if (!zoomed || !frameRef.current) return;
-              frameRef.current.setPointerCapture(e.pointerId);
-              moved.current = false;
-              drag.current = {
-                x: e.clientX,
-                y: e.clientY,
-                left: frameRef.current.scrollLeft,
-                top: frameRef.current.scrollTop,
-              };
-            }}
-            onPointerMove={(e) => {
-              const from = drag.current;
-              if (!from || !frameRef.current) return;
-              if (Math.abs(e.clientX - from.x) + Math.abs(e.clientY - from.y) > 4) {
-                moved.current = true;
-              }
-              frameRef.current.scrollLeft = from.left - (e.clientX - from.x);
-              frameRef.current.scrollTop = from.top - (e.clientY - from.y);
-            }}
-            onPointerUp={(e) => {
-              frameRef.current?.releasePointerCapture(e.pointerId);
-              drag.current = null;
-            }}
-            onPointerCancel={() => {
-              drag.current = null;
-            }}
+            {...panHandlers}
           >
             {/* eslint-disable-next-line @next/next/no-img-element -- served from our own DB-backed route, already resized/compressed server-side */}
             <img

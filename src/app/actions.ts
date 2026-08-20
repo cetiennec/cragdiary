@@ -1253,11 +1253,12 @@ export async function copyEntryToJournal(formData: FormData): Promise<void> {
     lon: number | null;
     country: string | null;
     author: string;
+    visibility: EntryVisibility;
   }>(
     `select e.entry_date, e.month_only, e.crag, e.location, e.style, e.grade_max,
             e.rating, e.orientation, e.equipment, e.pitches, e.height_m, e.routes,
             e.notes, e.pitch_notes, e.c2c_url, e.c2c_route_url, e.c2c_summary, e.lat, e.lon,
-            e.country, u.username as author
+            e.country, e.visibility, u.username as author
      from entries e join users u on u.id = e.user_id
      where e.id = $1
        and e.user_id <> $2
@@ -1276,13 +1277,16 @@ export async function copyEntryToJournal(formData: FormData): Promise<void> {
   if (existing.rowCount) redirect(`/entries/${existing.rows[0].id}/edit`);
 
 
-  // Tagging them back is what links the two days to each other.
+  // Tagging them back is what links the two days to each other. The copy is
+  // filed at the level of the day it came from rather than at a default of its
+  // own: it is the same day, written by the other person on the rope, and
+  // filing it more openly than the original would be a decision nobody made.
   const result = await pool.query<{ id: string }>(
     `insert into entries
        (user_id, entry_date, month_only, crag, location, style, grade_max, rating,
         orientation, equipment, pitches, height_m, routes, notes, pitch_notes,
         partners, c2c_url, c2c_route_url, c2c_summary, lat, lon, country, visibility)
-     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,'private')
+     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)
      returning id`,
     [
       user.id,
@@ -1307,6 +1311,7 @@ export async function copyEntryToJournal(formData: FormData): Promise<void> {
       day.lat,
       day.lon,
       day.country,
+      day.visibility,
     ]
   );
 

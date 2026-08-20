@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import { useZoomPan } from "@/lib/use-zoom-pan";
 
 /**
  * Someone else's photograph, at the size it was actually taken.
@@ -17,6 +18,7 @@ export default function AvatarZoom({
   initial,
   label,
   closeLabel,
+  zoomLabel,
 }: {
   username: string;
   hasAvatar: boolean;
@@ -24,13 +26,27 @@ export default function AvatarZoom({
   initial: string;
   label: string;
   closeLabel: string;
+  zoomLabel: string;
 }) {
   const [open, setOpen] = useState(false);
+  // The same enlarging and dragging the entry photographs have: a face stored
+  // at 640 px has more in it than a phone-width frame shows.
+  const { zoomed, zoomWidth, frameRef, imgRef, panHandlers, toggle, reset, wasDrag } =
+    useZoomPan();
+
+  function close() {
+    setOpen(false);
+    // Otherwise the next opening starts where the last one was left.
+    reset();
+  }
 
   useEffect(() => {
     if (!open) return;
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") {
+        setOpen(false);
+        reset();
+      }
     }
     document.addEventListener("keydown", onKey);
     document.body.style.overflow = "hidden";
@@ -38,7 +54,7 @@ export default function AvatarZoom({
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = "";
     };
-  }, [open]);
+  }, [open, reset]);
 
   // Nothing to enlarge: a letter is already as large as it will ever be.
   if (!hasAvatar) {
@@ -66,22 +82,41 @@ export default function AvatarZoom({
           inside the header could never rise above the action row above it —
           the buttons went on showing through the dark. */}
       {open && createPortal(
-        <div className="lightbox" onClick={() => setOpen(false)}>
-          <figure className="lightbox-figure">
+        <div className="lightbox" onClick={close}>
+          <figure
+            ref={frameRef}
+            className={`lightbox-figure${zoomed ? " zoomed" : ""}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              // A drag ends with a click; only a still pointer toggles.
+              if (wasDrag()) return;
+              toggle();
+            }}
+            {...panHandlers}
+          >
             {/* eslint-disable-next-line @next/next/no-img-element -- our own DB-backed route */}
             <img
+              ref={imgRef}
               className="avatar-zoom-full"
               src={`/api/avatars/${username}`}
               alt={username}
-              onClick={(e) => e.stopPropagation()}
+              style={zoomed && zoomWidth ? { width: `${zoomWidth}px` } : undefined}
             />
           </figure>
           <button
             type="button"
-            className="lightbox-close"
-            aria-label={closeLabel}
-            onClick={() => setOpen(false)}
+            className="lightbox-zoom"
+            aria-label={zoomLabel}
+            title={zoomLabel}
+            aria-pressed={zoomed}
+            onClick={(e) => {
+              e.stopPropagation();
+              toggle();
+            }}
           >
+            {zoomed ? "－" : "＋"}
+          </button>
+          <button type="button" className="lightbox-close" aria-label={closeLabel} onClick={close}>
             ×
           </button>
         </div>,

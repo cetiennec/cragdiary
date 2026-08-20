@@ -153,16 +153,25 @@ export default async function ProfilePage({
     getEntriesByUser(profile.id, {
       includeNonPublic: isSelf,
       viewerFollows,
+      namedViewer: isSelf ? null : (user?.username ?? null),
       filters,
       limit: show,
     }),
-    getUserStats(profile.id, { includeNonPublic: isSelf, viewerFollows }),
+    getUserStats(profile.id, {
+      includeNonPublic: isSelf,
+      viewerFollows,
+      namedViewer: isSelf ? null : (user?.username ?? null),
+    }),
     getEntryYears(profile.id),
     getOwnedWishlists(profile.id, user?.id ?? null),
     isSelf ? getSharedWishlists(profile.id) : Promise.resolve([]),
     // Every day that has coordinates, for the map — the rows are small and
     // carry no photos, so this stays cheap however long the journal is.
-    getPinCollection(profile.id, { includeNonPublic: isSelf, viewerFollows }),
+    getPinCollection(profile.id, {
+      includeNonPublic: isSelf,
+      viewerFollows,
+      namedViewer: isSelf ? null : (user?.username ?? null),
+    }),
     isSelf ? getFollowers(profile.id) : Promise.resolve([]),
     isSelf ? getFollowRequests(profile.id) : Promise.resolve([]),
     // Routes someone else tagged you on: not yours, but meant for you.
@@ -301,6 +310,7 @@ export default async function ProfilePage({
             label={t.profile.avatarChange}
             zoomLabel={t.profile.avatarZoom}
             zoomCloseLabel={t.profile.avatarZoomClose}
+            enlargeLabel={t.entry.lightboxZoom}
           />
         ) : (
           <AvatarZoom
@@ -309,6 +319,7 @@ export default async function ProfilePage({
             initial={profile.display_name.slice(0, 1).toUpperCase()}
             label={t.profile.avatarZoom}
             closeLabel={t.profile.avatarZoomClose}
+            zoomLabel={t.entry.lightboxZoom}
           />
         )}
         <div>

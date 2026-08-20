@@ -187,9 +187,12 @@ const followable = await B.locator("form[action] button, .follow-button").count(
 check("a by-link journal can still be followed", followable > 0, followable);
 await anon.goto(base);
 await anon.waitForTimeout(500);
+// By the entry's own link, not by its title: B legitimately holds a copy of
+// the public day by now, and a copy is filed at the level of the day it came
+// from — so the words appear in the feed under B's name, quite correctly.
 check(
   "and its days are off the main feed",
-  !(await anon.locator("body").innerText()).includes(`Journée public ${stamp}`)
+  (await anon.locator(`a[href="/entries/${ids.public}"]`).count()) === 0
 );
 
 // --- Export is your own journal only ---

@@ -173,20 +173,27 @@ export async function getEntriesByUser(
   {
     includeNonPublic = false,
     viewerFollows = false,
+    namedViewer = null,
     filters = {},
     limit = null,
   }: {
     includeNonPublic?: boolean;
     /** Whether the reader is an accepted follower — see `EntryVisibility`. */
     viewerFollows?: boolean;
+    /** The reader's own username, so days naming them are theirs to see. */
+    namedViewer?: string | null;
     filters?: EntryFilters;
     limit?: number | null;
   } = {}
 ): Promise<{ entries: EntryWithAuthor[]; total: number }> {
-  const params: unknown[] = [userId, includeNonPublic, viewerFollows];
+  const params: unknown[] = [userId, includeNonPublic, viewerFollows, namedViewer];
   const conds = [
     "e.user_id = $1",
-    "($2 or e.visibility = 'public' or ($3 and e.visibility = 'followers'))",
+    // A day that names you is yours to read at every level — the same rule the
+    // day's own page follows. Without it a journal could hold nine days
+    // written about climbing with you and show you none of them.
+    `($2 or e.visibility = 'public' or ($3 and e.visibility = 'followers')
+      or ($4::text is not null and e.partners ~* ('@' || $4 || '([^a-z0-9-]|$)')))`,
   ];
   filterConditions(filters, params, conds);
 
@@ -350,13 +357,18 @@ export async function getCoverPhotoIds(entryIds: string[]): Promise<Map<string, 
 
 export async function getPinCollection(
   userId: string,
-  { includeNonPublic = false, viewerFollows = false } = {}
+  {
+    includeNonPublic = false,
+    viewerFollows = false,
+    namedViewer = null,
+  }: { includeNonPublic?: boolean; viewerFollows?: boolean; namedViewer?: string | null } = {}
 ): Promise<Entry[]> {
   const result = await pool.query<Entry>(
     `select * from entries
      where user_id = $1
-       and ($2 or visibility = 'public' or ($3 and visibility = 'followers'))`,
-    [userId, includeNonPublic, viewerFollows]
+       and ($2 or visibility = 'public' or ($3 and visibility = 'followers')
+            or ($4::text is not null and partners ~* ('@' || $4 || '([^a-z0-9-]|$)')))`,
+    [userId, includeNonPublic, viewerFollows, namedViewer]
   );
   return result.rows;
 }
@@ -810,7 +822,8 @@ export async function getUserStats(
   {
     includeNonPublic = false,
     viewerFollows = false,
-  }: { includeNonPublic?: boolean; viewerFollows?: boolean } = {}
+    namedViewer = null,
+  }: { includeNonPublic?: boolean; viewerFollows?: boolean; namedViewer?: string | null } = {}
 ): Promise<UserStats> {
   const result = await pool.query<UserStats>(
     `select count(*)::int as total,
@@ -819,8 +832,9 @@ export async function getUserStats(
             count(*) filter (where entry_date >= date_trunc('month', current_date))::int as this_month
      from entries
      where user_id = $1
-       and ($2 or visibility = 'public' or ($3 and visibility = 'followers'))`,
-    [userId, includeNonPublic, viewerFollows]
+       and ($2 or visibility = 'public' or ($3 and visibility = 'followers')
+            or ($4::text is not null and partners ~* ('@' || $4 || '([^a-z0-9-]|$)')))`,
+    [userId, includeNonPublic, viewerFollows, namedViewer]
   );
   return result.rows[0];
 }

@@ -24,6 +24,7 @@ export default function AvatarPicker({
   label,
   zoomLabel,
   zoomCloseLabel,
+  enlargeLabel,
 }: {
   username: string;
   hasAvatar: boolean;
@@ -32,6 +33,8 @@ export default function AvatarPicker({
   label: string;
   zoomLabel: string;
   zoomCloseLabel: string;
+  /** The ＋ inside the opened frame — the gallery's own word for it. */
+  enlargeLabel: string;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
   const [busy, setBusy] = useState(false);
@@ -56,6 +59,7 @@ export default function AvatarPicker({
           initial={initial}
           label={zoomLabel}
           closeLabel={zoomCloseLabel}
+          zoomLabel={enlargeLabel}
         />
       ) : (
         <label className="profile-avatar" title={label} aria-label={label}>
