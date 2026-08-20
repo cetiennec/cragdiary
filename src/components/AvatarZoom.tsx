@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 /**
  * Someone else's photograph, at the size it was actually taken.
@@ -60,7 +61,11 @@ export default function AvatarZoom({
         {/* eslint-disable-next-line @next/next/no-img-element -- served from our own DB-backed route, already resized server-side */}
         <img src={`/api/avatars/${username}`} alt="" />
       </button>
-      {open && (
+      {/* Into the body, not where it stands. The profile's own children each
+          open a stacking context (`.profile-page > *`), so an overlay born
+          inside the header could never rise above the action row above it —
+          the buttons went on showing through the dark. */}
+      {open && createPortal(
         <div className="lightbox" onClick={() => setOpen(false)}>
           <figure className="lightbox-figure">
             {/* eslint-disable-next-line @next/next/no-img-element -- our own DB-backed route */}
@@ -79,7 +84,8 @@ export default function AvatarZoom({
           >
             ×
           </button>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

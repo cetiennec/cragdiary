@@ -4454,8 +4454,9 @@ a {
   right: -3px;
   bottom: -3px;
   z-index: 2;
-  /* Decoration only — the photograph underneath is the button. */
-  pointer-events: none;
+  /* The button for changing the photograph, now that pressing the photograph
+     itself enlarges it instead. */
+  cursor: pointer;
   width: 22px;
   height: 22px;
   border-radius: 50%;

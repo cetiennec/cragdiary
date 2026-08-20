@@ -283,6 +283,8 @@ export default async function ProfilePage({
             hasAvatar={profile.has_avatar}
             initial={profile.display_name.slice(0, 1).toUpperCase()}
             label={t.profile.avatarChange}
+            zoomLabel={t.profile.avatarZoom}
+            zoomCloseLabel={t.profile.avatarZoomClose}
           />
         ) : (
           <AvatarZoom
