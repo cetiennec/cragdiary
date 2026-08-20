@@ -1050,6 +1050,12 @@ export default function EntryForm({
                 if (outingUrl.trim()) void importOuting(outingUrl);
               }}
             />
+            {/* The field only covers half the thought: pasting a link is for a
+                day already written up over there. The other half — a route you
+                have never logged — is the title's own search, one line up. */}
+            {!importing && !importErr && !outingUrl.trim() && !imported && (
+              <span className="c2c-inline-hint">{t.c2cInlineHint}</span>
+            )}
             {importing && <span className="c2c-inline-status">⏳ {t.c2cImporting}</span>}
             {importErr && <span className="form-error">{importErr}</span>}
             {!importing && !importErr && (outingUrl.trim() || imported) && (

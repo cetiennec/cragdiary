@@ -208,7 +208,8 @@ const en = {
     c2cImportPlaceholder: "Paste a camptocamp outing link…",
     c2cImportBtn: "Import",
     c2cImporting: "Importing from camptocamp (fields + photos)…",
-    c2cInlinePlaceholder: "Auto-import from camptocamp — paste an outing link",
+    c2cInlinePlaceholder: "Already wrote this day on camptocamp? Paste its outing link",
+    c2cInlineHint: "If not, type the route's name in the title above and pick it from the suggestions.",
     c2cImportWarning:
       "Only import your own outings — the report and photos belong to their author on camptocamp.",
     c2cImportError: "Couldn't import this link — check it's a camptocamp outing.",
@@ -1014,7 +1015,8 @@ const fr: Dict = {
     c2cImportPlaceholder: "Collez le lien d'une sortie camptocamp…",
     c2cImportBtn: "Importer",
     c2cImporting: "Import depuis camptocamp (champs + photos)…",
-    c2cInlinePlaceholder: "Auto-import camptocamp — collez le lien d'une sortie",
+    c2cInlinePlaceholder: "Journée déjà écrite sur camptocamp ? Collez le lien de la sortie",
+    c2cInlineHint: "Sinon, tapez le nom de la voie dans le titre ci-dessus et choisissez-la dans les suggestions.",
     c2cImportWarning:
       "N'importez que vos propres sorties — le récit et les photos appartiennent à leur auteur sur camptocamp.",
     c2cImportError: "Import impossible — vérifiez que c'est bien une sortie camptocamp.",

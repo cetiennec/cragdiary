@@ -698,6 +698,15 @@ a {
   color: var(--text-muted);
 }
 
+/* The other half of the same instruction, under the field rather than beside
+   it — it is a sentence, not a badge. */
+.c2c-inline-hint {
+  flex-basis: 100%;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
 /* Import page: three option cards (c2c account, free text, file) */
 .import-intro {
   color: var(--text-muted);
