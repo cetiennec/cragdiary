@@ -5836,6 +5836,25 @@ label:has(input:placeholder-shown) + .form-hint.form-warn {
   border-color: var(--accent);
 }
 
+/* On a phone the pill has nowhere to go: "Nos sorties communes" refuses to
+   shrink and the name beside it refuses to give way, so the two met in the
+   middle. Below this width it drops onto its own line, under the name it
+   belongs to. */
+@media (max-width: 560px) {
+  .climber-row:has(.climber-days) {
+    flex-wrap: wrap;
+    row-gap: 0.5rem;
+  }
+
+  .climber-row-main {
+    flex-basis: 100%;
+  }
+
+  .climber-days {
+    margin-left: 0;
+  }
+}
+
 /* The shared days flow in the same grid as the feed. */
 .days-with-count {
   margin-bottom: 1.2rem;
