@@ -396,8 +396,12 @@ export async function login(formData: FormData): Promise<void> {
     redirect(back("throttled"));
   }
 
+  // Either name works: whichever of the two you remember on the day. Both
+  // columns are unique case-insensitively, so one row at most can answer, and
+  // a username cannot hold an "@" — the two can never collide.
   const result = await pool.query<{ id: string; password_hash: string }>(
-    "select id, password_hash from users where lower(username) = lower($1)",
+    `select id, password_hash from users
+      where lower(username) = lower($1) or lower(email) = lower($1)`,
     [username]
   );
   // An unknown username used to answer before scrypt had run, so the reply time

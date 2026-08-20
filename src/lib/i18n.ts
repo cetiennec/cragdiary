@@ -73,9 +73,9 @@ const en = {
   },
   login: {
     title: "Log in",
-    username: "Username",
+    username: "Username or email",
     password: "Password",
-    error: "Wrong username or password.",
+    error: "Wrong username, email or password.",
     throttled: "Too many attempts — please wait a few minutes and try again.",
     submit: "Log in",
     hintPre: "No account yet? ",
@@ -879,9 +879,9 @@ const fr: Dict = {
   },
   login: {
     title: "Connexion",
-    username: "Nom d'utilisateur",
+    username: "Nom d'utilisateur ou e-mail",
     password: "Mot de passe",
-    error: "Nom d'utilisateur ou mot de passe incorrect.",
+    error: "Nom d'utilisateur, e-mail ou mot de passe incorrect.",
     throttled: "Trop de tentatives — patientez quelques minutes avant de réessayer.",
     submit: "Se connecter",
     hintPre: "Pas encore de compte ? ",
