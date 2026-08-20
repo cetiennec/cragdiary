@@ -598,7 +598,7 @@ export async function updateProfile(formData: FormData): Promise<void> {
     if (coverFile instanceof File && coverFile.size > 0) {
       const processed = await sharp(Buffer.from(await coverFile.arrayBuffer()))
         .rotate()
-        .resize({ width: 1400, height: 420, fit: "cover" })
+        .resize({ width: 1800, height: 560, fit: "cover" })
         .webp({ quality: 80 })
         .toBuffer();
       await pool.query(

@@ -2191,12 +2191,16 @@ a {
 
 /* Profile cover */
 
+/* A cover photograph is the top of the page, not a card pinned to it: the
+   same full-bleed hero an entry's cover gets, running edge to edge and up
+   under the page's own top padding. */
 .profile-cover {
-  height: clamp(120px, 22vw, 220px);
-  border-radius: var(--radius-card);
-  overflow: hidden;
+  height: clamp(180px, 30vh, 320px);
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-top: -2.5rem;
   margin-bottom: 1.6rem;
-  border: 1px solid var(--border);
+  overflow: hidden;
   background: var(--bg-elevated);
 }
 
