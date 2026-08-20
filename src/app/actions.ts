@@ -525,7 +525,7 @@ export async function updateAvatar(formData: FormData): Promise<void> {
 
   const processed = await sharp(Buffer.from(await file.arrayBuffer()))
     .rotate()
-    .resize({ width: 320, height: 320, fit: "cover" })
+    .resize({ width: 640, height: 640, fit: "cover" })
     .webp({ quality: 80 })
     .toBuffer();
   await pool.query("update users set avatar = $1, avatar_type = 'image/webp' where id = $2", [
@@ -579,7 +579,7 @@ export async function updateProfile(formData: FormData): Promise<void> {
     if (file instanceof File && file.size > 0) {
       const processed = await sharp(Buffer.from(await file.arrayBuffer()))
         .rotate()
-        .resize({ width: 320, height: 320, fit: "cover" })
+        .resize({ width: 640, height: 640, fit: "cover" })
         .webp({ quality: 80 })
         .toBuffer();
       await pool.query(

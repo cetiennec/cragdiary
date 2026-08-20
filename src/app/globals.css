@@ -1838,6 +1838,23 @@ a {
   overflow: hidden;
 }
 
+/* Someone else's photograph is a button that enlarges it — a button element
+   so it reaches the keyboard, stripped back to the circle it already was. */
+.avatar-zoom {
+  padding: 0;
+  border: 0;
+  cursor: zoom-in;
+  appearance: none;
+}
+
+/* Bounded by the frame, never blown past the pixels we actually stored. */
+.avatar-zoom-full {
+  max-width: min(88vw, 640px);
+  max-height: 88vh;
+  border-radius: var(--radius-card);
+  display: block;
+}
+
 .profile-name {
   font-size: 1.6rem;
   margin: 0;
