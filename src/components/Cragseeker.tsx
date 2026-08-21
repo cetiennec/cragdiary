@@ -280,6 +280,9 @@ export default function Cragseeker({
   // fresh search.
   const [sort, setSort] = useState<Sort>("near");
   const [minLogged, setMinLogged] = useState(0);
+  // Narrows what came back, as opposed to what was asked for: the search above
+  // goes to the databases, this one only reads the answer.
+  const [contains, setContains] = useState("");
 
   const [results, setResults] = useState<SeekerResult[]>([]);
   // c2c counts its bounding box; the circle keeps only ~π/4 of it, so this is an
@@ -876,7 +879,9 @@ export default function Cragseeker({
   // What is actually on screen: the answer, refined. The map is fed from the
   // same list, so a point never outlives the card it belongs to.
   const shown = useMemo(() => {
+    const needle = contains.trim().toLowerCase();
     const kept = results.filter((r) => {
+      if (needle && !`${r.title} ${r.area ?? ""}`.toLowerCase().includes(needle)) return false;
       if (minLogged > 0) {
         // OpenBeta catalogues crags camptocamp has never counted, so a minimum
         // number of c2c outings is a question they cannot answer at all.
@@ -914,7 +919,7 @@ export default function Cragseeker({
     else if (sort === "trad") sorted.sort(by(equipped, -1));
     else sorted.sort(by((r) => r.distance_km, 1));
     return sorted;
-  }, [results, sort, minLogged, activity, outings]);
+  }, [results, sort, minLogged, contains, activity, outings]);
 
   const refined = shown.length !== results.length;
 
@@ -1067,7 +1072,7 @@ export default function Cragseeker({
         <p className="seeker-step-hint">{t.step2Hint}</p>
         <div className="seeker-row">
           <div className="seeker-field seeker-field-grow seeker-direct">
-            <span className="seeker-field-label">{t.keyword}</span>
+            <span className="seeker-field-label">{t.nameLabel}</span>
             <div className="combobox">
               <input
                 type="search"
@@ -1381,6 +1386,17 @@ export default function Cragseeker({
               <option value="bolted">{t.sortBolted}</option>
               <option value="trad">{t.sortTrad}</option>
             </select>
+          </label>
+          <label className="seeker-refine-field">
+            <span>{t.keyword}</span>
+            <input
+              type="search"
+              className="seeker-refine-text"
+              value={contains}
+              placeholder={t.keywordPlaceholder}
+              autoComplete="off"
+              onChange={(e) => setContains(e.target.value)}
+            />
           </label>
           <label className="seeker-refine-field">
             <span>{t.loggedLabel}</span>
