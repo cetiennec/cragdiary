@@ -43,16 +43,11 @@ const RADII = [10, 25, 50, 100, 200];
 
 // How the results may be reordered once they are in — no second request, since
 // everything these read has already arrived.
-type Sort = "near" | "easy" | "hard" | "logged";
+type Sort = "near" | "easy" | "hard" | "logged" | "bolted" | "trad";
 
 // How often a route must have been climbed, as camptocamp counts it.
 const LOGGED_STEPS = [0, 1, 5, 20] as const;
 
-// How well equipped, at worst. Camptocamp's scale runs P1 (bolted) to P4+
-// (bring everything), so this is a ceiling rather than a floor: "no worse than
-// this". Four stops rather than all eight — the half-grades matter to whoever
-// wrote the topo, not to someone deciding where to go on Saturday.
-const EQUIP_STOPS = ["", "P1", "P2+", "P3+"] as const;
 
 const clamp01 = (n: number) => Math.max(0, Math.min(1, n));
 
@@ -284,7 +279,6 @@ export default function Cragseeker({
   // fresh search.
   const [sort, setSort] = useState<Sort>("near");
   const [minLogged, setMinLogged] = useState(0);
-  const [maxEquip, setMaxEquip] = useState<string>("");
 
   const [results, setResults] = useState<SeekerResult[]>([]);
   // c2c counts its bounding box; the circle keeps only ~π/4 of it, so this is an
@@ -845,19 +839,6 @@ export default function Cragseeker({
   // same list, so a point never outlives the card it belongs to.
   const shown = useMemo(() => {
     const kept = results.filter((r) => {
-      if (maxEquip) {
-        // Unrated is not "well equipped": a route camptocamp says nothing
-        // about cannot answer the question being asked, so it stands aside
-        // while the question is being asked — as does an OpenBeta crag, which
-        // has no such rating at all.
-        const worst = C2C_EQUIPMENT_RATINGS.indexOf(
-          maxEquip as (typeof C2C_EQUIPMENT_RATINGS)[number]
-        );
-        const mine = r.equipment
-          ? C2C_EQUIPMENT_RATINGS.indexOf(r.equipment as (typeof C2C_EQUIPMENT_RATINGS)[number])
-          : -1;
-        if (mine < 0 || mine > worst) return false;
-      }
       if (minLogged > 0) {
         // OpenBeta catalogues crags camptocamp has never counted, so a minimum
         // number of c2c outings is a question they cannot answer at all.
@@ -877,14 +858,25 @@ export default function Cragseeker({
       return (x - y) * dir;
     };
     const grade = (r: SeekerResult) => difficultyRank(r, activity);
+    // P1 (bolted) to P4+ (bring everything), as camptocamp orders them; a
+    // route it says nothing about has no place on that ladder and goes last,
+    // the same as one with no grade.
+    const equipped = (r: SeekerResult) => {
+      const i = r.equipment
+        ? C2C_EQUIPMENT_RATINGS.indexOf(r.equipment as (typeof C2C_EQUIPMENT_RATINGS)[number])
+        : -1;
+      return i < 0 ? null : i;
+    };
     const logged = (r: SeekerResult) => (r.source === "c2c" ? outings[Number(r.id)] ?? null : null);
     const sorted = [...kept];
     if (sort === "easy") sorted.sort(by(grade, 1));
     else if (sort === "hard") sorted.sort(by(grade, -1));
     else if (sort === "logged") sorted.sort(by(logged, -1));
+    else if (sort === "bolted") sorted.sort(by(equipped, 1));
+    else if (sort === "trad") sorted.sort(by(equipped, -1));
     else sorted.sort(by((r) => r.distance_km, 1));
     return sorted;
-  }, [results, sort, minLogged, maxEquip, activity, outings]);
+  }, [results, sort, minLogged, activity, outings]);
 
   const refined = shown.length !== results.length;
 
@@ -1277,22 +1269,8 @@ export default function Cragseeker({
               <option value="easy">{t.sortEasy}</option>
               <option value="hard">{t.sortHard}</option>
               <option value="logged">{t.sortLogged}</option>
-            </select>
-          </label>
-          <label className="seeker-refine-field">
-            <span>{t.equipLabel}</span>
-            <select value={maxEquip} onChange={(e) => setMaxEquip(e.target.value)}>
-              {EQUIP_STOPS.map((stop) => (
-                <option key={stop} value={stop}>
-                  {stop === ""
-                    ? t.equipAny
-                    : stop === "P1"
-                      ? t.equipBolted
-                      : stop === "P2+"
-                        ? t.equipMostly
-                        : t.equipSome}
-                </option>
-              ))}
+              <option value="bolted">{t.sortBolted}</option>
+              <option value="trad">{t.sortTrad}</option>
             </select>
           </label>
           <label className="seeker-refine-field">

@@ -716,13 +716,10 @@ const en = {
     sortEasy: "Easiest first",
     sortHard: "Hardest first",
     sortLogged: "Most climbed",
-    // Lower is better bolted, which no label should make you work out — see
-    // C2C_EQUIPMENT_RATINGS, and the panel's own hint "P1 well bolted → P4".
-    equipLabel: "Equipment",
-    equipAny: "However equipped",
-    equipBolted: "Well bolted (P1)",
-    equipMostly: "Mostly bolted (to P2+)",
-    equipSome: "Some gear (to P3+)",
+    // P1 is well bolted and P4 is bring-everything, so "best equipped first"
+    // is the scale read forwards — see C2C_EQUIPMENT_RATINGS.
+    sortBolted: "Best equipped",
+    sortTrad: "Least equipped",
     loggedLabel: "Logged on c2c",
     loggedAny: "However often",
     loggedOnce: "At least once",
@@ -1547,11 +1544,8 @@ const fr: Dict = {
     sortEasy: "Les plus faciles",
     sortHard: "Les plus dures",
     sortLogged: "Les plus parcourues",
-    equipLabel: "Équipement",
-    equipAny: "Peu importe",
-    equipBolted: "Bien équipé (P1)",
-    equipMostly: "Plutôt équipé (jusqu'à P2+)",
-    equipSome: "Un peu de matériel (jusqu'à P3+)",
+    sortBolted: "Les mieux équipées",
+    sortTrad: "Les moins équipées",
     loggedLabel: "Sorties sur c2c",
     loggedAny: "Peu importe",
     loggedOnce: "Au moins une",
