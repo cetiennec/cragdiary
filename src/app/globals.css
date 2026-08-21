@@ -2204,7 +2204,15 @@ a {
    same full-bleed hero an entry's cover gets, running edge to edge and up
    under the page's own top padding. */
 .profile-cover {
-  height: clamp(180px, 30vh, 320px);
+  /* The stored cover is 1800x560 (see updateProfile), so the band keeps that
+     shape and the whole photograph stays inside it. A fixed height did not: on
+     a 390 px phone it was 253 px tall against an image three times as wide as
+     it is high, and object-fit cropped away half the picture to fill the band.
+     Bounded at both ends — never a sliver on a narrow screen, never half the
+     window on a wide one. */
+  aspect-ratio: 1800 / 560;
+  min-height: 120px;
+  max-height: 320px;
   width: 100vw;
   margin-left: calc(50% - 50vw);
   margin-top: -2.5rem;
