@@ -18,6 +18,7 @@ import type { OpenBetaClimb } from "@/app/api/seeker/climbs/route";
 import type { MountainHut } from "@/app/api/seeker/huts/route";
 import type { ClimbingGym } from "@/app/api/seeker/gyms/route";
 import type { C2cAccessPoint, C2cRouteDetail } from "@/app/api/c2c/access/route";
+import type { C2cSuggestion } from "@/app/api/c2c/search/route";
 import type { GeoSuggestion } from "@/app/api/geo/search/route";
 import {
   ACTIVITY_HEIGHT_PARAM,
@@ -338,6 +339,11 @@ export default function Cragseeker({
   const [places, setPlaces] = useState<GeoSuggestion[]>([]);
   const [placesOpen, setPlacesOpen] = useState(false);
   const placeArmed = useRef(false);
+  // The direct search proposes routes as you type, the way the wishlist's own
+  // route field does — same endpoint, same shape of list.
+  const [routeHints, setRouteHints] = useState<C2cSuggestion[]>([]);
+  const [hintsOpen, setHintsOpen] = useState(false);
+  const hintsArmed = useRef(false);
 
   // One description of the search, used both to call the API and to write the
   // address bar — so any link a visitor copies reproduces exactly what they see.
@@ -575,6 +581,46 @@ export default function Cragseeker({
     }, 300);
     return () => clearTimeout(timer);
   }, [placeInput, locale]);
+
+  useEffect(() => {
+    if (!hintsArmed.current || q.trim().length < 3) {
+      setRouteHints([]);
+      setHintsOpen(false);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/c2c/search?q=${encodeURIComponent(q.trim())}&lang=${locale}`);
+        const data = (await res.json()) as { results: C2cSuggestion[] };
+        setRouteHints(data.results);
+        setHintsOpen(data.results.length > 0);
+      } catch {
+        // Typing on is still a search; only the suggestions are lost.
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [q, locale]);
+
+  /**
+   * Picking a route out of the list takes you to it: the map moves onto it and
+   * the circle closes to the smallest radius, so the route is on screen with
+   * its neighbours rather than alone in a list. A route camptocamp has no
+   * position for has nowhere to take you, so its name stays as the filter it
+   * already was.
+   */
+  function pickRoute(hint: C2cSuggestion) {
+    hintsArmed.current = false;
+    setRouteHints([]);
+    setHintsOpen(false);
+    if (hint.lat != null && hint.lon != null) {
+      setCentre({ lat: hint.lat, lon: hint.lon, name: hint.title });
+      setPlaceInput(hint.title);
+      setRadius(10);
+      setQ("");
+    } else {
+      setQ(hint.title);
+    }
+  }
 
   function pickPlace(place: GeoSuggestion) {
     placeArmed.current = false;
@@ -1028,15 +1074,49 @@ export default function Cragseeker({
         <h2 className="seeker-step">{t.step2}</h2>
         <p className="seeker-step-hint">{t.step2Hint}</p>
         <div className="seeker-row">
-          <label className="seeker-field seeker-field-grow seeker-direct">
-            <input
-              type="search"
-              value={q}
-              placeholder={t.directPlaceholder}
-              aria-label={t.step2Hint}
-              onChange={(e) => setQ(e.target.value)}
-            />
-          </label>
+          <div className="seeker-field seeker-field-grow seeker-direct">
+            <div className="combobox">
+              <input
+                type="search"
+                value={q}
+                placeholder={t.directPlaceholder}
+                aria-label={t.step2Hint}
+                // Off, or Safari offers to fill a climbing route in with a
+                // postal address.
+                autoComplete="off"
+                onChange={(e) => {
+                  hintsArmed.current = true;
+                  setQ(e.target.value);
+                }}
+                onBlur={() => setTimeout(() => setHintsOpen(false), 150)}
+              />
+              {hintsOpen && (
+                <ul className="combobox-list" role="listbox">
+                  {routeHints.map((hint) => (
+                    <li key={hint.id}>
+                      <button
+                        type="button"
+                        role="option"
+                        aria-selected={false}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          pickRoute(hint);
+                        }}
+                      >
+                        <span className="combobox-title">{hint.title}</span>
+                        <span className="combobox-meta">
+                          {[hint.area, hint.height_m ? `${hint.height_m} m` : null, hint.rating, hint.grade]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                  <li className="combobox-attribution">{t.suggestionsAttribution}</li>
+                </ul>
+              )}
+            </div>
+          </div>
         </div>
 
         <h2 className="seeker-step">{t.step3}</h2>
@@ -1044,7 +1124,7 @@ export default function Cragseeker({
 
         {/* 3. Where to look. */}
         <div className="seeker-row">
-          <div className="seeker-field seeker-field-grow">
+          <div className="seeker-field seeker-field-grow seeker-where">
             <span className="seeker-field-label">{t.where}</span>
             <div className="combobox">
               <input
