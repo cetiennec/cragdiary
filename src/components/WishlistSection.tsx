@@ -163,6 +163,9 @@ export default function WishlistSection({
                   { username: list.owner_username, display_name: list.owner_display_name },
                   ...list.members,
                 ].filter((p) => p.username !== viewerUsername)}
+                // A shared list already says who these routes are with; asking
+                // again, route by route, is asking the same question twice.
+                canAdd={!shared}
                 t={{
                   placeholder: t.partnersPlaceholder,
                   save: t.savePartners,

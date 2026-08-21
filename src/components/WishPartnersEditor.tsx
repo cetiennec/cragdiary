@@ -13,11 +13,17 @@ export default function WishPartnersEditor({
   partners,
   partnersNode,
   people,
+  canAdd = true,
   t,
 }: {
   wishId: string;
   partners: string;
   partnersNode?: React.ReactNode;
+  /** False on a shared list, where the people the list is shared with are the
+      partners already — see WishlistSection. Anything named on a wish before
+      the list was shared still shows, and can still be edited; what goes is
+      the invitation to name someone a second time. */
+  canAdd?: boolean;
   /** Everyone this list is already shared with. On a shared list they are the
       partners nine times out of ten, so they are offered as one tap rather
       than as something to type out again. */
@@ -37,6 +43,7 @@ export default function WishPartnersEditor({
 
   if (!editing) {
     if (!partners) {
+      if (!canAdd) return null;
       return (
         <button
           type="button"
