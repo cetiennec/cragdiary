@@ -3954,11 +3954,19 @@ a {
 }
 
 /* The direct search is the one field that should look like a way in rather
-   than a filter: full width, and large enough to type a route name into. */
-.seeker-direct input {
+   than a filter: full width, and large enough to type a route name into. The
+   place field is the same question asked of a map, so it is the same size. */
+.seeker-direct input,
+.seeker-where input {
   width: 100%;
   font-size: 1rem;
   padding: 0.55rem 0.7rem;
+}
+
+/* Wide enough for what people actually type into it — "Une ville, une falaise,
+   une aiguille…" was being cut off at a third of its length. */
+.seeker-where {
+  flex: 1 1 340px;
 }
 
 .seeker-row {
