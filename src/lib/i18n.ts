@@ -640,8 +640,6 @@ const en = {
     intro:
       "What you climb on, when it was made, when it went into service, and when someone last looked at it properly. The dates below are the usual manufacturer's limits, offered so the register can sort by urgency — the notice that came with the gear is the authority, and the verdict is the inspector's.",
     add: "Add a piece of gear",
-    search: "From the catalogue",
-    searchHint: "Petzl Corax, Boa 9.8, GriGri…",
     kind: "Kind",
     brand: "Brand",
     model: "Model",
@@ -702,6 +700,12 @@ const en = {
     retiredOn: "Retired {date}",
     disclaimer:
       "A register records judgements, it does not make them. EN 365 asks for an inspection at least every {months} months by a competent person; this page keeps the record of those inspections, and never decides for you whether something is safe.",
+    recallTitle: "Possible product recall",
+    recallBatch: "batch/barcode:",
+    recallOpen: "The recall notice",
+    recallHint:
+      "Matched on brand and model against RappelConso, the French government's recall register. Only the batch number on your own label says whether it is yours.",
+    recallSource: "Recalls: RappelConso (DGCCRF), updated weekly.",
     backToJournal: "Back to the journal",
   },
   seeker: {
@@ -1552,8 +1556,6 @@ const fr: Dict = {
     intro:
       "Ce sur quoi vous grimpez : sa date de fabrication, sa mise en service, et le dernier contrôle sérieux qu'il a reçu. Les échéances ci-dessous sont les limites habituelles des fabricants, affichées pour classer par urgence — la notice du matériel fait foi, et le verdict appartient au contrôleur.",
     add: "Ajouter un équipement",
-    search: "Depuis le catalogue",
-    searchHint: "Petzl Corax, Boa 9.8, GriGri…",
     kind: "Type",
     brand: "Marque",
     model: "Modèle",
@@ -1614,6 +1616,12 @@ const fr: Dict = {
     retiredOn: "Réformé le {date}",
     disclaimer:
       "Un registre consigne des jugements, il n'en rend pas. La norme EN 365 demande un contrôle au moins tous les {months} mois par une personne compétente ; cette page en garde la trace, et ne décide jamais à votre place si un équipement est sûr.",
+    recallTitle: "Rappel produit possible",
+    recallBatch: "lot/code-barres :",
+    recallOpen: "La fiche de rappel",
+    recallHint:
+      "Rapprochement par marque et modèle avec RappelConso, le registre officiel des rappels. Seul le numéro de lot inscrit sur votre matériel dit si le vôtre est concerné.",
+    recallSource: "Rappels : RappelConso (DGCCRF), mis à jour chaque semaine.",
     backToJournal: "Retour au carnet",
   },
   seeker: {

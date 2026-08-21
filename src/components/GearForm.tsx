@@ -2,13 +2,16 @@
 
 import { useRef, useState } from "react";
 import { addGear } from "@/app/actions";
-import { GEAR_KINDS, searchCatalogue, type GearKind, type GearModel } from "@/lib/gear";
+import { GEAR_KINDS, type GearKind } from "@/lib/gear";
 
 /**
- * Adding a piece of gear. The brand and model come from the catalogue where
- * the catalogue knows them — picking one fills in the kind and the standard
- * too — and from your own typing where it doesn't, since no list will ever
- * hold every sling ever sold.
+ * Adding a piece of gear: what it is, and the dates that govern it.
+ *
+ * No catalogue behind the brand and model. There is no public database of
+ * climbing PPE to search, and a hand-kept list of our own would be out of date
+ * the week after it was written and never hold every sling ever sold — so what
+ * you type is what the register knows. The recall check on the page reads the
+ * brand and model straight from here.
  */
 export default function GearForm({
   t,
@@ -16,8 +19,6 @@ export default function GearForm({
 }: {
   t: {
     add: string;
-    search: string;
-    searchHint: string;
     kind: string;
     brand: string;
     model: string;
@@ -35,18 +36,10 @@ export default function GearForm({
   kinds: Record<GearKind, string>;
 }) {
   const [open, setOpen] = useState(false);
-  const [hits, setHits] = useState<GearModel[]>([]);
   const [kind, setKind] = useState<GearKind>("rope");
   const [brand, setBrand] = useState("");
   const [model, setModel] = useState("");
   const formRef = useRef<HTMLFormElement>(null);
-
-  function pick(hit: GearModel) {
-    setKind(hit.kind);
-    setBrand(hit.brand);
-    setModel(hit.model);
-    setHits([]);
-  }
 
   if (!open) {
     return (
@@ -65,48 +58,9 @@ export default function GearForm({
         setOpen(false);
         setBrand("");
         setModel("");
-        setHits([]);
       }}
       className="entry-form gear-form"
     >
-      {/* The catalogue: two letters is enough to be useful, and nothing here
-          is required — the fields below take whatever you type instead. */}
-      <label>
-        {t.search}
-        <span className="combobox">
-          <input
-            type="search"
-            autoComplete="off"
-            placeholder={t.searchHint}
-            onChange={(e) => setHits(searchCatalogue(e.target.value))}
-          />
-          {hits.length > 0 && (
-            <ul className="combobox-list" role="listbox">
-              {hits.map((hit) => (
-                <li key={`${hit.brand}-${hit.model}`}>
-                  <button
-                    type="button"
-                    role="option"
-                    aria-selected={false}
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      pick(hit);
-                    }}
-                  >
-                    <span className="combobox-title">
-                      {hit.brand} {hit.model}
-                    </span>
-                    <span className="combobox-meta">
-                      {[kinds[hit.kind], hit.standard].filter(Boolean).join(" · ")}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </span>
-      </label>
-
       <div className="gear-row">
         <label>
           {t.kind}

@@ -6097,6 +6097,26 @@ label:has(input:placeholder-shown) + .form-hint.form-warn {
   font-style: italic;
 }
 
+/* A recall is the one thing on this page that should stop you reading. */
+.gear-recall {
+  margin-top: 0.7rem;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid #b3402f;
+  border-radius: 10px;
+  background: color-mix(in srgb, #b3402f 8%, transparent);
+  font-size: 0.84rem;
+}
+
+.gear-recall ul {
+  margin: 0.35rem 0;
+  padding-left: 1.1rem;
+}
+
+.gear-recall em {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
 .gear-actions > summary {
   cursor: pointer;
   font-size: 0.84rem;

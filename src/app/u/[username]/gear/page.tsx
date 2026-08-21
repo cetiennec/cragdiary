@@ -7,6 +7,7 @@ import { getDict } from "@/lib/i18n";
 import { checkGear, retireGear } from "@/app/actions";
 import GearForm from "@/components/GearForm";
 import { byUrgency, gearStatus, CHECK_EVERY_MONTHS, type GearKind } from "@/lib/gear";
+import { matchRecalls, recallsForBrand, type Recall } from "@/lib/recalls";
 
 export const metadata: Metadata = { robots: { index: false, follow: false } };
 
@@ -35,6 +36,17 @@ export default async function GearPage({
   const today = new Date().toISOString().slice(0, 10);
   const g = t.gear;
 
+  // One request per brand, not per item: a register holds a handful of brands
+  // and a great many carabiners. Cached for a day upstream.
+  const brands = [...new Set(items.map((i) => i.brand).filter(Boolean) as string[])];
+  const recallsByBrand = new Map<string, Recall[]>(
+    await Promise.all(
+      brands.map(
+        async (brand) => [brand.toLowerCase(), await recallsForBrand(brand)] as const
+      )
+    )
+  );
+
   const rows = items
     .map((item) => ({ item, status: gearStatus(item, checks.get(item.id) ?? [], today) }))
     .sort(
@@ -59,8 +71,6 @@ export default async function GearPage({
         <GearForm
           t={{
             add: g.add,
-            search: g.search,
-            searchHint: g.searchHint,
             kind: g.kind,
             brand: g.brand,
             model: g.model,
@@ -90,6 +100,9 @@ export default async function GearPage({
         <ul className="gear-list">
           {rows.map(({ item, status }) => {
             const history = checks.get(item.id) ?? [];
+            const recalls = item.brand
+              ? matchRecalls(recallsByBrand.get(item.brand.toLowerCase()) ?? [], item.model)
+              : [];
             return (
               <li key={item.id} className={`gear-item is-${status.state}`}>
                 <div className="gear-item-head">
@@ -108,6 +121,33 @@ export default async function GearPage({
                     .filter(Boolean)
                     .join(" · ")}
                 </p>
+
+                {/* Never a verdict: the batch number on your own label is what
+                    settles whether a recall is about your rope. */}
+                {recalls.length > 0 && !item.retired_on && (
+                  <div className="gear-recall">
+                    <strong>{g.recallTitle}</strong>
+                    <ul>
+                      {recalls.slice(0, 3).map((recall, i) => (
+                        <li key={i}>
+                          {recall.publishedOn ? `${date(recall.publishedOn)} — ` : ""}
+                          {recall.models}
+                          {recall.identifiers ? ` · ${g.recallBatch} ${recall.identifiers}` : ""}
+                          {recall.reason ? ` — ${recall.reason}` : ""}
+                          {recall.url && (
+                            <>
+                              {" "}
+                              <a href={recall.url} target="_blank" rel="noopener noreferrer">
+                                {g.recallOpen} ↗
+                              </a>
+                            </>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                    <em>{g.recallHint}</em>
+                  </div>
+                )}
 
                 {/* What the two clocks say, in words rather than in dates. */}
                 <p className="gear-clocks">
@@ -192,7 +232,7 @@ export default async function GearPage({
       )}
 
       <p className="gear-disclaimer">
-        {g.disclaimer.replace("{months}", String(CHECK_EVERY_MONTHS))}
+        {g.disclaimer.replace("{months}", String(CHECK_EVERY_MONTHS))} {g.recallSource}
       </p>
       <p className="form-hint">
         <Link href={`/u/${profile.username}`}>← {g.backToJournal}</Link>

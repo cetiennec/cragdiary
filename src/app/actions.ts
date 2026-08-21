@@ -2110,6 +2110,7 @@ export async function addGear(formData: FormData): Promise<void> {
       optionalText(formData.get("notes")),
     ]
   );
+
   revalidatePath(`/u/${user.username}/gear`);
 }
 
