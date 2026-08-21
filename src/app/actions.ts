@@ -806,10 +806,10 @@ async function addC2cPhotos(
 export async function importOneC2cOuting(
   id: number,
   withPhotos: boolean,
-  // Imported days default to link-only — 'private' in a day's own vocabulary:
-  // shareable with whoever you send the link to, but off the public feed until
-  // you decide otherwise.
-  visibility: string = "private",
+  // Imported days default to the people who follow you. Both callers pass the
+  // choice made in ImportOptionsDialog; this is only the fallback, and it
+  // agrees with that dialog's own default.
+  visibility: string = "followers",
   {
     revalidate = true,
     // What to do when the outing is already in the journal: leave it alone, or

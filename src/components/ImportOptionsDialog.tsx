@@ -32,7 +32,10 @@ export default function ImportOptionsDialog({
   count,
   existingCount = 0,
   askComplete = false,
-  defaultVisibility = "private",
+  // Followers, not by-link: an imported day is a day you climbed, and the
+  // people who follow you are the ones it is for. By-link was the old
+  // "unlisted", chosen when there was no level between public and nothing.
+  defaultVisibility = "followers",
   defaultPhotos = true,
   t,
   onCancel,
