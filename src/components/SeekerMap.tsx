@@ -484,6 +484,25 @@ export default function SeekerMap({
     };
   }, [map, L, centre, radiusKm]);
 
+  // With no circle to frame — a search by name, which has no place in it — the
+  // map frames what was found instead, so the route you asked for is on screen
+  // rather than somewhere off the coast of the default view.
+  const foundKey = points.map((p) => p.id).join(",");
+  useEffect(() => {
+    if (!map || !L || centre || points.length === 0) return;
+    const located = points.filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lon));
+    if (located.length === 0) return;
+    map.invalidateSize();
+    map.fitBounds(
+      L.latLngBounds(located.map((p) => [p.lat, p.lon] as [number, number])),
+      // Close in on a single route, but never so close that the map is one
+      // rock face and no context.
+      { padding: [40, 40], maxZoom: 13, animate: true }
+    );
+    // `points` is rebuilt on every render; the ids are what actually changed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map, L, centre, foundKey]);
+
   useEffect(() => {
     if (!map || !L) return;
 
