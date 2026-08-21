@@ -1324,8 +1324,17 @@ export default function Cragseeker({
               onMouseEnter={() => setActiveId(route.key)}
             >
               <div className="seeker-result-head">
-                <a href={route.url} target="_blank" rel="noopener noreferrer">
-                  {route.title}
+                {/* The name is the link, and the arrow says so — which is why
+                    there is no longer a second link to the same page at the
+                    foot of the card. The title attribute names the database,
+                    the one thing that link said and this one doesn't. */}
+                <a
+                  href={route.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title={t.openOn[route.source]}
+                >
+                  {route.title} <span className="seeker-out" aria-hidden>↗</span>
                 </a>
                 {route.distance_km != null && (
                   <span className="seeker-distance">
@@ -1417,9 +1426,6 @@ export default function Cragseeker({
                 />
               )}
               <div className="seeker-actions">
-                <a href={route.url} target="_blank" rel="noopener noreferrer">
-                  {t.openOn[route.source]}
-                </a>
                 {/* A visitor gets the same button, and it takes them to the
                     signup page carrying this search: the moment someone wants
                     to keep a route is the only moment an account means
