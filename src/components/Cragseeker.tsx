@@ -602,24 +602,16 @@ export default function Cragseeker({
   }, [q, locale]);
 
   /**
-   * Picking a route out of the list takes you to it: the map moves onto it and
-   * the circle closes to the smallest radius, so the route is on screen with
-   * its neighbours rather than alone in a list. A route camptocamp has no
-   * position for has nowhere to take you, so its name stays as the filter it
-   * already was.
+   * Picking a route out of the list spells it for you, and nothing more. It
+   * used to move the map onto the route and search its neighbourhood, which
+   * quietly turned a search for one named route into a local search around it
+   * — the opposite of what naming a route asks for.
    */
   function pickRoute(hint: C2cSuggestion) {
     hintsArmed.current = false;
     setRouteHints([]);
     setHintsOpen(false);
-    if (hint.lat != null && hint.lon != null) {
-      setCentre({ lat: hint.lat, lon: hint.lon, name: hint.title });
-      setPlaceInput(hint.title);
-      setRadius(10);
-      setQ("");
-    } else {
-      setQ(hint.title);
-    }
+    setQ(hint.title);
   }
 
   function pickPlace(place: GeoSuggestion) {
@@ -1075,15 +1067,23 @@ export default function Cragseeker({
         <p className="seeker-step-hint">{t.step2Hint}</p>
         <div className="seeker-row">
           <div className="seeker-field seeker-field-grow seeker-direct">
+            <span className="seeker-field-label">{t.keyword}</span>
             <div className="combobox">
               <input
                 type="search"
+                role="combobox"
+                aria-expanded={hintsOpen}
+                aria-controls="seeker-routes"
+                aria-autocomplete="list"
                 value={q}
                 placeholder={t.directPlaceholder}
                 aria-label={t.step2Hint}
                 // Off, or Safari offers to fill a climbing route in with a
-                // postal address.
+                // postal address — see the place field below, where saying so
+                // was not enough on its own.
                 autoComplete="off"
+                data-1p-ignore
+                data-lpignore="true"
                 onChange={(e) => {
                   hintsArmed.current = true;
                   setQ(e.target.value);
@@ -1091,7 +1091,7 @@ export default function Cragseeker({
                 onBlur={() => setTimeout(() => setHintsOpen(false), 150)}
               />
               {hintsOpen && (
-                <ul className="combobox-list" role="listbox">
+                <ul className="combobox-list" role="listbox" id="seeker-routes">
                   {routeHints.map((hint) => (
                     <li key={hint.id}>
                       <button
@@ -1127,12 +1127,25 @@ export default function Cragseeker({
           <div className="seeker-field seeker-field-grow seeker-where">
             <span className="seeker-field-label">{t.where}</span>
             <div className="combobox">
+              {/* A search field, not a text one, and announced as the combobox
+                  it is. Safari reads `autocomplete="off"` as advice rather than
+                  instruction and offers your contacts anyway once it decides a
+                  field wants an address — which a text input labelled "où" and
+                  suggesting "une adresse" is bound to look like. The
+                  placeholder no longer says the word; the tooltip still does,
+                  and an address still works. */}
               <input
-                type="text"
+                type="search"
+                role="combobox"
+                aria-expanded={placesOpen}
+                aria-controls="seeker-places"
+                aria-autocomplete="list"
                 value={placeInput}
                 placeholder={centre && !centre.name ? t.droppedPin : t.placePlaceholder}
                 title={t.whereHint}
                 autoComplete="off"
+                data-1p-ignore
+                data-lpignore="true"
                 onChange={(e) => {
                   placeArmed.current = true;
                   setPlaceInput(e.target.value);
@@ -1140,7 +1153,7 @@ export default function Cragseeker({
                 onBlur={() => setTimeout(() => setPlacesOpen(false), 150)}
               />
               {placesOpen && (
-                <ul className="combobox-list" role="listbox">
+                <ul className="combobox-list" role="listbox" id="seeker-places">
                   {places.map((p) => (
                     <li key={`${p.lat},${p.lon},${p.name}`}>
                       <button
