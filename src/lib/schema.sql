@@ -263,3 +263,39 @@ create table if not exists climbing_gyms (
 -- refines to a circle — the table is a few thousand rows, a seq scan would
 -- be fine too, this just keeps the habit for whenever it grows.
 create index if not exists climbing_gyms_lat_lon_idx on climbing_gyms(lat, lon);
+
+-- The EPI register (migration 038): the gear you climb on, when it was made,
+-- when it went into service, and every time someone has looked at it properly.
+-- Retired items stay — a register whose purpose is traceability must be able to
+-- say what was in service last year, including what has since been destroyed.
+create table if not exists gear (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references users(id) on delete cascade,
+  kind text not null,
+  brand text,
+  model text,
+  serial text,
+  -- Textiles age on two clocks: from manufacture, and from first use. Whichever
+  -- runs out first is the one that matters — see src/lib/gear.ts.
+  made_on date,
+  bought_on date,
+  first_used_on date,
+  notes text,
+  retired_on date,
+  retired_reason text,
+  created_at timestamptz not null default now()
+);
+create index if not exists gear_user_idx on gear(user_id, created_at desc);
+
+-- One row per periodic inspection: EN 365 asks for at least one a year, by
+-- someone competent to give it. The verdict is theirs, never the app's.
+create table if not exists gear_checks (
+  id uuid primary key default gen_random_uuid(),
+  gear_id uuid not null references gear(id) on delete cascade,
+  checked_on date not null,
+  verdict text not null check (verdict in ('ok','watch','retire')),
+  inspector text,
+  notes text,
+  created_at timestamptz not null default now()
+);
+create index if not exists gear_checks_gear_idx on gear_checks(gear_id, checked_on desc);

@@ -409,6 +409,14 @@ export default async function ProfilePage({
         )}
       </header>
 
+      {/* Your own gear, kept beside your own journal — a link rather than a
+          panel, the register being a page of its own. */}
+      {isSelf && (
+        <p className="profile-gear-link">
+          <Link href={`/u/${profile.username}/gear`}>🔩 {t.gear.title}</Link>
+        </p>
+      )}
+
       {isSelf && (
         <details className="profile-settings">
           <summary>{t.profile.settingsTitle}</summary>

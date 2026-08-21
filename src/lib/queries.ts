@@ -1,3 +1,4 @@
+import type { GearCheck, GearItem } from "@/lib/gear";
 import {
   pool,
   type Entry,
@@ -864,4 +865,44 @@ export async function getExistingUsernames(usernames: string[]): Promise<Map<str
   // Keyed by the lowercase form the mention was matched on, valued by the
   // spelling the account actually uses — which is where the link must point.
   return new Map(result.rows.map((r) => [r.username.toLowerCase(), r.username]));
+}
+
+/**
+ * The whole register for one climber, with every inspection each item has had,
+ * newest first. Small enough to read in one go — a lifetime of climbing gear
+ * is tens of rows, not thousands — and the page needs all of it to sort by
+ * what needs attention.
+ */
+export async function getGear(
+  userId: string
+): Promise<{ items: GearItem[]; checks: Map<string, GearCheck[]> }> {
+  const items = await pool.query<GearItem>(
+    `select id, user_id, kind, brand, model, serial,
+            to_char(made_on, 'YYYY-MM-DD') as made_on,
+            to_char(bought_on, 'YYYY-MM-DD') as bought_on,
+            to_char(first_used_on, 'YYYY-MM-DD') as first_used_on,
+            notes,
+            to_char(retired_on, 'YYYY-MM-DD') as retired_on,
+            retired_reason, created_at
+     from gear where user_id = $1
+     order by created_at desc`,
+    [userId]
+  );
+  if (items.rows.length === 0) return { items: [], checks: new Map() };
+
+  const checks = await pool.query<GearCheck>(
+    `select id, gear_id, to_char(checked_on, 'YYYY-MM-DD') as checked_on,
+            verdict, inspector, notes
+     from gear_checks
+     where gear_id = any($1)
+     order by checked_on desc, created_at desc`,
+    [items.rows.map((i) => i.id)]
+  );
+  const byItem = new Map<string, GearCheck[]>();
+  for (const check of checks.rows) {
+    const list = byItem.get(check.gear_id) ?? [];
+    list.push(check);
+    byItem.set(check.gear_id, list);
+  }
+  return { items: items.rows, checks: byItem };
 }

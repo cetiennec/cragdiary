@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import sharp from "sharp";
 import { pool, type EntryVisibility, type ProfileVisibility } from "@/lib/db";
+import { GEAR_KINDS } from "@/lib/gear";
 import { LOCALE_COOKIE, getLocale } from "@/lib/i18n";
 import { sendEmail } from "@/lib/email";
 import {
@@ -2076,4 +2077,95 @@ export async function deleteWish(formData: FormData): Promise<void> {
     );
   }
   revalidatePath(`/u/${user.username}`);
+}
+
+// ---- The EPI register ------------------------------------------------------
+
+/** A date input, or null — anything that isn't YYYY-MM-DD is nobody's date. */
+function optionalDate(value: FormDataEntryValue | null): string | null {
+  const raw = String(value ?? "").trim();
+  return /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : null;
+}
+
+export async function addGear(formData: FormData): Promise<void> {
+  const user = await currentUser();
+  if (!user) throw new Error("Unauthorized");
+
+  const kind = String(formData.get("kind") ?? "");
+  if (!(GEAR_KINDS as readonly string[]).includes(kind)) return;
+
+  await pool.query(
+    `insert into gear (user_id, kind, brand, model, serial, made_on, bought_on,
+                       first_used_on, notes)
+     values ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+    [
+      user.id,
+      kind,
+      optionalText(formData.get("brand")),
+      optionalText(formData.get("model")),
+      optionalText(formData.get("serial")),
+      optionalDate(formData.get("made_on")),
+      optionalDate(formData.get("bought_on")),
+      optionalDate(formData.get("first_used_on")),
+      optionalText(formData.get("notes")),
+    ]
+  );
+  revalidatePath(`/u/${user.username}/gear`);
+}
+
+/**
+ * One inspection. The verdict is the inspector's; "retire" also retires the
+ * item, since an inspection that ends in "réforme" and leaves the thing in
+ * service would be a register that disagrees with itself.
+ */
+export async function checkGear(formData: FormData): Promise<void> {
+  const user = await currentUser();
+  if (!user) throw new Error("Unauthorized");
+
+  const id = String(formData.get("id") ?? "");
+  const verdict = String(formData.get("verdict") ?? "");
+  const checkedOn = optionalDate(formData.get("checked_on")) ?? new Date().toISOString().slice(0, 10);
+  if (!id || !["ok", "watch", "retire"].includes(verdict)) return;
+
+  // Ownership is checked in the insert itself: no row of yours, no inspection.
+  const owned = await pool.query<{ id: string }>(
+    "select id from gear where id = $1 and user_id = $2",
+    [id, user.id]
+  );
+  if (owned.rows.length === 0) return;
+
+  await pool.query(
+    `insert into gear_checks (gear_id, checked_on, verdict, inspector, notes)
+     values ($1,$2,$3,$4,$5)`,
+    [
+      id,
+      checkedOn,
+      verdict,
+      optionalText(formData.get("inspector")),
+      optionalText(formData.get("notes")),
+    ]
+  );
+  if (verdict === "retire") {
+    await pool.query(
+      `update gear set retired_on = $1, retired_reason = coalesce(retired_reason, $2)
+       where id = $3 and user_id = $4 and retired_on is null`,
+      [checkedOn, optionalText(formData.get("notes")), id, user.id]
+    );
+  }
+  revalidatePath(`/u/${user.username}/gear`);
+}
+
+/** Retiring by hand — a fall, a cut, or simply "I no longer trust it". */
+export async function retireGear(formData: FormData): Promise<void> {
+  const user = await currentUser();
+  if (!user) throw new Error("Unauthorized");
+
+  const id = String(formData.get("id") ?? "");
+  if (!id) return;
+  await pool.query(
+    `update gear set retired_on = coalesce($1, current_date), retired_reason = $2
+     where id = $3 and user_id = $4`,
+    [optionalDate(formData.get("retired_on")), optionalText(formData.get("reason")), id, user.id]
+  );
+  revalidatePath(`/u/${user.username}/gear`);
 }
