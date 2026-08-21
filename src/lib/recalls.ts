@@ -17,6 +17,20 @@
  * number on your label is what settles it.
  */
 
+/**
+ * Brands are written by two different hands — yours, and whoever filed the
+ * recall — so they are compared with the accents, the case and the stray
+ * spaces taken off both: "Béal", "BEAL " and "beal" are one brand.
+ */
+function normalise(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 const API =
   "https://data.economie.gouv.fr/api/records/1.0/search/?dataset=rappelconso-v2-gtin-trie";
 
@@ -47,10 +61,11 @@ type Row = {
  * item: a register holds a handful of brands and a great many carabiners.
  */
 export async function recallsForBrand(brand: string): Promise<Recall[]> {
-  const name = brand.trim();
+  const name = normalise(brand);
   if (name.length < 2) return [];
   try {
     const res = await fetch(
+      // Unaccented on the way out too: the register spells it "beal".
       `${API}&q=${encodeURIComponent(name)}&rows=20`,
       // A day is fresh enough for a register that is read once a season, and
       // it keeps a page of gear from being twenty requests to Bercy.
@@ -62,10 +77,10 @@ export async function recallsForBrand(brand: string): Promise<Recall[]> {
       const f = r.fields ?? {};
       // The search is full-text over the whole record, so "Camp" matches a
       // camping stove. Keep only what really is this brand.
-      if ((f.marque_produit ?? "").toLowerCase() !== name.toLowerCase()) return [];
+      if (normalise(f.marque_produit ?? "") !== name) return [];
       return [
         {
-          brand: f.marque_produit ?? name,
+          brand: f.marque_produit ?? brand,
           models: f.modeles_ou_references ?? f.libelle ?? "",
           reason: f.motif_rappel ?? "",
           publishedOn: f.date_publication?.slice(0, 10) ?? null,
@@ -98,13 +113,12 @@ export function matchRecalls(
   model: string | null
 ): Recall[] {
   if (recalls.length === 0) return [];
-  const words = (model ?? "")
-    .toLowerCase()
+  const words = normalise(model ?? "")
     .split(/[\s,]+/)
     .filter((w) => w.length > 2);
   if (words.length === 0) return recalls;
   return recalls.filter((r) => {
-    const haystack = `${r.models} ${r.brand}`.toLowerCase();
+    const haystack = normalise(`${r.models} ${r.brand}`);
     return words.some((w) => haystack.includes(w));
   });
 }
