@@ -1270,9 +1270,21 @@ export default function Cragseeker({
           </label>
         </div>
 
-        {/* 5. Aspect. The free-text field that used to share this row is now
-            the second question, above. */}
+        {/* 5. Narrowing what came back, and the aspect. The field here reads
+            the answer rather than asking the databases for a new one — the
+            question is asked above, under "Nom". */}
         <div className="seeker-row">
+          <label className="seeker-field seeker-field-grow">
+            <span className="seeker-field-label">{t.keyword}</span>
+            <input
+              type="search"
+              value={contains}
+              placeholder={t.keywordPlaceholder}
+              autoComplete="off"
+              onChange={(e) => setContains(e.target.value)}
+            />
+          </label>
+
           <fieldset className="seeker-facing">
             <legend className="seeker-field-label">{t.orientation}</legend>
             {C2C_ORIENTATIONS.map((o) => (
@@ -1386,17 +1398,6 @@ export default function Cragseeker({
               <option value="bolted">{t.sortBolted}</option>
               <option value="trad">{t.sortTrad}</option>
             </select>
-          </label>
-          <label className="seeker-refine-field">
-            <span>{t.keyword}</span>
-            <input
-              type="search"
-              className="seeker-refine-text"
-              value={contains}
-              placeholder={t.keywordPlaceholder}
-              autoComplete="off"
-              onChange={(e) => setContains(e.target.value)}
-            />
           </label>
           <label className="seeker-refine-field">
             <span>{t.loggedLabel}</span>
