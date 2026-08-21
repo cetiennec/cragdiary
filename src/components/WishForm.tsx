@@ -28,10 +28,13 @@ export default function WishForm({
   t,
   locale,
   wishlistId,
+  withPartners = true,
 }: {
   t: WishFormLabels;
   locale: Locale;
   wishlistId: string;
+  /** False on a shared list — see WishlistSection. */
+  withPartners?: boolean;
 }) {
   const [title, setTitle] = useState("");
   const [fields, setFields] = useState({
@@ -160,11 +163,15 @@ export default function WishForm({
         )}
       </div>
       <input type="text" name="note" placeholder={t.notePlaceholder} className="wish-note" />
-      <MentionInput
-        name="partners"
-        placeholder={t.partnersPlaceholder}
-        className="wish-note"
-      />
+      {/* Absent on a shared list, where the people it is shared with are the
+          partners already — the same reasoning as the per-route field. */}
+      {withPartners && (
+        <MentionInput
+          name="partners"
+          placeholder={t.partnersPlaceholder}
+          className="wish-note"
+        />
+      )}
       <SubmitButton label={t.add} />
     </form>
   );

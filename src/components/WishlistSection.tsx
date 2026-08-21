@@ -105,6 +105,7 @@ export default function WishlistSection({
         <WishForm
           locale={locale}
           wishlistId={list.id}
+          withPartners={!shared}
           t={{
             titlePlaceholder: t.titlePlaceholder,
             notePlaceholder: t.notePlaceholder,
