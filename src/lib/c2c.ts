@@ -394,6 +394,69 @@ export type C2cRouteFilters = {
   limit?: number;
 };
 
+// The ladder an expanding search climbs, in kilometres. Camptocamp cannot sort
+// by distance (its default order for routes is newest document first), so a
+// single wide box answers with whatever was catalogued most recently and the
+// nearest routes may not be in it at all: searching 100 km around Céüse
+// returned nothing closer than 37 km, with 4,000 routes in the box and the
+// crag itself 1.5 km away. Asking a small box first, and widening only when it
+// cannot fill a page, puts the ladder back the right way up.
+const NEAREST_RINGS = [5, 10, 25, 50, 100, 200];
+
+// What one search may cost upstream. Each rung is one request per page of it,
+// and c2c is not fast; better to answer with the nearest thirty we could reach
+// than to walk the whole ladder.
+const NEAREST_BUDGET = 8;
+
+/**
+ * The routes nearest a point, actually nearest-first.
+ *
+ * Walks outward a ring at a time, paging each ring far enough to fill the page
+ * before widening. Documents repeat between rings — an inner box is inside the
+ * outer one — so they are kept by id.
+ */
+export async function searchRoutesNearest(
+  filters: C2cRouteFilters,
+  lang: string,
+  near: { lat: number; lon: number; radiusKm: number },
+  want: number
+): Promise<{ boxTotal: number; results: C2cRouteResult[]; exhausted: boolean }> {
+  const pageSize = filters.limit ?? 30;
+  const rings = [...NEAREST_RINGS.filter((r) => r < near.radiusKm), near.radiusKm];
+
+  const seen = new Map<C2cRouteResult["id"], C2cRouteResult>();
+  let spent = 0;
+  let exhausted = false;
+
+  // The whole circle's size, asked once and cheaply, so "about N routes" still
+  // describes what you searched rather than the last ring that was walked.
+  const totalPromise = searchRoutes({ ...filters, limit: 1, offset: 0 }, lang, near);
+
+  for (const radius of rings) {
+    const ring = { ...near, radiusKm: radius };
+    const bbox = bboxAround(near.lat, near.lon, radius);
+    let offset = 0;
+    let ringTotal = Infinity;
+
+    while (seen.size < want && spent < NEAREST_BUDGET && offset < ringTotal) {
+      const page = await searchRoutes({ ...filters, bbox, limit: pageSize, offset }, lang, ring);
+      spent++;
+      ringTotal = page.boxTotal;
+      for (const r of page.results) seen.set(r.id, r);
+      offset += pageSize;
+      // A ring smaller than the one asked for is a ring seen to its end.
+      if (offset >= ringTotal) exhausted = radius === near.radiusKm;
+    }
+    if (seen.size >= want || spent >= NEAREST_BUDGET) break;
+  }
+
+  const { boxTotal } = await totalPromise;
+  const results = [...seen.values()].sort(
+    (a, b) => (a.distance_km ?? Infinity) - (b.distance_km ?? Infinity)
+  );
+  return { boxTotal, results, exhausted };
+}
+
 export async function searchRoutes(
   filters: C2cRouteFilters,
   lang: string,
