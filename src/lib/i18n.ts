@@ -700,6 +700,15 @@ const en = {
     min: "min",
     max: "max",
     orientation: "Orientation",
+    // The panel asks three questions in turn rather than presenting one wall
+    // of controls: what kind of day, do you already know what you want, and
+    // failing that, where are you.
+    step1: "What are you after?",
+    step2: "Something particular in mind?",
+    step2Hint: "Search straight for it, by route or by crag.",
+    step3: "Looking for something near you?",
+    step3Hint: "Pick a place — or drop a pin on the map — and narrow it down below.",
+    directPlaceholder: "A route or a crag by name — Ceüse, Fous ta cagoule…",
     filters: "Filters",
     clear: "Clear filters",
     noLocation: "Pick a place or drop a pin to search a region — or search by name alone.",
@@ -1530,6 +1539,12 @@ const fr: Dict = {
     min: "min",
     max: "max",
     orientation: "Orientation",
+    step1: "Que voulez-vous faire ?",
+    step2: "Vous avez une idée précise ?",
+    step2Hint: "Effectuez une recherche directe, par nom de voie ou de falaise.",
+    step3: "Vous cherchez près de chez vous ?",
+    step3Hint: "Choisissez un lieu — ou posez un point sur la carte — puis affinez ci-dessous.",
+    directPlaceholder: "Une voie ou une falaise par son nom — Ceüse, Fous ta cagoule…",
     filters: "Filtres",
     clear: "Effacer les filtres",
     noLocation:

@@ -919,6 +919,11 @@ export default function Cragseeker({
       </header>
 
       <section className="seeker-controls" aria-label={t.filters}>
+        {/* Three questions in turn, rather than one wall of controls: what
+            kind of day you want, whether you already know what you are after,
+            and — failing that — where you are. */}
+        <h2 className="seeker-step">{t.step1}</h2>
+
         {/* 1. Which databases to ask — the choice every filter below hangs off,
             so it sits above them rather than in among them. */}
         <div className="seeker-row seeker-row-sources">
@@ -1016,6 +1021,26 @@ export default function Cragseeker({
             </fieldset>
           )}
         </div>
+
+        {/* 2b. The way in for anyone who already knows the name — it used to
+            sit last, among the filters, labelled "name contains", which is a
+            filter's name rather than a search's. */}
+        <h2 className="seeker-step">{t.step2}</h2>
+        <p className="seeker-step-hint">{t.step2Hint}</p>
+        <div className="seeker-row">
+          <label className="seeker-field seeker-field-grow seeker-direct">
+            <input
+              type="search"
+              value={q}
+              placeholder={t.directPlaceholder}
+              aria-label={t.step2Hint}
+              onChange={(e) => setQ(e.target.value)}
+            />
+          </label>
+        </div>
+
+        <h2 className="seeker-step">{t.step3}</h2>
+        <p className="seeker-step-hint">{t.step3Hint}</p>
 
         {/* 3. Where to look. */}
         <div className="seeker-row">
@@ -1147,18 +1172,9 @@ export default function Cragseeker({
           </label>
         </div>
 
-        {/* 5. Free text and aspect, side by side. */}
+        {/* 5. Aspect. The free-text field that used to share this row is now
+            the second question, above. */}
         <div className="seeker-row">
-          <label className="seeker-field seeker-field-grow">
-            <span className="seeker-field-label">{t.keyword}</span>
-            <input
-              type="search"
-              value={q}
-              placeholder={t.keywordPlaceholder}
-              onChange={(e) => setQ(e.target.value)}
-            />
-          </label>
-
           <fieldset className="seeker-facing">
             <legend className="seeker-field-label">{t.orientation}</legend>
             {C2C_ORIENTATIONS.map((o) => (

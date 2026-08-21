@@ -3932,6 +3932,35 @@ a {
   margin-bottom: 1.4rem;
 }
 
+/* The panel asks three questions; each heading is a question, and the hint
+   under it is the answer's instructions. Quiet — they organise the controls,
+   they are not the page's own title. */
+.seeker-step {
+  font-family: var(--heading-font), serif;
+  font-size: 1.02rem;
+  font-weight: 600;
+  margin: 1.4rem 0 0.1rem;
+  color: var(--text);
+}
+
+.seeker-step:first-of-type {
+  margin-top: 0;
+}
+
+.seeker-step-hint {
+  margin: 0 0 0.6rem;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+/* The direct search is the one field that should look like a way in rather
+   than a filter: full width, and large enough to type a route name into. */
+.seeker-direct input {
+  width: 100%;
+  font-size: 1rem;
+  padding: 0.55rem 0.7rem;
+}
+
 .seeker-row {
   display: flex;
   flex-wrap: wrap;
