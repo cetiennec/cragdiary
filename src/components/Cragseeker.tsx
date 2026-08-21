@@ -614,11 +614,13 @@ export default function Cragseeker({
     hintsArmed.current = false;
     setRouteHints([]);
     setHintsOpen(false);
+    startNameSearch();
     setQ(hint.title);
   }
 
   function pickPlace(place: GeoSuggestion) {
     placeArmed.current = false;
+    setQ("");
     setPlaceInput(place.name);
     setCentre({ lat: place.lat, lon: place.lon, name: place.name });
     setPlaces([]);
@@ -627,6 +629,7 @@ export default function Cragseeker({
 
   function dropPin(lat: number, lon: number) {
     placeArmed.current = false;
+    setQ("");
     setCentre({ lat, lon, name: null });
     setPlaceInput("");
   }
@@ -691,6 +694,27 @@ export default function Cragseeker({
 
   function clearAll() {
     setQ("");
+    setContains("");
+    setRanges({});
+    setHeight({ min: "", max: "" });
+    setElevation({ min: "", max: "" });
+    setFacing([]);
+    setOutdoorTypes([]);
+  }
+
+  /**
+   * The two ways of searching are two ways, not two halves of one.
+   *
+   * Asking for a route by name asks the whole database for it, so the place,
+   * the circle and every criterion that could hide the route you just named
+   * step aside — searching "Fous ta cagoule" while pinned to Chamonix with a
+   * 6a floor finds nothing, and finding nothing is the least useful answer a
+   * search can give. Choosing a place does the reverse, and drops the name.
+   */
+  function startNameSearch() {
+    setCentre(null);
+    setPlaceInput("");
+    setContains("");
     setRanges({});
     setHeight({ min: "", max: "" });
     setElevation({ min: "", max: "" });
@@ -1091,6 +1115,9 @@ export default function Cragseeker({
                 data-lpignore="true"
                 onChange={(e) => {
                   hintsArmed.current = true;
+                  // Once, as the name search begins — not on every keystroke,
+                  // so a filter re-applied afterwards is left alone.
+                  if (!q && e.target.value) startNameSearch();
                   setQ(e.target.value);
                 }}
                 onBlur={() => setTimeout(() => setHintsOpen(false), 150)}
