@@ -8,6 +8,8 @@ export type NotificationType =
   | "wishlist_invite"
   | "wishlist_add"
   | "wish_tagged"
+  /** Someone offered you the pen on a day you climbed with them (migration 039). */
+  | "coauthor_invite"
   /** From the site itself: camptocamp has outings this journal doesn't. */
   | "c2c_new";
 

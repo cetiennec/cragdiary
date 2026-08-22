@@ -40,9 +40,11 @@ const grades = await page.locator(".seeker-result .seeker-tag").allInnerTexts();
 console.log("sample tags:", grades.slice(0, 12).join(" | "));
 await page.screenshot({ path: `${out}/seeker-2-filtered.png`, fullPage: true });
 
-// 3. Drop a pin by clicking the map.
+// 3. Drop a pin by clicking the map. The fractions aim at the northern Alps —
+// the map opens on the whole of France now, not on Savoie, so a click has to
+// be pointed at climbing country rather than landing there by default.
 const box = await page.locator(".seeker-map").boundingBox();
-await page.mouse.click(box.x + box.width * 0.35, box.y + box.height * 0.4);
+await page.mouse.click(box.x + box.width * 0.65, box.y + box.height * 0.68);
 await page.waitForTimeout(2500);
 console.log("after pin:", await status(), "-", await count(), "cards");
 await page.screenshot({ path: `${out}/seeker-3-pin.png`, fullPage: true });

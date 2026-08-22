@@ -3,8 +3,14 @@ import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
 import { getDict } from "@/lib/i18n";
 import { getNotifications, type Notification } from "@/lib/notifications";
-import { entriesGone, entriesNotOfferable, getEmailPrefs, getFollowRequests } from "@/lib/queries";
-import { answerFollowRequest, copyEntryToJournal } from "@/app/actions";
+import {
+  entriesGone,
+  entriesNotOfferable,
+  getEmailPrefs,
+  getFollowRequests,
+  pendingCoAuthorInvites,
+} from "@/lib/queries";
+import { acceptCoAuthor, answerFollowRequest, copyEntryToJournal, removeCoAuthor } from "@/app/actions";
 import EmailPrefsForm from "@/components/EmailPrefsForm";
 import MarkNotificationsRead from "@/components/MarkNotificationsRead";
 
@@ -21,6 +27,7 @@ function target(n: Notification, selfUsername: string): string {
     case "follow_accepted":
       return n.actor_username ? `/u/${n.actor_username}` : "/climbers";
     case "tagged":
+    case "coauthor_invite":
       return n.data?.entry_id ? `/entries/${n.data.entry_id}` : "/";
     case "wishlist_invite":
     case "wishlist_add":
@@ -50,9 +57,15 @@ export default async function NotificationsPage() {
   const tagged = items.flatMap((n) =>
     n.type === "tagged" && n.data?.entry_id ? [n.data.entry_id] : []
   );
-  const [known, gone] = await Promise.all([
+  const invited = items.flatMap((n) =>
+    n.type === "coauthor_invite" && n.data?.entry_id ? [n.data.entry_id] : []
+  );
+  const [known, gone, stillPending] = await Promise.all([
     entriesNotOfferable(user.id, tagged),
-    entriesGone(tagged),
+    entriesGone([...tagged, ...invited]),
+    // An invitation already answered leaves its notification behind; only the
+    // ones still waiting get buttons.
+    pendingCoAuthorInvites(user.id, invited),
   ]);
   const tn = t.notifications;
   // A request already answered leaves its notification behind; only the ones
@@ -110,6 +123,7 @@ export default async function NotificationsPage() {
             else if (n.type === "wishlist_add")
               message = `${tn.added} « ${n.data?.list_name ?? ""} »`;
             else if (n.type === "wish_tagged") message = tn.wishTagged;
+            else if (n.type === "coauthor_invite") message = tn.coAuthorInvite;
             else if (n.type === "c2c_new")
               message = tn.c2cNew.replace("{n}", String(n.data?.count ?? 0));
             return (
@@ -117,9 +131,10 @@ export default async function NotificationsPage() {
                 {/* A deleted day has nowhere to lead: the row still says what
                     happened, but stops pretending to be a link. */}
                 {(() => {
-                  const missing = n.type === "tagged" && n.data?.entry_id
-                    ? gone.has(n.data.entry_id)
-                    : false;
+                  const missing =
+                    (n.type === "tagged" || n.type === "coauthor_invite") && n.data?.entry_id
+                      ? gone.has(n.data.entry_id)
+                      : false;
                   const inner = (
                   <>
                   <span className="profile-avatar profile-avatar-sm" aria-hidden>
@@ -166,6 +181,26 @@ export default async function NotificationsPage() {
                     </form>
                   </span>
                 )}
+                {/* The pen offered on a day you climbed together: accepted, it
+                    is one entry with two hands on it, not a copy that drifts. */}
+                {n.type === "coauthor_invite" &&
+                  n.data?.entry_id &&
+                  stillPending.has(n.data.entry_id) && (
+                    <span className="follower-actions coauthor-invite-actions">
+                      <form action={acceptCoAuthor}>
+                        <input type="hidden" name="entry_id" value={n.data.entry_id} />
+                        <button type="submit" className="follower-accept">
+                          {t.follow.accept}
+                        </button>
+                      </form>
+                      <form action={removeCoAuthor}>
+                        <input type="hidden" name="entry_id" value={n.data.entry_id} />
+                        <button type="submit" className="follower-remove">
+                          {t.follow.decline}
+                        </button>
+                      </form>
+                    </span>
+                  )}
                 {n.type === "follow_request" &&
                   n.actor_username &&
                   pending.has(n.actor_username) && (

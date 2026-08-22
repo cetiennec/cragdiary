@@ -9,6 +9,7 @@ import WishlistManageBar from "@/components/WishlistManageBar";
 import WishlistMembers from "@/components/WishlistMembers";
 import WishlistRename from "@/components/WishlistRename";
 import ParkingLink from "@/components/ParkingLink";
+import WeatherLink from "@/components/WeatherLink";
 
 type WishlistDict = Dict["wishlist"];
 
@@ -36,8 +37,8 @@ export default function WishlistSection({
   partnerNodes: Map<string, ReactNode>;
   locale: Locale;
   t: WishlistDict;
-  /** Cragseeker's wording, reused for the parking a saved route carries. */
-  seeker: Pick<Dict["seeker"], "parking" | "openIn">;
+  /** Cragseeker's wording, reused for the parking and forecast a saved route carries. */
+  seeker: Pick<Dict["seeker"], "parking" | "openIn" | "weather" | "weatherHint">;
   attribution: string;
   /** Overrides "nothing here yet" when the list is empty only because of a filter. */
   emptyLabel?: string;
@@ -150,6 +151,16 @@ export default function WishlistSection({
                   }}
                   label={seeker.parking}
                   openIn={seeker.openIn}
+                />
+              )}
+              {/* The forecast where the route is — the question you ask of a
+                  wishlist far more often than of a day already climbed. */}
+              {wish.lat != null && wish.lon != null && (
+                <WeatherLink
+                  point={{ lat: wish.lat, lon: wish.lon }}
+                  label={seeker.weather}
+                  openIn={seeker.openIn}
+                  hint={seeker.weatherHint}
                 />
               )}
             </div>

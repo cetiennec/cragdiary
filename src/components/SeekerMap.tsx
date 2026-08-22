@@ -193,8 +193,10 @@ export type MapLayer = {
 
 type Leaflet = typeof import("leaflet");
 
-// The Alps — a sensible "you are somewhere in climbing country" opening view.
-const DEFAULT_VIEW: [number, number] = [45.5, 6.5];
+// France, whole — the country most of these databases describe best, and the
+// one most people arriving here are looking in. The Alps alone opened east of
+// where half the crags are.
+const DEFAULT_VIEW: [number, number] = [46.6, 2.4];
 const DEFAULT_ZOOM = 6;
 
 // One colour per database, so a glance at the map says where a marker's
@@ -276,6 +278,7 @@ export default function SeekerMap({
   hutLabels,
   gyms,
   gymLabels,
+  frameResults = true,
 }: {
   centre: { lat: number; lon: number } | null;
   radiusKm: number;
@@ -295,6 +298,13 @@ export default function SeekerMap({
   huts: MountainHut[];
   /** How to label a shelter's popup. */
   hutLabels: { beds: string; noBeds: string; open: string };
+  /**
+   * Whether the map should reframe itself around what was found. True once
+   * something has actually been asked for; false for the page as it opens,
+   * where the results are a sample of everything and framing them zooms out to
+   * the whole world instead of showing the country most of them are in.
+   */
+  frameResults?: boolean;
   /** Indoor climbing gyms to draw beside the results, empty when the layer is off. */
   gyms: ClimbingGym[];
   /** How to label a gym's popup. */
@@ -489,7 +499,7 @@ export default function SeekerMap({
   // rather than somewhere off the coast of the default view.
   const foundKey = points.map((p) => p.id).join(",");
   useEffect(() => {
-    if (!map || !L || centre || points.length === 0) return;
+    if (!map || !L || centre || !frameResults || points.length === 0) return;
     const located = points.filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lon));
     if (located.length === 0) return;
     map.invalidateSize();
@@ -501,7 +511,7 @@ export default function SeekerMap({
     );
     // `points` is rebuilt on every render; the ids are what actually changed.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [map, L, centre, foundKey]);
+  }, [map, L, centre, frameResults, foundKey]);
 
   useEffect(() => {
     if (!map || !L) return;

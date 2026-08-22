@@ -140,6 +140,12 @@ export type Photo = {
   width: number | null;
   height: number | null;
   caption: string | null;
+  /**
+   * Who put it there (migration 039). Null on every photo older than
+   * co-authoring, which reads as "the entry's author" — nobody else could
+   * have. Only its uploader may take it back out again.
+   */
+  uploaded_by: string | null;
 };
 
 export type Wish = {

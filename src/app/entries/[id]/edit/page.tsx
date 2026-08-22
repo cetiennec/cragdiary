@@ -1,5 +1,5 @@
 import { notFound, redirect } from "next/navigation";
-import { getEntry } from "@/lib/queries";
+import { canEditEntry, getCoAuthors, getEntry } from "@/lib/queries";
 import { currentUser } from "@/lib/auth";
 import { getDict } from "@/lib/i18n";
 import EntryForm from "@/components/EntryForm";
@@ -20,7 +20,11 @@ export default async function EditEntryPage({
   if (!user) redirect("/login");
 
   const entry = await getEntry(id);
-  if (!entry || entry.user_id !== user.id) notFound();
+  if (!entry || !(await canEditEntry(entry.id, user.id))) notFound();
+  const isAuthor = entry.user_id === user.id;
+  const coAuthors = isAuthor
+    ? await getCoAuthors(entry.id)
+    : [];
 
   const { locale, t } = await getDict();
   return (
@@ -38,17 +42,30 @@ export default async function EditEntryPage({
       <EntryForm entry={entry} t={t.editor} locale={locale} />
 
       {/* Outside the editor's own <form> — a form can't nest — and last on the
-          page, so deleting is never a click away from saving. */}
-      <div className="page-container narrow entry-footer entry-footer-editor">
-        <DeleteEntryButton
-          id={entry.id}
-          labels={{
-            delete: t.entry.delete,
-            deleting: t.entry.deleting,
-            confirm: t.entry.confirmDelete,
-          }}
-        />
-      </div>
+          page, so deleting is never a click away from saving. A co-author
+          writes the day but cannot end it; leaving is their equivalent, and it
+          lives in the tray on their own profile. */}
+      {isAuthor && (
+        <div className="page-container narrow entry-footer entry-footer-editor">
+          <DeleteEntryButton
+            id={entry.id}
+            labels={{
+              delete: t.entry.delete,
+              deleting: t.entry.deleting,
+              confirm:
+                coAuthors.filter((a) => a.status === "accepted").length > 0
+                  ? t.entry.confirmDeleteShared.replace(
+                      "{names}",
+                      coAuthors
+                        .filter((a) => a.status === "accepted")
+                        .map((a) => a.display_name)
+                        .join(", ")
+                    )
+                  : t.entry.confirmDelete,
+            }}
+          />
+        </div>
+      )}
     </>
   );
 }

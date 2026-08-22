@@ -26,6 +26,7 @@ const en = {
     invited: "invited you to",
     added: "added a route to",
     wishTagged: "tagged you on a route",
+    coAuthorInvite: "invites you to write this day with them",
     addToJournal: "Add to my journal",
     c2cNew: "{n} outings on camptocamp aren't in your journal yet — sync to bring them in.",
     entryGone: "this outing has been deleted",
@@ -141,6 +142,15 @@ const en = {
     pitches: "🪜 Pitches",
     height: "📏 Height (m)",
     partners: "👥 Partners",
+    coAuthors: {
+      hint: "Naming someone opens the day to them. Offering the pen lets them write it with you — one entry, in both journals.",
+      offer: "Let them write it too",
+      invited: "Invited",
+      writing: "Writes this day",
+      withdraw: "Take back",
+      needsMutual: "You each need to follow the other",
+      saveFirst: "Save the day first, then you can offer to write it together.",
+    },
     partnersPlaceholder: "Léo, @marine… (@ to tag a climber)",
     mentionAddedToCordee: "@{user} added to the rope party",
     linkDay: {
@@ -151,7 +161,6 @@ const en = {
       willMoveDate: "Your day would move to {date}.",
       link: "Link",
       ignore: "Not the same day",
-      alreadyLinked: "Already linked to your journal.",
       matchedDate: "same dates",
       matchedPlace: "same place",
       linked: "Linked to @{user}'s day",
@@ -254,6 +263,9 @@ const en = {
     delete: "Delete entry",
     deleting: "Deleting…",
     confirmDelete: "Delete this entry? This cannot be undone.",
+    confirmDeleteShared:
+      "{names} shares this day and will lose it too. Delete it? This cannot be undone.",
+    coAuthorsLabel: "✍️ Written with",
     badges: { followers: "👥 Followers", private: "🔗 By link" },
     visibilityPicker: "Who can see this day",
     visibilityShort: {
@@ -346,6 +358,18 @@ const en = {
       thisYear: "This year",
       thisMonth: "This month",
     },
+  },
+  sharedDays: {
+    title: "Days you're on",
+    intro:
+      "Days someone else wrote with you on them. The ones you co-write can stand among your own entries; the rest are their account of it, and yours is still yours to write.",
+    by: "written by {name}",
+    coAuthorTag: "you can edit it",
+    showInJournal: "Show in my journal",
+    hideFromJournal: "Keep it here only",
+    writeMine: "Write my own version",
+    alreadyMine: "You wrote your own",
+    leave: "Leave this day",
   },
   cordees: {
     title: "Days climbed with",
@@ -943,6 +967,7 @@ const fr: Dict = {
     invited: "vous a invité à",
     added: "a ajouté une voie à",
     wishTagged: "vous a ajouté·e à une voie",
+    coAuthorInvite: "vous propose d'écrire cette journée avec elle ou lui",
     addToJournal: "Ajouter à mon carnet",
     c2cNew: "{n} sorties sur camptocamp ne sont pas encore dans votre carnet — synchronisez pour les récupérer.",
     entryGone: "cette sortie a été supprimée",
@@ -1058,6 +1083,15 @@ const fr: Dict = {
     pitches: "🪜 Longueurs",
     height: "📏 Hauteur (m)",
     partners: "👥 Partenaires",
+    coAuthors: {
+      hint: "Nommer quelqu'un lui ouvre la journée. Lui passer la plume lui permet de l'écrire avec vous — une seule entrée, dans les deux carnets.",
+      offer: "Lui passer la plume",
+      invited: "Invitation envoyée",
+      writing: "Écrit cette journée",
+      withdraw: "Reprendre",
+      needsMutual: "Il faut vous suivre mutuellement",
+      saveFirst: "Enregistrez d'abord la journée, vous pourrez ensuite proposer de l'écrire à deux.",
+    },
     partnersPlaceholder: "Léo, @marine… (@ pour taguer un grimpeur)",
     mentionAddedToCordee: "@{user} ajouté·e à la cordée",
     linkDay: {
@@ -1068,7 +1102,6 @@ const fr: Dict = {
       willMoveDate: "Votre journée passerait au {date}.",
       link: "Lier",
       ignore: "Pas la même journée",
-      alreadyLinked: "Déjà liée à votre carnet.",
       matchedDate: "mêmes dates",
       matchedPlace: "même lieu",
       linked: "Liée à la journée de @{user}",
@@ -1171,6 +1204,9 @@ const fr: Dict = {
     delete: "Supprimer l'entrée",
     deleting: "Suppression…",
     confirmDelete: "Supprimer cette entrée ? C'est irréversible.",
+    confirmDeleteShared:
+      "{names} partage cette journée et la perdra aussi. Supprimer ? C'est irréversible.",
+    coAuthorsLabel: "✍️ Écrite avec",
     badges: { followers: "👥 Abonné·es", private: "🔗 Par lien" },
     visibilityPicker: "Qui peut voir cette journée",
     visibilityShort: {
@@ -1264,6 +1300,18 @@ const fr: Dict = {
       thisYear: "Cette année",
       thisMonth: "Ce mois-ci",
     },
+  },
+  sharedDays: {
+    title: "Les journées où vous apparaissez",
+    intro:
+      "Des journées écrites par quelqu'un d'autre, où vous êtes. Celles que vous co-écrivez peuvent figurer parmi vos entrées ; les autres sont leur récit, et le vôtre reste à écrire.",
+    by: "écrite par {name}",
+    coAuthorTag: "vous pouvez la modifier",
+    showInJournal: "Afficher dans mon carnet",
+    hideFromJournal: "La garder ici seulement",
+    writeMine: "Écrire ma version",
+    alreadyMine: "Vous avez écrit la vôtre",
+    leave: "Quitter cette journée",
   },
   cordees: {
     title: "Sorties communes avec",

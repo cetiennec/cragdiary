@@ -1,6 +1,6 @@
 import { pool } from "@/lib/db";
 import { currentUser } from "@/lib/auth";
-import { followState } from "@/lib/queries";
+import { entryReadState, mayRead } from "@/lib/queries";
 
 export async function GET(
   req: Request,
@@ -15,10 +15,9 @@ export async function GET(
     thumb: Buffer | null;
     content_type: string;
     visibility: string;
-    user_id: string;
-    partners: string | null;
+    entry_id: string;
   }>(
-    `select p.data, p.thumb, p.content_type, e.visibility, e.user_id, e.partners
+    `select p.data, p.thumb, p.content_type, e.visibility, e.id as entry_id
      from photos p
      join entries e on e.id = p.entry_id
      where p.id = $1`,
@@ -29,22 +28,18 @@ export async function GET(
     return new Response("Not found", { status: 404 });
   }
 
-  const { data, thumb, content_type, visibility, user_id, partners } = result.rows[0];
+  const { data, thumb, content_type, visibility, entry_id } = result.rows[0];
 
   // A photo id is as unguessable as the day it belongs to, so a day reachable
   // by its link ('private') hands over its photographs to whoever follows that
   // link — otherwise the page would open onto empty frames. A day written for
-  // followers asks the same question its own page asks.
+  // followers asks the same question its own page asks, through the same
+  // function, so the two can never drift apart.
   if (visibility === "followers") {
     const user = await currentUser();
-    const named =
-      user != null && new RegExp(`@${user.username}([^a-z0-9-]|$)`, "i").test(partners ?? "");
-    const mine = user?.id === user_id;
-    if (!mine && !named) {
-      const follow = user ? await followState(user.id, user_id) : "none";
-      if (follow !== "accepted") {
-        return new Response("Not found", { status: 404 });
-      }
+    const state = await entryReadState(entry_id, user);
+    if (!state || !mayRead(state)) {
+      return new Response("Not found", { status: 404 });
     }
   }
 

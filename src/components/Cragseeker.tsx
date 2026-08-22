@@ -1363,6 +1363,10 @@ export default function Cragseeker({
         hutLabels={hutLabels}
         gyms={visibleGyms}
         gymLabels={gymLabels}
+        // Only once something has been asked for. Opening the page on a sample
+        // of every database and framing it fits the Alps, the Rockies and Peru
+        // into one view of the world; France is the honest opening shot.
+        frameResults={q.trim().length > 0}
       />
 
       <div className="seeker-status">

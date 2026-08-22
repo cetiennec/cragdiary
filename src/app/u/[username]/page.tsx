@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import {
   getEntriesByUser,
+  getTrayDays,
   getEntryYears,
   getCoverPhotoIds,
   getPinCollection,
@@ -29,6 +30,7 @@ import CreateWishlistForm from "@/components/CreateWishlistForm";
 import { currentUser } from "@/lib/auth";
 import { formatDate, formatMeters, getDict } from "@/lib/i18n";
 import EntryCard from "@/components/EntryCard";
+import SharedDaysTray from "@/components/SharedDaysTray";
 import ProfileMap from "@/components/ProfileMap";
 import ProfileSettingsForm from "@/components/ProfileSettingsForm";
 import FollowersPanel from "@/components/FollowersPanel";
@@ -139,6 +141,14 @@ export default async function ProfilePage({
   const follow =
     user && !isSelf ? await followState(user.id, profile.id) : ("none" as const);
   const viewerFollows = follow === "accepted";
+  // One description of "whose journal, read by whom", shared by the listing,
+  // the counts and the map so they can never disagree about what is in it.
+  const scope = {
+    includeNonPublic: isSelf,
+    viewerFollows,
+    namedViewer: isSelf ? null : (user?.username ?? null),
+    viewerId: user?.id ?? null,
+  };
   const [
     page,
     stats,
@@ -149,33 +159,26 @@ export default async function ProfilePage({
     followers,
     followRequests,
     taggedWishes,
+    trayDays,
   ] = await Promise.all([
     getEntriesByUser(profile.id, {
-      includeNonPublic: isSelf,
-      viewerFollows,
-      namedViewer: isSelf ? null : (user?.username ?? null),
+      ...scope,
       filters,
       limit: show,
     }),
-    getUserStats(profile.id, {
-      includeNonPublic: isSelf,
-      viewerFollows,
-      namedViewer: isSelf ? null : (user?.username ?? null),
-    }),
+    getUserStats(profile.id, scope),
     getEntryYears(profile.id),
     getOwnedWishlists(profile.id, user?.id ?? null),
     isSelf ? getSharedWishlists(profile.id) : Promise.resolve([]),
     // Every day that has coordinates, for the map — the rows are small and
     // carry no photos, so this stays cheap however long the journal is.
-    getPinCollection(profile.id, {
-      includeNonPublic: isSelf,
-      viewerFollows,
-      namedViewer: isSelf ? null : (user?.username ?? null),
-    }),
+    getPinCollection(profile.id, scope),
     isSelf ? getFollowers(profile.id) : Promise.resolve([]),
     isSelf ? getFollowRequests(profile.id) : Promise.resolve([]),
     // Routes someone else tagged you on: not yours, but meant for you.
     isSelf ? getWishesTaggingUser(profile.id, profile.username) : Promise.resolve([]),
+    // Days someone else wrote that you are on — the tray at the foot of the page.
+    isSelf ? getTrayDays(profile.id, profile.username) : Promise.resolve([]),
   ]);
   const entries = page.entries;
   const wishes = [...wishlists, ...sharedWishlists].flatMap((l) => l.wishes);
@@ -707,6 +710,11 @@ export default async function ProfilePage({
             </>
           )}
         </section>
+      )}
+
+      {/* Days you are on but have not written up — yours alone to see. */}
+      {isSelf && (
+        <SharedDaysTray days={trayDays} locale={locale} t={t.sharedDays} />
       )}
       </div>
     </>

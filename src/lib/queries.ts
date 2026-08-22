@@ -24,7 +24,8 @@ async function attachPhotos<T extends Entry>(
   if (entries.length === 0) return [];
 
   const photosResult = await pool.query<Photo>(
-    `select id, entry_id, content_type, position, size, align, para, width, height, caption
+    `select id, entry_id, content_type, position, size, align, para, width, height, caption,
+            uploaded_by
      from photos
      where entry_id = any($1)
      order by position asc`,
@@ -42,6 +43,195 @@ async function attachPhotos<T extends Entry>(
     ...entry,
     photos: photosByEntry.get(entry.id) ?? [],
   }));
+}
+
+/**
+ * A day two people wrote (migration 039).
+ *
+ * `pending` is an invitation and grants nothing; `accepted` is a co-author, who
+ * may edit the day itself but not its visibility, and may not delete it. That
+ * asymmetry is deliberate: one day, one owner, and a second hand on the pen.
+ */
+export type CoAuthor = {
+  user_id: string;
+  username: string;
+  display_name: string;
+  status: "pending" | "accepted";
+  /** Their own choice to show the day among their entries, not only in the tray. */
+  in_journal: boolean;
+  has_avatar: boolean;
+};
+
+/**
+ * SQL: the reader follows someone who wrote this day — its author, or a
+ * co-author. A shared day is filed once but stands in two journals, so
+ * "followers" has to mean the followers of either; otherwise a co-author shows
+ * a day on her page that her own followers get a 404 on.
+ *
+ * Both fragments take an alias for `entries` and an already-pushed parameter
+ * placeholder for the viewer's id.
+ */
+function followsAnAuthorSql(entry: string, viewer: string): string {
+  return `exists (select 1 from follows f
+                  where f.follower_id = ${viewer} and f.status = 'accepted'
+                    and (f.followee_id = ${entry}.user_id
+                         or f.followee_id in (select ca.user_id from entry_authors ca
+                                              where ca.entry_id = ${entry}.id
+                                                and ca.status = 'accepted')))`;
+}
+
+/** SQL: the reader is one of this day's accepted co-authors. */
+function isCoAuthorSql(entry: string, viewer: string): string {
+  return `exists (select 1 from entry_authors ca
+                  where ca.entry_id = ${entry}.id and ca.user_id = ${viewer}
+                    and ca.status = 'accepted')`;
+}
+
+/** Everyone invited onto a day, accepted or not. Authors see both; readers only accepted ones. */
+export async function getCoAuthors(entryId: string): Promise<CoAuthor[]> {
+  const result = await pool.query<CoAuthor>(
+    `select a.user_id, u.username, u.display_name, a.status, a.in_journal,
+            u.avatar is not null as has_avatar
+     from entry_authors a
+     join users u on u.id = a.user_id
+     where a.entry_id = $1
+     order by u.display_name`,
+    [entryId]
+  );
+  return result.rows;
+}
+
+/** The same, for a page full of cards, in one query. */
+export async function coAuthorsByEntry(
+  entryIds: string[]
+): Promise<Map<string, CoAuthor[]>> {
+  const byEntry = new Map<string, CoAuthor[]>();
+  if (entryIds.length === 0) return byEntry;
+  const result = await pool.query<CoAuthor & { entry_id: string }>(
+    `select a.entry_id, a.user_id, u.username, u.display_name, a.status, a.in_journal,
+            u.avatar is not null as has_avatar
+     from entry_authors a
+     join users u on u.id = a.user_id
+     where a.entry_id = any($1) and a.status = 'accepted'
+     order by u.display_name`,
+    [entryIds]
+  );
+  for (const { entry_id, ...author } of result.rows) {
+    const list = byEntry.get(entry_id) ?? [];
+    list.push(author);
+    byEntry.set(entry_id, list);
+  }
+  return byEntry;
+}
+
+/** Whether this user may write to this day: its author, or an accepted co-author. */
+export async function canEditEntry(entryId: string, userId: string): Promise<boolean> {
+  const result = await pool.query(
+    `select 1 from entries e
+     where e.id = $1
+       and (e.user_id = $2 or ${isCoAuthorSql("e", "$2")})`,
+    [entryId, userId]
+  );
+  return result.rows.length > 0;
+}
+
+export type EntryReadState = {
+  visibility: string;
+  is_author: boolean;
+  is_coauthor: boolean;
+  /** @-named on the day, which opens it whatever level it is filed under. */
+  is_named: boolean;
+  follows_an_author: boolean;
+};
+
+/**
+ * The one place that answers "may this reader open this day". A `private` day
+ * is reached by its unguessable link, a `public` one by anyone; only the
+ * middle rung asks anything, and it asks it of the author *and* the co-authors.
+ */
+export async function entryReadState(
+  entryId: string,
+  viewer: { id: string; username: string } | null
+): Promise<EntryReadState | null> {
+  const result = await pool.query<EntryReadState>(
+    `select e.visibility,
+            e.user_id = $2::uuid as is_author,
+            ${isCoAuthorSql("e", "$2::uuid")} as is_coauthor,
+            ($3::text is not null
+             and e.partners ~* ('@' || $3 || '([^a-z0-9-]|$)')) as is_named,
+            ${followsAnAuthorSql("e", "$2::uuid")} as follows_an_author
+     from entries e
+     where e.id = $1`,
+    [entryId, viewer?.id ?? null, viewer?.username ?? null]
+  );
+  return result.rows[0] ?? null;
+}
+
+/** Whether the read state above adds up to "yes". */
+export function mayRead(state: EntryReadState): boolean {
+  return (
+    state.visibility !== "followers" ||
+    state.is_author ||
+    state.is_coauthor ||
+    state.is_named ||
+    state.follows_an_author
+  );
+}
+
+/**
+ * One person's journal, and which of its days a given reader may see.
+ *
+ * A journal is no longer only the rows someone wrote: since migration 039 it
+ * also holds the days they co-wrote and chose to show among their own. The
+ * listing, the counts and the map all ask this one question, so a profile can
+ * never say "12 entries" above thirteen cards.
+ *
+ * Emits SQL over the fixed parameters $1..$5, in the order `journalParams`
+ * pushes them.
+ */
+export type JournalScope = {
+  includeNonPublic?: boolean;
+  /** Whether the reader is an accepted follower of the journal's owner. */
+  viewerFollows?: boolean;
+  /** The reader's own username, so days naming them are theirs to see. */
+  namedViewer?: string | null;
+  /**
+   * The reader's id. A day with two authors is filed once but stands in two
+   * journals, so its middle rung answers to the followers of either — which
+   * takes knowing who is asking, not just whether they follow this owner.
+   */
+  viewerId?: string | null;
+};
+
+function journalParams(ownerId: string, scope: JournalScope): unknown[] {
+  return [
+    ownerId,
+    scope.includeNonPublic ?? false,
+    scope.viewerFollows ?? false,
+    scope.namedViewer ?? null,
+    scope.viewerId ?? null,
+  ];
+}
+
+/** SQL: this day belongs in $1's journal — written by them, or co-written and promoted. */
+function inJournalSql(entry: string): string {
+  return `(${entry}.user_id = $1
+           or exists (select 1 from entry_authors ja
+                      where ja.entry_id = ${entry}.id and ja.user_id = $1
+                        and ja.status = 'accepted' and ja.in_journal))`;
+}
+
+/** SQL: and this reader may see it. */
+function journalVisibleSql(entry: string): string {
+  return `($2 or ${entry}.visibility = 'public'
+           or ($3 and ${entry}.visibility = 'followers')
+           or ($4::text is not null
+               and ${entry}.partners ~* ('@' || $4 || '([^a-z0-9-]|$)'))
+           or ($5::uuid is not null
+               and (${entry}.user_id = $5::uuid
+                    or ${isCoAuthorSql(entry, "$5::uuid")}
+                    or (${entry}.visibility = 'followers'
+                        and ${followsAnAuthorSql(entry, "$5::uuid")}))))`;
 }
 
 export type EntryFilters = {
@@ -91,16 +281,20 @@ export async function getFeed(
     // names you — you were there, whatever level it was filed under.
     conds[0] = `(
       e.visibility = 'public'
-      or (e.visibility = 'followers'
-          and e.user_id in (select followee_id from follows
-                            where follower_id = $${pid} and status = 'accepted'))
+      or (e.visibility = 'followers' and ${followsAnAuthorSql("e", `$${pid}`)})
       or e.partners ~* ('@' || $${pu} || '([^a-z0-9-]|$)')
+      or ${isCoAuthorSql("e", `$${pid}`)}
     )`;
     // A rope party: someone you follow, someone you tagged as a partner,
-    // or someone who tagged you as a partner.
+    // or someone who tagged you as a partner. A day's co-authors count as its
+    // authors here too — following one of them is following whoever wrote it.
     conds.push(`(
       e.user_id in (select followee_id from follows
                     where follower_id = $${pid} and status = 'accepted')
+      or exists (select 1 from entry_authors fa
+                 where fa.entry_id = e.id and fa.status = 'accepted'
+                   and fa.user_id in (select followee_id from follows
+                                      where follower_id = $${pid} and status = 'accepted'))
       or exists (select 1 from entries mine
                  where mine.user_id = $${pid}
                    and mine.partners ~* ('@' || u.username || '([^a-z0-9-]|$)'))
@@ -172,30 +366,19 @@ export async function getUserByUsername(username: string): Promise<User | null> 
 export async function getEntriesByUser(
   userId: string,
   {
-    includeNonPublic = false,
-    viewerFollows = false,
-    namedViewer = null,
     filters = {},
     limit = null,
-  }: {
-    includeNonPublic?: boolean;
-    /** Whether the reader is an accepted follower — see `EntryVisibility`. */
-    viewerFollows?: boolean;
-    /** The reader's own username, so days naming them are theirs to see. */
-    namedViewer?: string | null;
+    ...scope
+  }: JournalScope & {
     filters?: EntryFilters;
     limit?: number | null;
   } = {}
 ): Promise<{ entries: EntryWithAuthor[]; total: number }> {
-  const params: unknown[] = [userId, includeNonPublic, viewerFollows, namedViewer];
-  const conds = [
-    "e.user_id = $1",
-    // A day that names you is yours to read at every level — the same rule the
-    // day's own page follows. Without it a journal could hold nine days
-    // written about climbing with you and show you none of them.
-    `($2 or e.visibility = 'public' or ($3 and e.visibility = 'followers')
-      or ($4::text is not null and e.partners ~* ('@' || $4 || '([^a-z0-9-]|$)')))`,
-  ];
+  const params: unknown[] = journalParams(userId, scope);
+  // A day that names you is yours to read at every level — the same rule the
+  // day's own page follows. Without it a journal could hold nine days written
+  // about climbing with you and show you none of them.
+  const conds = [inJournalSql("e"), journalVisibleSql("e")];
   filterConditions(filters, params, conds);
 
   // A journal grows without bound; the page shows a screenful. The window
@@ -358,18 +541,12 @@ export async function getCoverPhotoIds(entryIds: string[]): Promise<Map<string, 
 
 export async function getPinCollection(
   userId: string,
-  {
-    includeNonPublic = false,
-    viewerFollows = false,
-    namedViewer = null,
-  }: { includeNonPublic?: boolean; viewerFollows?: boolean; namedViewer?: string | null } = {}
+  scope: JournalScope = {}
 ): Promise<Entry[]> {
   const result = await pool.query<Entry>(
-    `select * from entries
-     where user_id = $1
-       and ($2 or visibility = 'public' or ($3 and visibility = 'followers')
-            or ($4::text is not null and partners ~* ('@' || $4 || '([^a-z0-9-]|$)')))`,
-    [userId, includeNonPublic, viewerFollows, namedViewer]
+    `select e.* from entries e
+     where ${inJournalSql("e")} and ${journalVisibleSql("e")}`,
+    journalParams(userId, scope)
   );
   return result.rows;
 }
@@ -597,6 +774,76 @@ export async function entriesNotOfferable(
   return new Set(result.rows.map((r) => r.id));
 }
 
+/** Of these days, the ones whose invitation this climber has not yet answered. */
+export async function pendingCoAuthorInvites(
+  userId: string,
+  entryIds: string[]
+): Promise<Set<string>> {
+  if (entryIds.length === 0) return new Set();
+  const result = await pool.query<{ entry_id: string }>(
+    `select entry_id from entry_authors
+     where user_id = $1 and entry_id = any($2) and status = 'pending'`,
+    [userId, entryIds]
+  );
+  return new Set(result.rows.map((r) => r.entry_id));
+}
+
+/**
+ * The tray at the foot of a profile: days this climber appears on but has not
+ * written up.
+ *
+ * Two kinds, and the difference is what can be done with them. A day they
+ * co-author is one entry with their name on it — it can be shown among their
+ * own entries with a switch. A day that merely @-names them is somebody else's
+ * account of it, and the only thing to do with that is write your own.
+ *
+ * The copy offer used to live in a notification and scroll away for good; here
+ * it stays available as long as the day does.
+ */
+export type TrayDay = EntryWithAuthor & {
+  /** Accepted co-author, so this day may be shown among their entries. */
+  is_coauthor: boolean;
+  /** Already promoted into the journal — listed here as a way back out. */
+  in_journal: boolean;
+  /** They already wrote their own version, so there is nothing to copy. */
+  has_own_version: boolean;
+};
+
+export async function getTrayDays(
+  userId: string,
+  username: string
+): Promise<TrayDay[]> {
+  const result = await pool.query<
+    Entry & {
+      username: string;
+      display_name: string;
+      author_visibility: ProfileVisibility;
+      is_coauthor: boolean;
+      in_journal: boolean;
+      has_own_version: boolean;
+    }
+  >(
+    `select e.*, u.username, u.display_name, u.visibility as author_visibility,
+            ca.user_id is not null as is_coauthor,
+            coalesce(ca.in_journal, false) as in_journal,
+            exists (select 1 from entries mine
+                    where mine.user_id = $1
+                      and mine.entry_date = e.entry_date
+                      and mine.crag = e.crag) as has_own_version
+     from entries e
+     join users u on u.id = e.user_id
+     left join entry_authors ca
+            on ca.entry_id = e.id and ca.user_id = $1 and ca.status = 'accepted'
+     where e.user_id <> $1
+       and (ca.user_id is not null
+            or e.partners ~* ('@' || $2 || '([^a-z0-9-]|$)'))
+     order by e.entry_date desc, e.created_at desc
+     limit 30`,
+    [userId, username]
+  );
+  return (await attachPhotos(result.rows)) as TrayDay[];
+}
+
 export type LinkableDay = {
   id: string;
   entry_date: string;
@@ -613,8 +860,6 @@ export type LinkableDay = {
   routes: string | null;
   c2c_url: string | null;
   photo_id: string | null;
-  /** Already mentions the viewer, so the two days are linked already. */
-  already_linked: boolean;
   /** Why it came up: the date, the place, or both. */
   same_date: boolean;
   same_place: boolean;
@@ -626,11 +871,16 @@ function likeLiteral(value: string): string {
 }
 
 // Days this climber logged that could be the same day as yours: same date (give
-// or take a couple of days) or same place. The climber is already named — you
-// tagged them — so a match on either is enough, and a match on both is the
-// strongest. Among those the viewer may see: the public ones, and — because
-// accepting a follower is saying "you may read me" — the link-only ones when
-// they accepted the viewer's follow. Never the private ones.
+// or take a couple of days) or same place. Among those the viewer may see: the
+// public ones, and — because accepting a follower is saying "you may read me" —
+// the link-only ones when they accepted the viewer's follow. Never the private
+// ones.
+//
+// Two kinds of day are deliberately never offered, because there is nothing
+// left to do with them: the ones that already name the viewer (linked already)
+// and the ones the viewer has already written up themselves. And a match on the
+// place alone is a weak signal — the same crag a fortnight apart is not the same
+// day — so it only speaks when no date matches at all.
 export async function findLinkableDays(
   viewerId: string,
   viewerUsername: string,
@@ -654,7 +904,6 @@ export async function findLinkableDays(
             (select p.id from photos p
              where p.entry_id = e.id and p.align is null
              order by p.position asc limit 1) as photo_id,
-            e.partners ~* ('@' || $3 || '([^a-z0-9-]|$)') as already_linked,
             abs(e.entry_date - $4::date) <= $5 as same_date,
             (cardinality($6::text[]) > 0
              and exists (select 1 from unnest($6::text[]) as q
@@ -668,22 +917,35 @@ export async function findLinkableDays(
             or (cardinality($6::text[]) > 0
                 and exists (select 1 from unnest($6::text[]) as q
                             where e.crag ilike '%' || q || '%'
-                               or e.location ilike '%' || q || '%'))
-            -- Already listed on their day: linked whatever the date says.
-            or e.partners ~* ('@' || $3 || '([^a-z0-9-]|$)'))
+                               or e.location ilike '%' || q || '%')))
+       -- Already linked: their day names the viewer, so offering it again is
+       -- offering to do what is done. Coalesced, because a day with no rope
+       -- party at all has a null partners column, and null !~* anything is
+       -- null rather than true — which would have thrown away every single day
+       -- nobody happened to be named on.
+       and coalesce(e.partners, '') !~* ('@' || $3 || '([^a-z0-9-]|$)')
+       -- Already written up on this side: the viewer has their own version of
+       -- that day, and a second one is the drift we are trying to avoid.
+       and not exists (select 1 from entries mine
+                       where mine.user_id = $2
+                         and mine.entry_date = e.entry_date
+                         and mine.crag = e.crag)
        and (e.visibility = 'public'
             or e.partners ~* ('@' || $3 || '([^a-z0-9-]|$)')
             or (e.visibility = 'followers'
                 and exists (select 1 from follows f
                             where f.follower_id = $2 and f.followee_id = u.id
                               and f.status = 'accepted')))
-     order by e.partners ~* ('@' || $3 || '([^a-z0-9-]|$)') desc,
-              (abs(e.entry_date - $4::date) <= $5) desc, abs(e.entry_date - $4::date),
+     order by (abs(e.entry_date - $4::date) <= $5) desc, abs(e.entry_date - $4::date),
               e.entry_date desc
-     limit 5`,
+     limit 12`,
     [username, viewerId, viewerUsername, date, dayWindow, place]
   );
-  return result.rows;
+
+  // The date is the strong signal. When any day matches it, the place-only ones
+  // are noise beside them; when none does, the place is all there is to go on.
+  const dated = result.rows.filter((d) => d.same_date);
+  return (dated.length > 0 ? dated : result.rows).slice(0, 3);
 }
 
 // The same day, written by someone who climbed it with you. Matched on the date
@@ -724,7 +986,8 @@ export async function getSharedDay(
   // down. Anything you want to keep for good has to be your own photo.
   // Only the gallery ones: a photo placed inside their story belongs to it.
   const photos = await pool.query<Photo>(
-    `select id, entry_id, content_type, position, size, align, para, width, height, caption
+    `select id, entry_id, content_type, position, size, align, para, width, height, caption,
+            uploaded_by
      from photos
      where entry_id = any($1) and align is null
      order by position asc`,
@@ -818,24 +1081,15 @@ export type UserStats = {
   this_month: number;
 };
 
-export async function getUserStats(
-  userId: string,
-  {
-    includeNonPublic = false,
-    viewerFollows = false,
-    namedViewer = null,
-  }: { includeNonPublic?: boolean; viewerFollows?: boolean; namedViewer?: string | null } = {}
-): Promise<UserStats> {
+export async function getUserStats(userId: string, scope: JournalScope = {}): Promise<UserStats> {
   const result = await pool.query<UserStats>(
     `select count(*)::int as total,
-            coalesce(sum(height_m), 0)::int as meters,
-            count(*) filter (where entry_date >= date_trunc('year', current_date))::int as this_year,
-            count(*) filter (where entry_date >= date_trunc('month', current_date))::int as this_month
-     from entries
-     where user_id = $1
-       and ($2 or visibility = 'public' or ($3 and visibility = 'followers')
-            or ($4::text is not null and partners ~* ('@' || $4 || '([^a-z0-9-]|$)')))`,
-    [userId, includeNonPublic, viewerFollows, namedViewer]
+            coalesce(sum(e.height_m), 0)::int as meters,
+            count(*) filter (where e.entry_date >= date_trunc('year', current_date))::int as this_year,
+            count(*) filter (where e.entry_date >= date_trunc('month', current_date))::int as this_month
+     from entries e
+     where ${inJournalSql("e")} and ${journalVisibleSql("e")}`,
+    journalParams(userId, scope)
   );
   return result.rows[0];
 }

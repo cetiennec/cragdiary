@@ -98,6 +98,10 @@ alter table photos add column if not exists caption text;
 -- which case the photo route falls back to the full image.
 alter table photos add column if not exists thumb bytea;
 
+-- Who put this photograph here (migration 039). Null on everything older,
+-- which reads as "the entry's author" — the only person who could have.
+alter table photos add column if not exists uploaded_by uuid references users(id) on delete set null;
+
 create index if not exists photos_entry_id_idx on photos(entry_id);
 create index if not exists entries_entry_date_idx on entries(entry_date desc);
 create index if not exists entries_user_id_idx on entries(user_id);
@@ -114,6 +118,28 @@ create table if not exists password_resets (
 -- A follow is accepted straight away unless the followee asks to approve them
 -- (users.approve_followers), in which case the row waits as 'pending'. Every
 -- read of this table filters on status: a request is not an audience.
+-- Co-authors of a day (migration 039). One entry, written by two people who
+-- were on the same rope, instead of two rows that start identical and drift.
+--
+-- An invitation before it is a permission: the row appears `pending` when the
+-- author offers it and grants nothing until it is `accepted`. `in_journal` is
+-- the co-author's separate decision to show the day among their own entries
+-- rather than only in the tray at the foot of their profile.
+--
+-- Deliberately not the same thing as being @-named in `partners`: a mention
+-- opens the day to you and lends your photos to it, and that is unchanged. A
+-- co-author may edit the day itself. Only the author may set its visibility or
+-- delete it.
+create table if not exists entry_authors (
+  entry_id uuid not null references entries(id) on delete cascade,
+  user_id uuid not null references users(id) on delete cascade,
+  status text not null default 'pending' check (status in ('pending','accepted')),
+  in_journal boolean not null default false,
+  created_at timestamptz not null default now(),
+  primary key (entry_id, user_id)
+);
+create index if not exists entry_authors_user_idx on entry_authors(user_id, status);
+
 create table if not exists follows (
   follower_id uuid not null references users(id) on delete cascade,
   followee_id uuid not null references users(id) on delete cascade,
@@ -129,7 +155,7 @@ create table if not exists notifications (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references users(id) on delete cascade,   -- recipient
   actor_id uuid references users(id) on delete cascade,           -- who triggered it
-  type text not null,                                             -- follow | follow_request | follow_accepted | tagged | wishlist_invite | wishlist_add
+  type text not null,                                             -- follow | follow_request | follow_accepted | tagged | wishlist_invite | wishlist_add | wish_tagged | c2c_new | coauthor_invite
   data jsonb,                                                     -- {entry_id, wishlist_id, list_name, wish_title}
   read boolean not null default false,
   created_at timestamptz not null default now()

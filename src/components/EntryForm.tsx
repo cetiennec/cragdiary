@@ -7,6 +7,7 @@ import { addEntryPhoto, autosaveEntry, createEntry, updateEntry } from "@/app/ac
 import Toast from "@/components/Toast";
 import LinkDayDialog from "@/components/LinkDayDialog";
 import type { LinkableDay } from "@/app/api/entries/linkable/route";
+import CoAuthorControls from "@/components/CoAuthorControls";
 import type { Dict, Locale } from "@/lib/i18n";
 import type { C2cSuggestion } from "@/app/api/c2c/search/route";
 import type { C2cOutingImport } from "@/lib/c2c";
@@ -214,6 +215,10 @@ export default function EntryForm({
   const [linkOffer, setLinkOffer] = useState<{ username: string; days: LinkableDay[] } | null>(
     null
   );
+  // Asked once per climber per sitting. Tagging someone in the story text after
+  // tagging them in the rope party — or dismissing the dialog and typing their
+  // name again — used to reopen the same offer, over and over.
+  const askedToLink = useRef<Set<string>>(new Set());
 
   // Two days are linked by sharing a date and a mention. Tagging someone just
   // supplied the mention, so all that can be missing is the date — hence the
@@ -221,6 +226,9 @@ export default function EntryForm({
   async function offerToLink(username: string) {
     const date = dateValue.length === 7 ? `${dateValue}-01` : dateValue;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+    const who = username.toLowerCase();
+    if (askedToLink.current.has(who)) return;
+    askedToLink.current.add(who);
     try {
       const params = new URLSearchParams({ user: username, date });
       if (title.trim()) params.set("crag", title.trim());
@@ -1341,6 +1349,9 @@ export default function EntryForm({
               )}
             </div>
             {fieldToggle("partners")}
+            {/* Named is one thing; writing the day is another. The offer sits
+                beside the names it is about. */}
+            <CoAuthorControls entryId={entry?.id ?? null} partners={partners} t={t.coAuthors} />
             </div>
           </div>
           <div className="notion-prop">

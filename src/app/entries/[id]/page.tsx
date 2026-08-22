@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { followState, getEntry, getSharedDay } from "@/lib/queries";
+import { entryReadState, getCoAuthors, getEntry, getSharedDay, mayRead } from "@/lib/queries";
 import { currentUser } from "@/lib/auth";
 import { formatDate, getDict } from "@/lib/i18n";
 import { renderMentions, renderMentionsAll } from "@/lib/mentions";
@@ -144,16 +144,17 @@ export default async function EntryPage({
 
   const isAuthor = user?.id === entry.user_id;
   // A day written for followers is closed to everyone else — except whoever is
-  // named on it with an @, who was there and is not a stranger to it. A
-  // "private" day asks nothing of the reader beyond the link: its id is
-  // unguessable, so holding it is the permission.
-  const named =
-    user != null &&
-    new RegExp(`@${user.username}([^a-z0-9-]|$)`, "i").test(entry.partners ?? "");
-  if (entry.visibility === "followers" && !isAuthor && !named) {
-    const follow = user ? await followState(user.id, entry.user_id) : "none";
-    if (follow !== "accepted") notFound();
-  }
+  // named on it with an @, whoever co-wrote it, and the followers of either
+  // hand that held the pen. A "private" day asks nothing of the reader beyond
+  // the link: its id is unguessable, so holding it is the permission.
+  const readState = await entryReadState(entry.id, user);
+  if (!readState || !mayRead(readState)) notFound();
+
+  const coAuthors = await getCoAuthors(entry.id);
+  const acceptedCoAuthors = coAuthors.filter((a) => a.status === "accepted");
+  // The pen is shared; the day is not. Editing is open to both, deleting and
+  // filing are the author's alone — see `entry_authors` in schema.sql.
+  const canEdit = isAuthor || readState.is_coauthor;
 
   const badge =
     isAuthor && entry.visibility !== "public" ? t.entry.badges[entry.visibility] : null;
@@ -201,7 +202,7 @@ export default async function EntryPage({
             entry.star_level === 3 ? " · ⭐⭐⭐" : ""
           } — ${t.entry.shareTagline}`}
         />
-        {isAuthor && (
+        {canEdit && (
           <Link
             href={`/entries/${entry.id}/edit`}
             className="edit-fab"
@@ -293,6 +294,21 @@ export default async function EntryPage({
             <div className="notion-prop">
               <dt>{t.entry.partners}</dt>
               <dd>{await renderMentions(entry.partners)}</dd>
+            </div>
+          )}
+          {/* Not the same line as the rope party: these are the people who may
+              write the day, not only the people who climbed it. */}
+          {acceptedCoAuthors.length > 0 && (
+            <div className="notion-prop">
+              <dt>{t.entry.coAuthorsLabel}</dt>
+              <dd>
+                {acceptedCoAuthors.map((a, i) => (
+                  <span key={a.user_id}>
+                    {i > 0 && ", "}
+                    <Link href={`/u/${a.username}`}>{a.display_name}</Link>
+                  </span>
+                ))}
+              </dd>
             </div>
           )}
           {/* Two different pages on camptocamp: the day someone climbed it and
@@ -463,19 +479,30 @@ export default async function EntryPage({
           </>
         )}
 
-        {isAuthor && (
+        {canEdit && (
           <div className="entry-footer">
             <Link href={`/entries/${entry.id}/edit`} className="edit-link">
               {t.entry.edit}
             </Link>
-            <DeleteEntryButton
-              id={entry.id}
-              labels={{
-                delete: t.entry.delete,
-                deleting: t.entry.deleting,
-                confirm: t.entry.confirmDelete,
-              }}
-            />
+            {/* Deleting stays the author's: a co-author who wants to keep the
+                day can make it their own from the tray on their profile, and
+                the warning says so before anything is lost. */}
+            {isAuthor && (
+              <DeleteEntryButton
+                id={entry.id}
+                labels={{
+                  delete: t.entry.delete,
+                  deleting: t.entry.deleting,
+                  confirm:
+                    acceptedCoAuthors.length > 0
+                      ? t.entry.confirmDeleteShared.replace(
+                          "{names}",
+                          acceptedCoAuthors.map((a) => a.display_name).join(", ")
+                        )
+                      : t.entry.confirmDelete,
+                }}
+              />
+            )}
           </div>
         )}
       </div>

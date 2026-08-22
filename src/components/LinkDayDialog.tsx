@@ -11,7 +11,6 @@ export type LinkDayLabels = {
   willMoveDate: string; // "your day will be dated {date}"
   link: string;
   ignore: string;
-  alreadyLinked: string;
   matchedDate: string;
   matchedPlace: string;
   /** Confirmation once linked. */
@@ -84,11 +83,9 @@ export default function LinkDayDialog({
                     .join(" · ")}
                 </span>
                 <span className="link-day-meta">
-                  {day.already_linked
-                    ? t.alreadyLinked
-                    : day.entry_date === currentDate
-                      ? t.sameDate
-                      : t.willMoveDate.replace("{date}", day.entry_date)}
+                  {day.entry_date === currentDate
+                    ? t.sameDate
+                    : t.willMoveDate.replace("{date}", day.entry_date)}
                 </span>
               </span>
               <button type="button" className="follower-accept" onClick={() => onLink(day)}>

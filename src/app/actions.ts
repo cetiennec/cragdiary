@@ -292,6 +292,22 @@ function parseStarLevel(value: FormDataEntryValue | null): number {
 
 // Country for an entry's coordinates, reusing the stored value when the
 // coordinates haven't moved so saves don't hit the geocoder needlessly.
+/**
+ * SQL predicate over `entries` (unaliased): the rows this climber may write to
+ * — their own, or one they were accepted onto as a co-author (migration 039).
+ *
+ * Two things are deliberately not included. Visibility is not a co-author's to
+ * set, so every `visibility =` below is wrapped in a `case` on the author; and
+ * deleting is not theirs at all, so `deleteEntry` keeps its plain `user_id`.
+ */
+function mayEditEntrySql(idParam: string, userParam: string): string {
+  return `id = ${idParam}
+          and (user_id = ${userParam}
+               or exists (select 1 from entry_authors a
+                          where a.entry_id = entries.id and a.user_id = ${userParam}
+                            and a.status = 'accepted'))`;
+}
+
 async function entryCountry(
   coords: { lat: number | null; lon: number | null },
   id?: string,
@@ -300,7 +316,7 @@ async function entryCountry(
   if (coords.lat == null || coords.lon == null) return null;
   if (id && userId) {
     const prev = await pool.query<{ lat: number | null; lon: number | null; country: string | null }>(
-      "select lat, lon, country from entries where id = $1 and user_id = $2",
+      `select lat, lon, country from entries where ${mayEditEntrySql("$1", "$2")}`,
       [id, userId]
     );
     const p = prev.rows[0];
@@ -689,8 +705,8 @@ export async function createEntry(formData: FormData): Promise<string | void> {
       const processed = await processPhoto(file, { cover: position === 0 });
       const layout = parsePhotoLayout(formData, "new_photo", position);
       await client.query(
-        `insert into photos (entry_id, content_type, data, thumb, position, size, align, para, width, height, caption)
-         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+        `insert into photos (entry_id, content_type, data, thumb, position, size, align, para, width, height, caption, uploaded_by)
+         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
         [
           entryId,
           PHOTO_MIME,
@@ -703,6 +719,7 @@ export async function createEntry(formData: FormData): Promise<string | void> {
           processed.width,
           processed.height,
           optionalText(formData.get(`new_photo_caption_${position}`)),
+          user.id,
         ]
       );
       position += 1;
@@ -743,6 +760,8 @@ type C2cPhotoTarget = {
   /** Camptocamp filenames already on the entry. */
   known: Set<string>;
   startPosition: number;
+  /** Whoever ran the import: the photographs are filed under their name. */
+  userId: string;
 };
 
 // Download, re-encode and store an outing's photos, skipping the ones the entry
@@ -785,8 +804,9 @@ async function addC2cPhotos(
     if (!item) continue; // a hole left by a failed download
     await client.query(
       `insert into photos
-         (entry_id, content_type, data, thumb, position, size, width, height, c2c_filename)
-       values ($1, $2, $3, $4, $5, 'm', $6, $7, $8)`,
+         (entry_id, content_type, data, thumb, position, size, width, height, c2c_filename,
+          uploaded_by)
+       values ($1, $2, $3, $4, $5, 'm', $6, $7, $8, $9)`,
       [
         target.entryId,
         PHOTO_MIME,
@@ -796,6 +816,7 @@ async function addC2cPhotos(
         item.processed.width,
         item.processed.height,
         item.filename,
+        target.userId,
       ]
     );
     position += 1;
@@ -932,7 +953,7 @@ export async function importOneC2cOuting(
     }
 
     const addedPhotos = withPhotos
-      ? await addC2cPhotos(client, { entryId, known, startPosition }, o.images)
+      ? await addC2cPhotos(client, { entryId, known, startPosition, userId: user.id }, o.images)
       : 0;
 
     if (revalidate) {
@@ -976,7 +997,7 @@ export async function updateEntry(formData: FormData): Promise<void> {
 
   // Old partners, so we only notify climbers newly tagged by this edit.
   const prevPartners = await pool.query<{ partners: string | null }>(
-    "select partners from entries where id = $1 and user_id = $2",
+    `select partners from entries where ${mayEditEntrySql("$1", "$2")}`,
     [id, user.id]
   );
   const previousPartners = prevPartners.rows[0]?.partners ?? null;
@@ -989,8 +1010,11 @@ export async function updateEntry(formData: FormData): Promise<void> {
            grade_max = $6, rating = $7, orientation = $8, equipment = $9, pitches = $10,
            height_m = $11, routes = $12, partners = $13, notes = $14, c2c_url = $15,
            c2c_summary = $16, pitch_notes = $17, lat = $18, lon = $19, show_pins = $20,
-           star_level = $21, country = $22, visibility = $23
-       where id = $24 and user_id = $25`,
+           star_level = $21, country = $22,
+           -- Whose day it is decides who it is for. A co-author writes the day;
+           -- the author files it.
+           visibility = case when entries.user_id = $25 then $23 else entries.visibility end
+       where ${mayEditEntrySql("$24", "$25")}`,
       [
         entryDate,
         monthOnly,
@@ -1022,9 +1046,15 @@ export async function updateEntry(formData: FormData): Promise<void> {
     if (updated.rowCount === 0) throw new Error("Not found");
 
     if (removePhotoIds.length > 0) {
+      // A co-author may take back what they put there, and no more: the
+      // author's photographs are not theirs to remove. Null `uploaded_by`
+      // predates migration 039, when only the author could have uploaded.
       await client.query(
-        "delete from photos where entry_id = $1 and id = any($2)",
-        [id, removePhotoIds]
+        `delete from photos
+         where entry_id = $1 and id = any($2)
+           and (coalesce(uploaded_by, (select user_id from entries where id = $1)) = $3
+                or exists (select 1 from entries e where e.id = $1 and e.user_id = $3))`,
+        [id, removePhotoIds, user.id]
       );
     }
 
@@ -1053,8 +1083,8 @@ export async function updateEntry(formData: FormData): Promise<void> {
         const processed = await processPhoto(file, { cover: position === 0 });
         const layout = parsePhotoLayout(formData, "new_photo", newIndex);
         await client.query(
-          `insert into photos (entry_id, content_type, data, thumb, position, size, align, para, width, height, caption)
-           values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+          `insert into photos (entry_id, content_type, data, thumb, position, size, align, para, width, height, caption, uploaded_by)
+           values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
           [
             id,
             PHOTO_MIME,
@@ -1067,6 +1097,7 @@ export async function updateEntry(formData: FormData): Promise<void> {
             processed.width,
             processed.height,
             optionalText(formData.get(`new_photo_caption_${newIndex}`)),
+            user.id,
           ]
         );
         position += 1;
@@ -1101,10 +1132,10 @@ export async function addEntryPhoto(formData: FormData): Promise<void> {
   const file = formData.get("photo");
   if (!id || !(file instanceof File) || file.size === 0) return;
 
-  const owned = await pool.query("select 1 from entries where id = $1 and user_id = $2", [
-    id,
-    user.id,
-  ]);
+  const owned = await pool.query(
+    `select 1 from entries where ${mayEditEntrySql("$1", "$2")}`,
+    [id, user.id]
+  );
   if (owned.rows.length === 0) throw new Error("Not found");
 
   const layout = parsePhotoLayout(formData, "new_photo", 0);
@@ -1124,8 +1155,8 @@ export async function addEntryPhoto(formData: FormData): Promise<void> {
   const processed = await processPhoto(file, { cover: position === 0 });
 
   await pool.query(
-    `insert into photos (entry_id, content_type, data, thumb, position, size, align, para, width, height, caption)
-     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+    `insert into photos (entry_id, content_type, data, thumb, position, size, align, para, width, height, caption, uploaded_by)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
     [
       id,
       PHOTO_MIME,
@@ -1138,6 +1169,7 @@ export async function addEntryPhoto(formData: FormData): Promise<void> {
       processed.width,
       processed.height,
       optionalText(formData.get("new_photo_caption_0")),
+      user.id,
     ]
   );
 
@@ -1167,14 +1199,15 @@ export async function autosaveEntry(formData: FormData): Promise<void> {
   // updateEntry sees nothing new to announce. Whoever was just tagged has to
   // be told from here. The CTE reads the old value in the same statement.
   const saved = await pool.query<{ previous_partners: string | null }>(
-    `with old as (select partners from entries where id = $24 and user_id = $25)
+    `with old as (select partners from entries where ${mayEditEntrySql("$24", "$25")})
      update entries
      set entry_date = $1, month_only = $2, crag = $3, location = $4, style = $5,
          grade_max = $6, rating = $7, orientation = $8, equipment = $9, pitches = $10,
          height_m = $11, routes = $12, partners = $13, notes = $14, c2c_url = $15,
          c2c_summary = $16, pitch_notes = $17, lat = $18, lon = $19, show_pins = $20,
-         star_level = $21, country = $22, visibility = $23
-     where id = $24 and user_id = $25
+         star_level = $21, country = $22,
+         visibility = case when entries.user_id = $25 then $23 else entries.visibility end
+     where ${mayEditEntrySql("$24", "$25")}
      returning (select partners from old) as previous_partners`,
     [
       entryDate,
@@ -1334,6 +1367,134 @@ export async function deleteEntry(formData: FormData): Promise<void> {
   revalidatePath("/");
   revalidatePath(`/u/${user.username}`);
   redirect("/");
+}
+
+/* ---- Co-authored days (migration 039) ---------------------------------- */
+
+/**
+ * Offer someone the pen. Only the author may, and only to a climber who follows
+ * them and is followed back: an invitation puts a row in someone else's journal,
+ * which is not something a stranger should be able to arrange. Nothing is
+ * granted until they accept.
+ */
+export async function inviteCoAuthor(formData: FormData): Promise<void> {
+  const user = await currentUser();
+  if (!user) throw new Error("Unauthorized");
+
+  const entryId = String(formData.get("entry_id") ?? "");
+  const username = String(formData.get("username") ?? "")
+    .trim()
+    .replace(/^@/, "")
+    .toLowerCase();
+  if (!entryId || !username) return;
+
+  const owned = await pool.query("select 1 from entries where id = $1 and user_id = $2", [
+    entryId,
+    user.id,
+  ]);
+  if (owned.rowCount === 0) throw new Error("Not found");
+
+  // Mutual, accepted, in both directions — checked in one query so neither
+  // half can be read as the whole.
+  const other = await pool.query<{ id: string }>(
+    `select u.id from users u
+     where lower(u.username) = $1
+       and u.id <> $2
+       and exists (select 1 from follows f
+                   where f.follower_id = u.id and f.followee_id = $2 and f.status = 'accepted')
+       and exists (select 1 from follows f
+                   where f.follower_id = $2 and f.followee_id = u.id and f.status = 'accepted')`,
+    [username, user.id]
+  );
+  const invitee = other.rows[0];
+  if (!invitee) return;
+
+  await pool.query(
+    `insert into entry_authors (entry_id, user_id) values ($1, $2)
+     on conflict (entry_id, user_id) do nothing`,
+    [entryId, invitee.id]
+  );
+  await notify({
+    userId: invitee.id,
+    actorId: user.id,
+    type: "coauthor_invite",
+    data: { entry_id: entryId },
+  });
+
+  revalidatePath(`/entries/${entryId}`);
+  revalidatePath(`/entries/${entryId}/edit`);
+}
+
+/** Take the pen back, or put it down: the author may withdraw, a co-author may leave. */
+export async function removeCoAuthor(formData: FormData): Promise<void> {
+  const user = await currentUser();
+  if (!user) throw new Error("Unauthorized");
+
+  const entryId = String(formData.get("entry_id") ?? "");
+  // Named either way: the editor knows the climber by their @name, the
+  // notification only ever removes the reader themselves.
+  const username = String(formData.get("username") ?? "")
+    .trim()
+    .replace(/^@/, "")
+    .toLowerCase();
+  if (!entryId) return;
+
+  await pool.query(
+    `delete from entry_authors a
+     using users u
+     where u.id = a.user_id
+       and a.entry_id = $1
+       and ($2::text is null or lower(u.username) = $2)
+       and ($2::text is not null or a.user_id = $3)
+       -- Yours to put down, or the author's to take back. Nobody else's.
+       and (a.user_id = $3 or exists (select 1 from entries e
+                                      where e.id = $1 and e.user_id = $3))`,
+    [entryId, username || null, user.id]
+  );
+
+  revalidatePath(`/entries/${entryId}`);
+  revalidatePath(`/u/${user.username}`);
+}
+
+/**
+ * Accept the invitation. The day starts in the tray at the foot of the profile
+ * rather than among the entries: appearing in someone's journal is their own
+ * decision, taken separately with `setCoAuthorInJournal`.
+ */
+export async function acceptCoAuthor(formData: FormData): Promise<void> {
+  const user = await currentUser();
+  if (!user) throw new Error("Unauthorized");
+
+  const entryId = String(formData.get("entry_id") ?? "");
+  if (!entryId) return;
+
+  await pool.query(
+    "update entry_authors set status = 'accepted' where entry_id = $1 and user_id = $2",
+    [entryId, user.id]
+  );
+
+  revalidatePath("/");
+  revalidatePath(`/entries/${entryId}`);
+  revalidatePath(`/u/${user.username}`);
+}
+
+/** Show the shared day among my own entries, or keep it in the tray. */
+export async function setCoAuthorInJournal(formData: FormData): Promise<void> {
+  const user = await currentUser();
+  if (!user) throw new Error("Unauthorized");
+
+  const entryId = String(formData.get("entry_id") ?? "");
+  if (!entryId) return;
+  const inJournal = formData.get("in_journal") === "1";
+
+  await pool.query(
+    `update entry_authors set in_journal = $3
+     where entry_id = $1 and user_id = $2 and status = 'accepted'`,
+    [entryId, user.id, inJournal]
+  );
+
+  revalidatePath("/");
+  revalidatePath(`/u/${user.username}`);
 }
 
 // Profile visibility from the header pill — same idea as setEntryVisibility, one
