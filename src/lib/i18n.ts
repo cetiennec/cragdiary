@@ -375,12 +375,12 @@ const en = {
     // still waiting is the more pressing of the two, so it speaks first.
     bannerInvited: (n: number) =>
       n === 1
-        ? "Someone has offered you the pen on a day you climbed together."
-        : `You have been offered the pen on ${n} days you climbed with others.`,
+        ? "✍️ A rope partner has invited you to write up a day you climbed together."
+        : `✍️ Your rope partners have invited you to write up ${n} days you climbed together.`,
     banner: (n: number) =>
       n === 1
-        ? "You accepted a day written with you — show it in your journal?"
-        : `You accepted ${n} days written with you — show them in your journal?`,
+        ? "✍️ You are writing a day with someone — would you like it in your journal?"
+        : `✍️ You are writing ${n} days with others — would you like them in your journal?`,
     bannerLink: "See all the days you're on",
     bannerDismiss: "Put this away",
     title: "Days you're on",
@@ -1340,12 +1340,12 @@ const fr: Dict = {
   sharedDays: {
     bannerInvited: (n: number) =>
       n === 1
-        ? "On vous propose d'écrire à deux une sortie faite ensemble."
-        : `On vous propose d'écrire à deux ${n} sorties faites ensemble.`,
+        ? "✍️ Un compagnon de cordée vous invite à raconter une sortie faite ensemble."
+        : `✍️ Vos compagnons de cordée vous invitent à raconter ${n} sorties faites ensemble.`,
     banner: (n: number) =>
       n === 1
-        ? "Vous avez accepté une sortie écrite avec vous — l'afficher sur votre carnet ?"
-        : `Vous avez accepté ${n} sorties écrites avec vous — les afficher sur votre carnet ?`,
+        ? "✍️ Vous écrivez une sortie à deux — vous l'affichez sur votre carnet ?"
+        : `✍️ Vous écrivez ${n} sorties à deux — vous les affichez sur votre carnet ?`,
     bannerLink: "Voyez toutes les journées partagées",
     bannerDismiss: "Masquer ce message",
     title: "Les journées où vous apparaissez",

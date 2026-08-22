@@ -477,10 +477,19 @@ export default async function ProfilePage({
         </details>
       )}
 
+      {isSelf && (
+        <FollowersPanel
+          followers={followers}
+          requests={followRequests}
+          approveFollowers={profile.approve_followers}
+          t={t.follow}
+        />
+      )}
+
       {/* A day you took the pen on lands at the foot of a long page, which is
-          nowhere anyone looks. This says so below the profile it belongs to,
-          stands only until the choice is made either way, and can be put away
-          in the meantime. */}
+          nowhere anyone looks. This says so up here, under the people it is
+          about, stands only until the choice is made either way, and can be
+          put away in the meantime. */}
       {isSelf && (
         <SharedDaysBanner
           ids={bannerDays.map((d) => d.id)}
@@ -491,15 +500,6 @@ export default async function ProfilePage({
           }
           linkLabel={t.sharedDays.bannerLink}
           dismissLabel={t.sharedDays.bannerDismiss}
-        />
-      )}
-
-      {isSelf && (
-        <FollowersPanel
-          followers={followers}
-          requests={followRequests}
-          approveFollowers={profile.approve_followers}
-          t={t.follow}
         />
       )}
 

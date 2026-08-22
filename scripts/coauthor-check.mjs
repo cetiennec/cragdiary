@@ -193,14 +193,17 @@ check(
   "a banner points down to it",
   (await B.locator('.shared-days-banner a[href="#shared-days"]').count()) === 1
 );
-// Below the profile, above the followers — not floating over the cover art.
+// Under the followers panel — not floating over the cover art, and not above
+// the people it is about.
 const placed = await B.evaluate(() => {
   const banner = document.querySelector(".shared-days-banner");
-  const header = document.querySelector(".profile-header");
-  if (!banner || !header) return null;
-  return header.compareDocumentPosition(banner) & Node.DOCUMENT_POSITION_FOLLOWING ? "after" : "before";
+  const followers = document.querySelector(".profile-followers");
+  if (!banner || !followers) return null;
+  return followers.compareDocumentPosition(banner) & Node.DOCUMENT_POSITION_FOLLOWING
+    ? "after"
+    : "before";
 });
-check("it sits below the profile", placed === "after", placed);
+check("it sits under the followers", placed === "after", placed);
 
 // The ✕ puts it away, and it stays away on the next visit.
 await B.locator(".shared-days-dismiss").click();
