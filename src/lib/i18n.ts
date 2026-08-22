@@ -382,6 +382,7 @@ const en = {
         ? "You accepted a day written with you — show it in your journal?"
         : `You accepted ${n} days written with you — show them in your journal?`,
     bannerLink: "See all the days you're on",
+    bannerDismiss: "Put this away",
     title: "Days you're on",
     intro:
       "Days someone else wrote with you on them. The ones you co-write can stand among your own entries; the rest are their account of it, and yours is still yours to write.",
@@ -1346,6 +1347,7 @@ const fr: Dict = {
         ? "Vous avez accepté une sortie écrite avec vous — l'afficher sur votre carnet ?"
         : `Vous avez accepté ${n} sorties écrites avec vous — les afficher sur votre carnet ?`,
     bannerLink: "Voyez toutes les journées partagées",
+    bannerDismiss: "Masquer ce message",
     title: "Les journées où vous apparaissez",
     intro:
       "Des journées écrites par quelqu'un d'autre, où vous êtes. Celles que vous co-écrivez peuvent figurer parmi vos entrées ; les autres sont leur récit, et le vôtre reste à écrire.",

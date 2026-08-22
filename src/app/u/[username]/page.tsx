@@ -31,6 +31,7 @@ import { currentUser } from "@/lib/auth";
 import { formatDate, formatMeters, getDict } from "@/lib/i18n";
 import EntryCard from "@/components/EntryCard";
 import SharedDaysTray from "@/components/SharedDaysTray";
+import SharedDaysBanner from "@/components/SharedDaysBanner";
 import ProfileMap from "@/components/ProfileMap";
 import ProfileSettingsForm from "@/components/ProfileSettingsForm";
 import FollowersPanel from "@/components/FollowersPanel";
@@ -192,7 +193,13 @@ export default async function ProfilePage({
   // An invitation nobody has answered is the more pressing of the two, and the
   // one most likely to be missed: its notification scrolls away, the day does
   // not.
-  const invitedCount = trayDays.filter((d) => d.co_status === "pending").length;
+  const invited = trayDays.filter((d) => d.co_status === "pending");
+  const invitedCount = invited.length;
+  // What the banner is about, so putting it away remembers these days rather
+  // than the act of dismissing — a new invitation speaks up again.
+  const bannerDays = invitedCount > 0
+    ? invited
+    : trayDays.filter((d) => d.co_status === "accepted" && !d.in_journal);
   const wishes = [...wishlists, ...sharedWishlists].flatMap((l) => l.wishes);
   const showWishlist = isSelf || wishlists.length > 0;
 
@@ -313,17 +320,6 @@ export default async function ProfilePage({
       {isSelf && error && (
         <p className="form-error">
           {error === "email-taken" ? t.profile.emailTaken : t.profile.wrongPassword}
-        </p>
-      )}
-      {/* A day you took the pen on lands at the foot of a long page, which is
-          nowhere anyone looks. This says so at the top, and stands only until
-          the choice is made either way. */}
-      {isSelf && (invitedCount > 0 || waitingToShow > 0) && (
-        <p className="shared-days-banner">
-          {invitedCount > 0
-            ? t.sharedDays.bannerInvited(invitedCount)
-            : t.sharedDays.banner(waitingToShow)}{" "}
-          <Link href="#shared-days">{t.sharedDays.bannerLink}</Link>
         </p>
       )}
       <header className="profile-header">
@@ -481,6 +477,23 @@ export default async function ProfilePage({
         </details>
       )}
 
+      {/* A day you took the pen on lands at the foot of a long page, which is
+          nowhere anyone looks. This says so below the profile it belongs to,
+          stands only until the choice is made either way, and can be put away
+          in the meantime. */}
+      {isSelf && (
+        <SharedDaysBanner
+          ids={bannerDays.map((d) => d.id)}
+          message={
+            invitedCount > 0
+              ? t.sharedDays.bannerInvited(invitedCount)
+              : t.sharedDays.banner(waitingToShow)
+          }
+          linkLabel={t.sharedDays.bannerLink}
+          dismissLabel={t.sharedDays.bannerDismiss}
+        />
+      )}
+
       {isSelf && (
         <FollowersPanel
           followers={followers}
@@ -586,7 +599,13 @@ export default async function ProfilePage({
               demoLabel={t.demo.banner}
               visibilityLabels={
                 isSelf
-                  ? { picker: t.entry.visibilityPicker, short: t.entry.visibilityShort }
+                  ? {
+                      picker: t.entry.visibilityPicker,
+                      short: t.entry.visibilityShort,
+                      // The same ceiling the editor shows: a by-link journal
+                      // has no public days, so the pill cannot make one.
+                      unavailable: profile.visibility === "public" ? undefined : ["public"],
+                    }
                   : undefined
               }
             />

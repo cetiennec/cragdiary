@@ -10,6 +10,13 @@ import { useRef, useState } from "react";
 export type VisibilityLabels = {
   picker: string;
   short: Record<string, string>;
+  /**
+   * Levels this thing may not be raised to — today, "public" on a day whose
+   * journal is only reached by its link. Greyed rather than dropped, so the
+   * reason is visible; a value already set stays selected, since `disabled`
+   * blocks the choosing and not the selectedness.
+   */
+  unavailable?: string[];
 };
 
 // Small pill that changes one thing's visibility in place — an entry card's
@@ -57,7 +64,7 @@ export default function VisibilityPicker({
         }}
       >
         {Object.entries(t.short).map(([value, label]) => (
-          <option key={value} value={value}>
+          <option key={value} value={value} disabled={t.unavailable?.includes(value)}>
             {label}
           </option>
         ))}

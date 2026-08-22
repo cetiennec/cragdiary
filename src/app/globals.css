@@ -6025,16 +6025,40 @@ label:has(input:placeholder-shown) + .form-hint.form-warn {
 }
 
 .shared-days-banner {
-  max-width: 52ch;
-  margin: 0.6rem auto 0;
-  padding: 0.6rem 1rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  margin: 0 0 1rem;
+  padding: 0.6rem 0.9rem;
   border: 1px solid var(--accent);
   /* Not a pill: it wraps to two lines at most widths, and a 999px radius on
      two lines reads as a speech bubble. */
   border-radius: 14px;
   background: color-mix(in srgb, var(--accent) 8%, transparent);
   font-size: 0.86rem;
-  text-align: center;
+}
+
+.shared-days-banner > span {
+  flex: 1;
+  min-width: 0;
+}
+
+.shared-days-dismiss {
+  flex-shrink: 0;
+  font: inherit;
+  font-size: 0.9rem;
+  line-height: 1;
+  padding: 0.15rem 0.3rem;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.shared-days-dismiss:hover {
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
 }
 
 .shared-days-banner a {

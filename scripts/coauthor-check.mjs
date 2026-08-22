@@ -190,8 +190,33 @@ check(
 await B.goto(`${base}/u/${mate}`);
 await B.waitForTimeout(800);
 check(
-  "a banner at the top points down to it",
+  "a banner points down to it",
   (await B.locator('.shared-days-banner a[href="#shared-days"]').count()) === 1
+);
+// Below the profile, above the followers — not floating over the cover art.
+const placed = await B.evaluate(() => {
+  const banner = document.querySelector(".shared-days-banner");
+  const header = document.querySelector(".profile-header");
+  if (!banner || !header) return null;
+  return header.compareDocumentPosition(banner) & Node.DOCUMENT_POSITION_FOLLOWING ? "after" : "before";
+});
+check("it sits below the profile", placed === "after", placed);
+
+// The ✕ puts it away, and it stays away on the next visit.
+await B.locator(".shared-days-dismiss").click();
+await B.waitForTimeout(400);
+check("dismissing hides it", (await B.locator(".shared-days-banner").count()) === 0);
+await B.goto(`${base}/u/${mate}`);
+await B.waitForTimeout(800);
+check(
+  "and it stays hidden on the next visit",
+  (await B.locator(".shared-days-banner").count()) === 0,
+  await B.locator(".shared-days-banner").count()
+);
+// The day itself is untouched: the tray is where it lives.
+check(
+  "the day is still in the tray",
+  (await B.locator(`.shared-day-row a[href="/entries/${entryId}"]`).count()) === 1
 );
 check("the shared day waits in the tray", (await B.locator(`.shared-day-row a[href="/entries/${entryId}"]`).count()) === 1);
 const inFeedBefore = await B.locator(`.entry-card-link[href="/entries/${entryId}"]`).count();

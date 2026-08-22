@@ -104,9 +104,7 @@ check(
 // --- A by-link journal is a ceiling over its days ---
 await db.query("update users set visibility = 'private' where username = $1", [me]);
 
-// A day already filed public keeps the option selectable — being unable to
-// re-save a day you are looking at would be worse than the thing this guards
-// against — but it says on the option itself why it no longer means much.
+// Greyed on every day, including one already filed public.
 await A.goto(`${base}/entries/${entryId}/edit`);
 await A.waitForTimeout(1200);
 const onPublicDay = A.locator('select[name="visibility"] option[value="public"]');
@@ -115,7 +113,29 @@ check(
   (await onPublicDay.innerText()).includes("by link"),
   await onPublicDay.innerText()
 );
-check("and is not taken away from under you", !(await onPublicDay.isDisabled()));
+check("and public cannot be picked there either", await onPublicDay.isDisabled());
+
+// The one thing that must not happen: a save that never touched the level
+// quietly lowering it, because a greyed option fell through to the next.
+await A.locator('textarea[name="notes"]').fill(`Untouched level ${stamp}.`);
+await A.locator(".notion-editor-actions button[type=submit]").click();
+await A.waitForURL(new RegExp(`/entries/${entryId}$`), { timeout: 30000 });
+const stillPublic = (
+  await db.query("select visibility from entries where id = $1", [entryId])
+).rows[0].visibility;
+check("and saving does not quietly downgrade it", stillPublic === "public", stillPublic);
+
+// Lowering it on purpose still works.
+await A.goto(`${base}/entries/${entryId}/edit`);
+await A.waitForTimeout(1200);
+await A.selectOption('select[name="visibility"]', "followers");
+await A.locator(".notion-editor-actions button[type=submit]").click();
+await A.waitForURL(new RegExp(`/entries/${entryId}$`), { timeout: 30000 });
+const lowered = (
+  await db.query("select visibility from entries where id = $1", [entryId])
+).rows[0].visibility;
+check("while lowering it on purpose still works", lowered === "followers", lowered);
+await db.query("update entries set visibility = 'public' where id = $1", [entryId]);
 
 // A day that is not public cannot be made public while the journal is by link.
 const other = await db.query(

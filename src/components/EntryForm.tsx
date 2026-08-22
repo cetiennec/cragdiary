@@ -1400,13 +1400,14 @@ export default function EntryForm({
                 defaultValue={entry?.visibility ?? (profileListed ? "public" : "followers")}
               >
                 {/* Left in place rather than removed, and greyed: the reason it
-                    cannot be chosen is worth seeing. A day already filed public
-                    keeps the option selectable, so nobody is stuck on a value
-                    the form refuses to submit. */}
-                <option
-                  value="public"
-                  disabled={!profileListed && entry?.visibility !== "public"}
-                >
+                    cannot be chosen is worth seeing. Greyed on every day, not
+                    only the ones that are not public yet — a journal reached by
+                    its link has no public days, and an option you can still
+                    click is not saying that. A day already filed public keeps
+                    the value it has: `disabled` blocks the choosing, not the
+                    selectedness, so the form still submits "public" until
+                    somebody picks something else on purpose. */}
+                <option value="public" disabled={!profileListed}>
                   {t.visibilityOptions.public}
                   {profileListed ? "" : ` (${t.visibilityCappedShort})`}
                 </option>
