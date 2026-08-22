@@ -234,6 +234,31 @@ function journalVisibleSql(entry: string): string {
                         and ${followsAnAuthorSql(entry, "$5::uuid")}))))`;
 }
 
+/**
+ * How a journal is ordered. A diary reads by date, but a journal is also a
+ * record of what you have done, and "which were the good ones" is a question
+ * the date cannot answer.
+ *
+ * Whitelisted rather than interpolated: this arrives from a query string, and
+ * an order-by is the one clause a parameter cannot stand in for.
+ */
+export type EntrySort = "date" | "stars" | "biggest";
+
+const ENTRY_ORDER: Record<EntrySort, string> = {
+  date: "e.entry_date desc, e.created_at desc",
+  // The ones you starred, best first; a thumbs-down day sinks below the
+  // unrated ones, which is where it belongs.
+  stars: "e.star_level desc, e.entry_date desc, e.created_at desc",
+  // "La plus majeure": the biggest thing you climbed, which is height before
+  // pitch count — 600 m in four pitches is a bigger day than 200 m in ten.
+  biggest:
+    "coalesce(e.height_m, 0) desc, coalesce(e.pitches, 0) desc, e.entry_date desc",
+};
+
+export function entryOrder(sort: string | null | undefined): string {
+  return ENTRY_ORDER[(sort ?? "date") as EntrySort] ?? ENTRY_ORDER.date;
+}
+
 export type EntryFilters = {
   q?: string;
   year?: number | null;
@@ -355,6 +380,19 @@ export async function getEntry(id: string): Promise<EntryWithAuthor | null> {
   return entry;
 }
 
+/**
+ * Whether this journal is listed. Asked by the editor, which greys "public" on
+ * a day whose journal is only reached by its link — the profile is a ceiling
+ * over its days (see `robots` on the entry page for the other half of it).
+ */
+export async function isProfileListed(userId: string): Promise<boolean> {
+  const result = await pool.query<{ visibility: ProfileVisibility }>(
+    "select visibility from users where id = $1",
+    [userId]
+  );
+  return result.rows[0]?.visibility !== "private";
+}
+
 export async function getUserByUsername(username: string): Promise<User | null> {
   const result = await pool.query<User>(
     "select id, username, display_name, bio, visibility, email, avatar is not null as has_avatar, cover is not null as has_cover, wishlist_public, approve_followers, c2c_profile_id, website, created_at from users where lower(username) = lower($1)",
@@ -368,10 +406,12 @@ export async function getEntriesByUser(
   {
     filters = {},
     limit = null,
+    sort = "date",
     ...scope
   }: JournalScope & {
     filters?: EntryFilters;
     limit?: number | null;
+    sort?: string | null;
   } = {}
 ): Promise<{ entries: EntryWithAuthor[]; total: number }> {
   const params: unknown[] = journalParams(userId, scope);
@@ -402,7 +442,7 @@ export async function getEntriesByUser(
      from entries e
      join users u on u.id = e.user_id
      where ${conds.join(" and ")}
-     order by e.entry_date desc, e.created_at desc${limitClause}`,
+     order by ${entryOrder(sort)}${limitClause}`,
     params
   );
   return {
@@ -774,18 +814,22 @@ export async function entriesNotOfferable(
   return new Set(result.rows.map((r) => r.id));
 }
 
-/** Of these days, the ones whose invitation this climber has not yet answered. */
-export async function pendingCoAuthorInvites(
+/**
+ * Where this climber stands on each of these invitations: waiting to answer,
+ * already a co-author, or — for a row with no answer at all — gone, because the
+ * invitation was withdrawn or they left.
+ */
+export async function coAuthorInviteStates(
   userId: string,
   entryIds: string[]
-): Promise<Set<string>> {
-  if (entryIds.length === 0) return new Set();
-  const result = await pool.query<{ entry_id: string }>(
-    `select entry_id from entry_authors
-     where user_id = $1 and entry_id = any($2) and status = 'pending'`,
+): Promise<Map<string, "pending" | "accepted">> {
+  if (entryIds.length === 0) return new Map();
+  const result = await pool.query<{ entry_id: string; status: "pending" | "accepted" }>(
+    `select entry_id, status from entry_authors
+     where user_id = $1 and entry_id = any($2)`,
     [userId, entryIds]
   );
-  return new Set(result.rows.map((r) => r.entry_id));
+  return new Map(result.rows.map((r) => [r.entry_id, r.status]));
 }
 
 /**
@@ -801,6 +845,12 @@ export async function pendingCoAuthorInvites(
  * it stays available as long as the day does.
  */
 export type TrayDay = EntryWithAuthor & {
+  /**
+   * Where they stand on the pen: never offered, offered and waiting, or taken.
+   * A waiting one can be answered here as well as from the notification, since
+   * this is where the day itself is.
+   */
+  co_status: "none" | "pending" | "accepted";
   /** Accepted co-author, so this day may be shown among their entries. */
   is_coauthor: boolean;
   /** Already promoted into the journal — listed here as a way back out. */
@@ -818,13 +868,15 @@ export async function getTrayDays(
       username: string;
       display_name: string;
       author_visibility: ProfileVisibility;
+      co_status: "none" | "pending" | "accepted";
       is_coauthor: boolean;
       in_journal: boolean;
       has_own_version: boolean;
     }
   >(
     `select e.*, u.username, u.display_name, u.visibility as author_visibility,
-            ca.user_id is not null as is_coauthor,
+            coalesce(ca.status, 'none') as co_status,
+            ca.status = 'accepted' as is_coauthor,
             coalesce(ca.in_journal, false) as in_journal,
             exists (select 1 from entries mine
                     where mine.user_id = $1
@@ -832,11 +884,18 @@ export async function getTrayDays(
                       and mine.crag = e.crag) as has_own_version
      from entries e
      join users u on u.id = e.user_id
-     left join entry_authors ca
-            on ca.entry_id = e.id and ca.user_id = $1 and ca.status = 'accepted'
+     left join entry_authors ca on ca.entry_id = e.id and ca.user_id = $1
      where e.user_id <> $1
        and (ca.user_id is not null
             or e.partners ~* ('@' || $2 || '([^a-z0-9-]|$)'))
+       -- A tray row shows the crag, the date and a photograph of the day, so it
+       -- may only hold days this climber could already open. Being accepted or
+       -- @-named is enough on its own; a *pending* invitation is not, and has
+       -- to clear the same gate any other reader would.
+       and (ca.status = 'accepted'
+            or e.partners ~* ('@' || $2 || '([^a-z0-9-]|$)')
+            or e.visibility <> 'followers'
+            or ${followsAnAuthorSql("e", "$1")})
      order by e.entry_date desc, e.created_at desc
      limit 30`,
     [userId, username]

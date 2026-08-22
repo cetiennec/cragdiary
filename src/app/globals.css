@@ -270,6 +270,18 @@ a {
   background: color-mix(in srgb, var(--accent) 7%, var(--bg-elevated));
 }
 
+/* Already seen: still there, still readable, but visibly done with — the list
+   is a handful of rows and what matters is which of them are new. */
+.notif-row:not(.unread) {
+  opacity: 0.6;
+  transition: opacity 0.15s ease;
+}
+
+.notif-row:not(.unread):hover,
+.notif-row:not(.unread):focus-within {
+  opacity: 1;
+}
+
 .notif-link {
   display: flex;
   align-items: center;
@@ -1719,6 +1731,11 @@ a {
   align-items: center;
   gap: 0.35rem;
   min-width: 0;
+  /* The co-author list hangs below the field it belongs to. Without this it
+     becomes a third item on the same line and squeezes the input it is about,
+     taking the @ menu down with it. Nothing else in here wraps: an input that
+     grows and a small toggle always fit. */
+  flex-wrap: wrap;
 }
 
 .prop-field > .combobox,
@@ -5977,6 +5994,7 @@ label:has(input:placeholder-shown) + .form-hint.form-warn {
 /* ---- Co-authored days, and the tray of days you're on -------------------- */
 
 .coauthors {
+  flex-basis: 100%;
   margin-top: 0.5rem;
 }
 
@@ -6004,6 +6022,38 @@ label:has(input:placeholder-shown) + .form-hint.form-warn {
 .coauthor-state {
   color: var(--text-muted);
   font-size: 0.8rem;
+}
+
+.shared-days-banner {
+  max-width: 52ch;
+  margin: 0.6rem auto 0;
+  padding: 0.6rem 1rem;
+  border: 1px solid var(--accent);
+  /* Not a pill: it wraps to two lines at most widths, and a 999px radius on
+     two lines reads as a speech bubble. */
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  font-size: 0.86rem;
+  text-align: center;
+}
+
+.shared-days-banner a {
+  white-space: nowrap;
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* The one row that is two lines: the notification, then where the day went. */
+.notif-row.has-note {
+  flex-wrap: wrap;
+}
+
+.coauthor-accepted {
+  flex-basis: 100%;
+  padding: 0 0.9rem 0.7rem;
+  font-size: 0.82rem;
 }
 
 .shared-days {

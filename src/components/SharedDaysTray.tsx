@@ -1,7 +1,12 @@
 import Link from "next/link";
 import type { TrayDay } from "@/lib/queries";
 import { formatDate, type Locale } from "@/lib/i18n";
-import { copyEntryToJournal, removeCoAuthor, setCoAuthorInJournal } from "@/app/actions";
+import {
+  acceptCoAuthor,
+  copyEntryToJournal,
+  removeCoAuthor,
+  setCoAuthorInJournal,
+} from "@/app/actions";
 
 export type SharedDaysLabels = {
   title: string;
@@ -14,6 +19,10 @@ export type SharedDaysLabels = {
   alreadyMine: string;
   leave: string;
   coAuthorTag: string;
+  /** An invitation still waiting, answerable here as well as in notifications. */
+  invited: string;
+  accept: string;
+  decline: string;
 };
 
 /**
@@ -68,13 +77,32 @@ export default function SharedDaysTray({
                   </span>
                   <span className="link-day-meta">
                     {t.by.replace("{name}", day.display_name)}
-                    {day.is_coauthor ? ` · ${t.coAuthorTag}` : ""}
+                    {day.co_status === "accepted" ? ` · ${t.coAuthorTag}` : ""}
+                    {day.co_status === "pending" ? ` · ${t.invited}` : ""}
                   </span>
                 </span>
               </Link>
 
               <span className="follower-actions">
-                {day.is_coauthor ? (
+                {/* An invitation is answerable where the day is, not only in
+                    the notification that announced it — which is gone the
+                    moment anything else arrives. */}
+                {day.co_status === "pending" ? (
+                  <>
+                    <form action={acceptCoAuthor}>
+                      <input type="hidden" name="entry_id" value={day.id} />
+                      <button type="submit" className="follower-accept">
+                        {t.accept}
+                      </button>
+                    </form>
+                    <form action={removeCoAuthor}>
+                      <input type="hidden" name="entry_id" value={day.id} />
+                      <button type="submit" className="follower-remove">
+                        {t.decline}
+                      </button>
+                    </form>
+                  </>
+                ) : day.is_coauthor ? (
                   <>
                     <form action={setCoAuthorInJournal}>
                       <input type="hidden" name="entry_id" value={day.id} />

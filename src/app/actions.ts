@@ -325,6 +325,27 @@ async function entryCountry(
   return lookupCountry(coords.lat, coords.lon);
 }
 
+/**
+ * The rows the author folded away on the day. Whitelisted against the fields
+ * that actually have a toggle: this arrives as free text and ends up in a
+ * column the entry page reads back.
+ */
+const HIDEABLE_FIELDS = [
+  "location",
+  "grade_max",
+  "rating",
+  "orientation",
+  "equipment",
+  "height_m",
+  "partners",
+  "c2c_url",
+] as const;
+
+function parseHiddenFields(value: FormDataEntryValue | null): string[] {
+  const asked = new Set(String(value ?? "").split(",").map((f) => f.trim()));
+  return HIDEABLE_FIELDS.filter((f) => asked.has(f));
+}
+
 function photoFiles(formData: FormData): File[] {
   return formData
     .getAll("photos")
@@ -668,8 +689,9 @@ export async function createEntry(formData: FormData): Promise<string | void> {
       `insert into entries
          (user_id, entry_date, month_only, crag, location, style, grade_max, rating,
           orientation, equipment, pitches, height_m, routes, partners, notes,
-          c2c_url, c2c_summary, pitch_notes, lat, lon, show_pins, star_level, country, visibility)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)
+          c2c_url, c2c_summary, pitch_notes, lat, lon, show_pins, star_level, country, visibility,
+          hidden_fields)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)
        returning id`,
       [
         user.id,
@@ -696,6 +718,7 @@ export async function createEntry(formData: FormData): Promise<string | void> {
         parseStarLevel(formData.get("star_level")),
         await entryCountry(coords),
         visibility,
+        parseHiddenFields(formData.get("hidden_fields")),
       ]
     );
     entryId = result.rows[0].id;
@@ -1013,7 +1036,8 @@ export async function updateEntry(formData: FormData): Promise<void> {
            star_level = $21, country = $22,
            -- Whose day it is decides who it is for. A co-author writes the day;
            -- the author files it.
-           visibility = case when entries.user_id = $25 then $23 else entries.visibility end
+           visibility = case when entries.user_id = $25 then $23 else entries.visibility end,
+           hidden_fields = $26
        where ${mayEditEntrySql("$24", "$25")}`,
       [
         entryDate,
@@ -1041,6 +1065,7 @@ export async function updateEntry(formData: FormData): Promise<void> {
         visibility,
         id,
         user.id,
+        parseHiddenFields(formData.get("hidden_fields")),
       ]
     );
     if (updated.rowCount === 0) throw new Error("Not found");
@@ -1206,7 +1231,8 @@ export async function autosaveEntry(formData: FormData): Promise<void> {
          height_m = $11, routes = $12, partners = $13, notes = $14, c2c_url = $15,
          c2c_summary = $16, pitch_notes = $17, lat = $18, lon = $19, show_pins = $20,
          star_level = $21, country = $22,
-         visibility = case when entries.user_id = $25 then $23 else entries.visibility end
+         visibility = case when entries.user_id = $25 then $23 else entries.visibility end,
+         hidden_fields = $26
      where ${mayEditEntrySql("$24", "$25")}
      returning (select partners from old) as previous_partners`,
     [
@@ -1235,6 +1261,7 @@ export async function autosaveEntry(formData: FormData): Promise<void> {
       visibility,
       id,
       user.id,
+      parseHiddenFields(formData.get("hidden_fields")),
     ]
   );
 
@@ -1366,7 +1393,9 @@ export async function deleteEntry(formData: FormData): Promise<void> {
 
   revalidatePath("/");
   revalidatePath(`/u/${user.username}`);
-  redirect("/");
+  // Back to your own journal, not the feed: you were reading your diary, and
+  // deleting a page of it should leave you holding the diary.
+  redirect(`/u/${user.username}`);
 }
 
 /* ---- Co-authored days (migration 039) ---------------------------------- */

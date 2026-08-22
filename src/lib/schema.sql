@@ -71,6 +71,10 @@ create table if not exists entries (
   -- and whoever I named with an @", and the middle rung goes to followers.
   visibility text not null default 'public'
     check (visibility in ('public','followers','private')),
+  -- Fields the author chose not to show on the day (migration 040). The value
+  -- is kept; only the row on the page goes. Hiding used to blank the column,
+  -- which deleted what "show this again" was supposed to bring back.
+  hidden_fields text[] not null default '{}',
   created_at timestamptz not null default now()
 );
 

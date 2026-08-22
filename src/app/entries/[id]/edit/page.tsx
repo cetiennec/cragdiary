@@ -1,5 +1,5 @@
 import { notFound, redirect } from "next/navigation";
-import { canEditEntry, getCoAuthors, getEntry } from "@/lib/queries";
+import { canEditEntry, getCoAuthors, getEntry, isProfileListed } from "@/lib/queries";
 import { currentUser } from "@/lib/auth";
 import { getDict } from "@/lib/i18n";
 import EntryForm from "@/components/EntryForm";
@@ -22,9 +22,10 @@ export default async function EditEntryPage({
   const entry = await getEntry(id);
   if (!entry || !(await canEditEntry(entry.id, user.id))) notFound();
   const isAuthor = entry.user_id === user.id;
-  const coAuthors = isAuthor
-    ? await getCoAuthors(entry.id)
-    : [];
+  const coAuthors = isAuthor ? await getCoAuthors(entry.id) : [];
+  const accepted = coAuthors.filter((a) => a.status === "accepted");
+
+  const profileListed = await isProfileListed(user.id);
 
   const { locale, t } = await getDict();
   return (
@@ -39,7 +40,12 @@ export default async function EditEntryPage({
           </p>
         </div>
       )}
-      <EntryForm entry={entry} t={t.editor} locale={locale} />
+      <EntryForm
+        entry={entry}
+        t={t.editor}
+        locale={locale}
+        profileListed={profileListed}
+      />
 
       {/* Outside the editor's own <form> — a form can't nest — and last on the
           page, so deleting is never a click away from saving. A co-author
@@ -53,13 +59,10 @@ export default async function EditEntryPage({
               delete: t.entry.delete,
               deleting: t.entry.deleting,
               confirm:
-                coAuthors.filter((a) => a.status === "accepted").length > 0
-                  ? t.entry.confirmDeleteShared.replace(
-                      "{names}",
-                      coAuthors
-                        .filter((a) => a.status === "accepted")
-                        .map((a) => a.display_name)
-                        .join(", ")
+                accepted.length > 0
+                  ? t.entry.confirmDeleteShared(
+                      accepted.map((a) => a.display_name).join(", "),
+                      accepted.length
                     )
                   : t.entry.confirmDelete,
             }}

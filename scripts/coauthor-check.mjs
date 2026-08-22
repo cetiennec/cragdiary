@@ -171,9 +171,28 @@ check(
   await B.locator(".delete-btn").count()
 );
 
+// --- Saying where the day went ---
+// Accepting drops an entry at the foot of a long page. Both places that say so
+// are checked, because "nothing visibly happened" is the complaint they answer.
+await B.goto(`${base}/notifications`);
+await B.waitForTimeout(600);
+check(
+  "the notification says where the day landed",
+  (await B.locator(".coauthor-accepted").count()) >= 1,
+  await B.locator(".coauthor-accepted").count()
+);
+check(
+  "and offers no second accept button",
+  (await B.locator(".coauthor-invite-actions").count()) === 0
+);
+
 // --- The tray, and the promotion out of it ---
 await B.goto(`${base}/u/${mate}`);
 await B.waitForTimeout(800);
+check(
+  "a banner at the top points down to it",
+  (await B.locator('.shared-days-banner a[href="#shared-days"]').count()) === 1
+);
 check("the shared day waits in the tray", (await B.locator(`.shared-day-row a[href="/entries/${entryId}"]`).count()) === 1);
 const inFeedBefore = await B.locator(`.entry-card-link[href="/entries/${entryId}"]`).count();
 check("and is not among their entries until they say so", inFeedBefore === 0, inFeedBefore);
@@ -187,6 +206,12 @@ await B.waitForTimeout(800);
 check(
   "shown in their journal once they do",
   (await B.locator(`.entry-card-link[href="/entries/${entryId}"]`).count()) === 1
+);
+// The banner was a question; it goes once the question is answered.
+check(
+  "and the banner has nothing left to ask",
+  (await B.locator(".shared-days-banner").count()) === 0,
+  await B.locator(".shared-days-banner").count()
 );
 
 // --- Withdrawing takes it all back ---

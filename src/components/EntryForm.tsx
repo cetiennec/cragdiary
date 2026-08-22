@@ -67,11 +67,18 @@ export default function EntryForm({
   defaults,
   t,
   locale,
+  profileListed = true,
 }: {
   entry?: EntryWithAuthor;
   defaults?: EntryDefaults;
   t: EditorDict;
   locale: Locale;
+  /**
+   * Whether the journal this day belongs to is listed. A by-link journal is a
+   * ceiling over its days: "public" is offered greyed, because choosing it
+   * would not make the day public while the journal itself is not.
+   */
+  profileListed?: boolean;
 }) {
   const [newFiles, setNewFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -155,7 +162,11 @@ export default function EntryForm({
     entry?.lon != null ? String(entry.lon) : defaults?.lon != null ? String(defaults.lon) : ""
   );
 
-  const [excludedFields, setExcludedFields] = useState<Set<string>>(new Set());
+  // Which rows the author has folded away on the day itself. Restored from the
+  // entry, because this is a property of the day now and not of this sitting.
+  const [excludedFields, setExcludedFields] = useState<Set<string>>(
+    () => new Set(entry?.hidden_fields ?? [])
+  );
 
   function toggleField(name: string) {
     setExcludedFields((prev) => {
@@ -927,8 +938,13 @@ export default function EntryForm({
       <div className="notion-body">
         {editing && <input type="hidden" name="id" value={entry!.id} />}
         {defaults?.fromWish && <input type="hidden" name="from_wish" value={defaults.fromWish} />}
-        <input type="hidden" name="lat" value={excludedFields.has("location") ? "" : lat} />
-        <input type="hidden" name="lon" value={excludedFields.has("location") ? "" : lon} />
+        {/* The point on the map belongs to the location, and hiding the
+            location no longer throws it away either. */}
+        {/* Which rows are folded away on the day. Kept as names, not as blanked
+            columns: hiding a field must not be a way of losing it. */}
+        <input type="hidden" name="hidden_fields" value={[...excludedFields].join(",")} />
+        <input type="hidden" name="lat" value={lat} />
+        <input type="hidden" name="lon" value={lon} />
         <input type="hidden" name="c2c_summary" value={includeSummary ? c2cSummary : ""} />
 
         <div className="editor-head-row">
@@ -1113,7 +1129,6 @@ export default function EntryForm({
                 id="location"
                 type="text"
                 name="location"
-                disabled={excludedFields.has("location")}
                 value={location}
                 onChange={(e) => {
                   geoArmed.current = true;
@@ -1192,7 +1207,6 @@ export default function EntryForm({
                 id="grade_max"
                 type="text"
                 name="grade_max"
-                disabled={excludedFields.has("grade_max")}
                 value={grade}
                 onChange={(e) => setGrade(e.target.value)}
                 placeholder={t.gradePlaceholder}
@@ -1208,7 +1222,6 @@ export default function EntryForm({
                 type="text"
                 name="rating"
                 list="rating-options"
-                disabled={excludedFields.has("rating")}
                 value={rating}
                 onChange={(e) => setRating(e.target.value)}
                 placeholder={t.ratingPlaceholder}
@@ -1231,7 +1244,6 @@ export default function EntryForm({
                 type="text"
                 name="orientation"
                 list="orientation-options"
-                disabled={excludedFields.has("orientation")}
                 value={orientation}
                 onChange={(e) => setOrientation(e.target.value)}
                 placeholder={t.orientationPlaceholder}
@@ -1252,7 +1264,6 @@ export default function EntryForm({
                 type="text"
                 name="equipment"
                 list="equipment-options"
-                disabled={excludedFields.has("equipment")}
                 value={equipment}
                 onChange={(e) => setEquipment(e.target.value)}
                 placeholder={t.equipmentPlaceholder}
@@ -1286,7 +1297,6 @@ export default function EntryForm({
                 type="number"
                 name="height_m"
                 min={1}
-                disabled={excludedFields.has("height_m")}
                 className={excludedFields.has("height_m") ? "input-excluded" : undefined}
                 value={heightM}
                 onChange={(e) => setHeightM(e.target.value)}
@@ -1304,7 +1314,6 @@ export default function EntryForm({
                 type="text"
                 name="partners"
                 ref={partnersInputRef}
-                disabled={excludedFields.has("partners")}
                 value={partners}
                 onChange={(e) => {
                   setPartners(e.target.value);
@@ -1371,7 +1380,6 @@ export default function EntryForm({
                 id="c2c_url"
                 type="url"
                 name="c2c_url"
-                disabled={excludedFields.has("c2c_url")}
                 value={c2cUrl}
                 onChange={(e) => setC2cUrl(e.target.value)}
                 placeholder={t.c2cPlaceholder}
@@ -1385,11 +1393,28 @@ export default function EntryForm({
           <input type="hidden" name="show_pins" value={(entry?.show_pins ?? true) ? "1" : "0"} />
           <div className="notion-prop">
             <label htmlFor="visibility">{t.visibility}</label>
-            <select id="visibility" name="visibility" defaultValue={entry?.visibility ?? "public"}>
-              <option value="public">{t.visibilityOptions.public}</option>
-              <option value="followers">{t.visibilityOptions.followers}</option>
-              <option value="private">{t.visibilityOptions.private}</option>
-            </select>
+            <div className="prop-field">
+              <select
+                id="visibility"
+                name="visibility"
+                defaultValue={entry?.visibility ?? (profileListed ? "public" : "followers")}
+              >
+                {/* Left in place rather than removed, and greyed: the reason it
+                    cannot be chosen is worth seeing. A day already filed public
+                    keeps the option selectable, so nobody is stuck on a value
+                    the form refuses to submit. */}
+                <option
+                  value="public"
+                  disabled={!profileListed && entry?.visibility !== "public"}
+                >
+                  {t.visibilityOptions.public}
+                  {profileListed ? "" : ` (${t.visibilityCappedShort})`}
+                </option>
+                <option value="followers">{t.visibilityOptions.followers}</option>
+                <option value="private">{t.visibilityOptions.private}</option>
+              </select>
+              {!profileListed && <p className="form-hint">{t.visibilityCapped}</p>}
+            </div>
           </div>
           <div className="notion-prop">
             <label htmlFor="photos">{t.addPhotos}</label>

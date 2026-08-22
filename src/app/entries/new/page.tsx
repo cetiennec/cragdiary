@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
-import { getWish } from "@/lib/queries";
+import { getWish, isProfileListed } from "@/lib/queries";
 import { getDict } from "@/lib/i18n";
 import EntryForm, { type EntryDefaults } from "@/components/EntryForm";
 
@@ -13,6 +13,8 @@ export default async function NewEntryPage({
   if (!user) {
     redirect("/login");
   }
+
+  const profileListed = await isProfileListed(user.id);
 
   const { from_wish, c2c } = await searchParams;
   let defaults: EntryDefaults | undefined;
@@ -38,5 +40,12 @@ export default async function NewEntryPage({
   }
 
   const { locale, t } = await getDict();
-  return <EntryForm t={t.editor} locale={locale} defaults={defaults} />;
+  return (
+    <EntryForm
+      t={t.editor}
+      locale={locale}
+      defaults={defaults}
+      profileListed={profileListed}
+    />
+  );
 }

@@ -117,7 +117,16 @@ export async function generateMetadata({
     description,
     // Only a public day belongs in a search index. The other two are reached
     // by a link someone was handed, or by following the person who wrote it.
-    robots: entry.visibility === "public" ? undefined : { index: false, follow: false },
+    //
+    // And the profile is a ceiling over the day: a journal that is only reached
+    // by its link does not get indexed through one of its days. The day keeps
+    // saying "public" — switch the profile back and it is public again, with
+    // nothing to re-file — but while the journal is by-link, so is everything
+    // in it.
+    robots:
+      entry.visibility === "public" && entry.author_visibility === "public"
+        ? undefined
+        : { index: false, follow: false },
     openGraph: {
       title: entry.crag,
       description,
@@ -172,9 +181,12 @@ export default async function EntryPage({
   // Someone who climbed this day with you and wrote their own version of it.
   const sharedDay = await getSharedDay(entry.id, user?.id ?? null);
 
+  // A folded-away row: its value is still on the entry, it simply is not shown.
+  const hidden = new Set(entry.hidden_fields ?? []);
+
   const pitchesAndHeight = [
     entry.pitches ? `${entry.pitches}L` : null,
-    entry.height_m ? `${entry.height_m} m` : null,
+    entry.height_m && !hidden.has("height_m") ? `${entry.height_m} m` : null,
   ]
     .filter(Boolean)
     .join(" · ");
@@ -242,7 +254,7 @@ export default async function EntryPage({
             <dt>{t.entry.date}</dt>
             <dd>{formatDate(entry.entry_date, locale, entry.month_only)}</dd>
           </div>
-          {entry.location && (
+          {entry.location && !hidden.has("location") && (
             <div className="notion-prop">
               <dt>{t.entry.location}</dt>
               <dd>{entry.location}</dd>
@@ -254,25 +266,25 @@ export default async function EntryPage({
               <dd>{entry.style}</dd>
             </div>
           )}
-          {entry.grade_max && (
+          {entry.grade_max && !hidden.has("grade_max") && (
             <div className="notion-prop">
               <dt>{t.entry.grade}</dt>
               <dd>{entry.grade_max}</dd>
             </div>
           )}
-          {entry.rating && (
+          {entry.rating && !hidden.has("rating") && (
             <div className="notion-prop">
               <dt>{t.entry.rating}</dt>
               <dd>{entry.rating}</dd>
             </div>
           )}
-          {entry.orientation && (
+          {entry.orientation && !hidden.has("orientation") && (
             <div className="notion-prop">
               <dt>{t.entry.orientation}</dt>
               <dd>{entry.orientation}</dd>
             </div>
           )}
-          {entry.equipment && (
+          {entry.equipment && !hidden.has("equipment") && (
             <div className="notion-prop">
               <dt>{t.entry.equipment}</dt>
               <dd>{entry.equipment}</dd>
@@ -290,7 +302,7 @@ export default async function EntryPage({
               <dd>{entry.routes}</dd>
             </div>
           )}
-          {entry.partners && (
+          {entry.partners && !hidden.has("partners") && (
             <div className="notion-prop">
               <dt>{t.entry.partners}</dt>
               <dd>{await renderMentions(entry.partners)}</dd>
@@ -315,7 +327,7 @@ export default async function EntryPage({
               the route itself. An import knows both; an entry written by hand
               usually carries only the topo it was looked up from — so the label
               follows what the link actually points at, not where it is stored. */}
-          {entry.c2c_url && (
+          {entry.c2c_url && !hidden.has("c2c_url") && (
             <div className="notion-prop">
               <dt>{entry.c2c_url.includes("/outings/") ? t.entry.story : t.entry.topo}</dt>
               <dd>
@@ -495,9 +507,9 @@ export default async function EntryPage({
                   deleting: t.entry.deleting,
                   confirm:
                     acceptedCoAuthors.length > 0
-                      ? t.entry.confirmDeleteShared.replace(
-                          "{names}",
-                          acceptedCoAuthors.map((a) => a.display_name).join(", ")
+                      ? t.entry.confirmDeleteShared(
+                          acceptedCoAuthors.map((a) => a.display_name).join(", "),
+                          acceptedCoAuthors.length
                         )
                       : t.entry.confirmDelete,
                 }}

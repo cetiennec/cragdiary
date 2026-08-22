@@ -121,6 +121,8 @@ export type Entry = {
   lat: number | null;
   lon: number | null;
   visibility: EntryVisibility;
+  /** Names of fields hidden on the entry page, their values kept (migration 040). */
+  hidden_fields: string[];
   show_pins: boolean;
   star_level: number;
   country: string | null;

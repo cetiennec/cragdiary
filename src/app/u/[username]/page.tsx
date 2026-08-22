@@ -103,6 +103,8 @@ export default async function ProfilePage({
     wloc?: string;
     wpartner?: string;
     wsort?: string;
+  /** How the journal is ordered: date, stars, biggest. */
+  sort?: string;
   }>;
 }) {
   const [{ username }, sp] = await Promise.all([params, searchParams]);
@@ -165,6 +167,7 @@ export default async function ProfilePage({
       ...scope,
       filters,
       limit: show,
+      sort: sp.sort,
     }),
     getUserStats(profile.id, scope),
     getEntryYears(profile.id),
@@ -181,6 +184,11 @@ export default async function ProfilePage({
     isSelf ? getTrayDays(profile.id, profile.username) : Promise.resolve([]),
   ]);
   const entries = page.entries;
+  // Days co-written and accepted, but not yet shown among their own entries —
+  // the only ones there is anything left to decide about.
+  const waitingToShow = trayDays.filter(
+    (d) => d.co_status === "accepted" && !d.in_journal
+  ).length;
   const wishes = [...wishlists, ...sharedWishlists].flatMap((l) => l.wishes);
   const showWishlist = isSelf || wishlists.length > 0;
 
@@ -301,6 +309,15 @@ export default async function ProfilePage({
       {isSelf && error && (
         <p className="form-error">
           {error === "email-taken" ? t.profile.emailTaken : t.profile.wrongPassword}
+        </p>
+      )}
+      {/* A day you took the pen on lands at the foot of a long page, which is
+          nowhere anyone looks. This says so at the top, and stands only until
+          the choice is made either way. */}
+      {isSelf && waitingToShow > 0 && (
+        <p className="shared-days-banner">
+          {t.sharedDays.banner(waitingToShow)}{" "}
+          <Link href="#shared-days">{t.sharedDays.bannerLink}</Link>
         </p>
       )}
       <header className="profile-header">
@@ -490,8 +507,9 @@ export default async function ProfilePage({
       <div className="filter-row">
         <FilterBar
           t={t.filters}
+          showSort
           years={years}
-          current={{ q: sp.q ?? "", year: sp.year ?? "", loc: sp.loc ?? "" }}
+          current={{ q: sp.q ?? "", year: sp.year ?? "", loc: sp.loc ?? "", sort: sp.sort ?? "date" }}
           action={`/u/${profile.username}`}
         />
         {isSelf && (
@@ -581,6 +599,7 @@ export default async function ProfilePage({
               ...(sp.q ? { q: sp.q } : {}),
               ...(sp.year ? { year: sp.year } : {}),
               ...(sp.loc ? { loc: sp.loc } : {}),
+              ...(sp.sort && sp.sort !== "date" ? { sort: sp.sort } : {}),
               show: String(show + 24),
             })}#more`}
             className="feed-more-btn"
@@ -600,6 +619,9 @@ export default async function ProfilePage({
             <AutoFilterForm action={`/u/${profile.username}`} className="filter-bar wish-filter">
               {sp.q && <input type="hidden" name="q" value={sp.q} />}
               {sp.year && <input type="hidden" name="year" value={sp.year} />}
+              {sp.sort && sp.sort !== "date" && (
+                <input type="hidden" name="sort" value={sp.sort} />
+              )}
               {sp.loc && <input type="hidden" name="loc" value={sp.loc} />}
               <span className="filter-label">{t.filters.label}</span>
               <input
@@ -714,7 +736,12 @@ export default async function ProfilePage({
 
       {/* Days you are on but have not written up — yours alone to see. */}
       {isSelf && (
-        <SharedDaysTray days={trayDays} locale={locale} t={t.sharedDays} />
+        <SharedDaysTray
+          days={trayDays}
+          locale={locale}
+          // Accept and decline read the same here as on a follow request.
+          t={{ ...t.sharedDays, accept: t.follow.accept, decline: t.follow.decline }}
+        />
       )}
       </div>
     </>

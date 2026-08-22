@@ -8,7 +8,7 @@ import {
   entriesNotOfferable,
   getEmailPrefs,
   getFollowRequests,
-  pendingCoAuthorInvites,
+  coAuthorInviteStates,
 } from "@/lib/queries";
 import { acceptCoAuthor, answerFollowRequest, copyEntryToJournal, removeCoAuthor } from "@/app/actions";
 import EmailPrefsForm from "@/components/EmailPrefsForm";
@@ -60,12 +60,12 @@ export default async function NotificationsPage() {
   const invited = items.flatMap((n) =>
     n.type === "coauthor_invite" && n.data?.entry_id ? [n.data.entry_id] : []
   );
-  const [known, gone, stillPending] = await Promise.all([
+  const [known, gone, inviteState] = await Promise.all([
     entriesNotOfferable(user.id, tagged),
     entriesGone([...tagged, ...invited]),
-    // An invitation already answered leaves its notification behind; only the
-    // ones still waiting get buttons.
-    pendingCoAuthorInvites(user.id, invited),
+    // An invitation already answered leaves its notification behind: the ones
+    // still waiting get buttons, the ones accepted get told where the day went.
+    coAuthorInviteStates(user.id, invited),
   ]);
   const tn = t.notifications;
   // A request already answered leaves its notification behind; only the ones
@@ -126,8 +126,21 @@ export default async function NotificationsPage() {
             else if (n.type === "coauthor_invite") message = tn.coAuthorInvite;
             else if (n.type === "c2c_new")
               message = tn.c2cNew.replace("{n}", String(n.data?.count ?? 0));
+            // An invitation already taken carries a line saying where the day
+            // went. It needs a line of its own — the row is a single flex line
+            // otherwise, and a third item in it squeezes the text to one word
+            // per line.
+            const acceptedInvite =
+              n.type === "coauthor_invite" &&
+              !!n.data?.entry_id &&
+              inviteState.get(n.data.entry_id) === "accepted";
             return (
-              <li key={n.id} className={`notif-row${n.read ? "" : " unread"}`}>
+              <li
+                key={n.id}
+                className={`notif-row${n.read ? "" : " unread"}${
+                  acceptedInvite ? " has-note" : ""
+                }`}
+              >
                 {/* A deleted day has nowhere to lead: the row still says what
                     happened, but stops pretending to be a link. */}
                 {(() => {
@@ -185,7 +198,7 @@ export default async function NotificationsPage() {
                     is one entry with two hands on it, not a copy that drifts. */}
                 {n.type === "coauthor_invite" &&
                   n.data?.entry_id &&
-                  stillPending.has(n.data.entry_id) && (
+                  inviteState.get(n.data.entry_id) === "pending" && (
                     <span className="follower-actions coauthor-invite-actions">
                       <form action={acceptCoAuthor}>
                         <input type="hidden" name="entry_id" value={n.data.entry_id} />
@@ -201,6 +214,15 @@ export default async function NotificationsPage() {
                       </form>
                     </span>
                   )}
+                {/* Accepting puts the day somewhere it was not before, and
+                    somewhere below the fold at that. Saying where is cheaper
+                    than letting someone wonder whether anything happened. */}
+                {acceptedInvite && (
+                    <span className="notif-sub coauthor-accepted">
+                      {tn.coAuthorAccepted}{" "}
+                      <Link href={`/u/${user.username}#shared-days`}>{tn.coAuthorAcceptedLink}</Link>
+                  </span>
+                )}
                 {n.type === "follow_request" &&
                   n.actor_username &&
                   pending.has(n.actor_username) && (

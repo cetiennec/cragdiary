@@ -27,6 +27,8 @@ const en = {
     added: "added a route to",
     wishTagged: "tagged you on a route",
     coAuthorInvite: "invites you to write this day with them",
+    coAuthorAccepted: "Accepted — the day is waiting at the foot of your journal.",
+    coAuthorAcceptedLink: "Go and see",
     addToJournal: "Add to my journal",
     c2cNew: "{n} outings on camptocamp aren't in your journal yet — sync to bring them in.",
     entryGone: "this outing has been deleted",
@@ -184,7 +186,10 @@ const en = {
     pitchNotesHint: "Pitch by pitch (leave blank to skip):",
     pitchPlaceholder: "6a, nice dihedral, small gear useful…",
     suggestionsAttribution: "data from Camptocamp (CC BY-SA)",
-    autofillHide: "Don't show this info on the entry",
+    visibilityCappedShort: "your journal is by link",
+    visibilityCapped:
+      "Your journal is reached by its link, so none of its days are public: they open for whoever holds the link, and stay out of the feed and out of search. Make your profile public again and every day filed public becomes public once more.",
+    autofillHide: "Don't show this info on the entry (it stays saved)",
     autofillShow: "Show this info again",
     c2cSummaryTitle: "Camptocamp route summary (CC BY-SA):",
     c2cSummaryInclude: "Show this summary on the entry",
@@ -263,8 +268,12 @@ const en = {
     delete: "Delete entry",
     deleting: "Deleting…",
     confirmDelete: "Delete this entry? This cannot be undone.",
-    confirmDeleteShared:
-      "{names} shares this day and will lose it too. Delete it? This cannot be undone.",
+    // Counted, not templated: a day can have any number of hands on it, and
+    // "Léa, Marc shares this day" is what one {names} slot gets you.
+    confirmDeleteShared: (names: string, n: number) =>
+      n === 1
+        ? `${names} shares this day and will lose it too. Delete it? This cannot be undone.`
+        : `${names} share this day and will lose it too. Delete it? This cannot be undone.`,
     coAuthorsLabel: "✍️ Written with",
     badges: { followers: "👥 Followers", private: "🔗 By link" },
     visibilityPicker: "Who can see this day",
@@ -360,11 +369,19 @@ const en = {
     },
   },
   sharedDays: {
+    // The nudge at the top of your own journal. It stands only while there is
+    // something to decide, and goes as soon as you decide it.
+    banner: (n: number) =>
+      n === 1
+        ? "You accepted a day written with you — show it in your journal?"
+        : `You accepted ${n} days written with you — show them in your journal?`,
+    bannerLink: "See all the days you're on",
     title: "Days you're on",
     intro:
       "Days someone else wrote with you on them. The ones you co-write can stand among your own entries; the rest are their account of it, and yours is still yours to write.",
     by: "written by {name}",
     coAuthorTag: "you can edit it",
+    invited: "you have been offered the pen",
     showInJournal: "Show in my journal",
     hideFromJournal: "Keep it here only",
     writeMine: "Write my own version",
@@ -410,6 +427,10 @@ const en = {
     location: "Place",
     label: "🔎 Filter",
     noResults: "Nothing matches those filters.",
+    sort: "Order",
+    sortDate: "🗓 Most recent",
+    sortStars: "⭐ Best first",
+    sortBiggest: "🏔 Biggest first",
     clear: "Clear",
   },
   follow: {
@@ -968,6 +989,8 @@ const fr: Dict = {
     added: "a ajouté une voie à",
     wishTagged: "vous a ajouté·e à une voie",
     coAuthorInvite: "vous propose d'écrire cette journée avec elle ou lui",
+    coAuthorAccepted: "Acceptée — la journée vous attend au bas de votre carnet.",
+    coAuthorAcceptedLink: "Aller voir",
     addToJournal: "Ajouter à mon carnet",
     c2cNew: "{n} sorties sur camptocamp ne sont pas encore dans votre carnet — synchronisez pour les récupérer.",
     entryGone: "cette sortie a été supprimée",
@@ -1125,7 +1148,10 @@ const fr: Dict = {
     pitchNotesHint: "Longueur par longueur (laissez vide pour passer) :",
     pitchPlaceholder: "6a, beau dièdre, petits coinceurs utiles…",
     suggestionsAttribution: "données Camptocamp (CC BY-SA)",
-    autofillHide: "Ne pas afficher cette info sur l'entrée",
+    visibilityCappedShort: "votre carnet est par lien",
+    visibilityCapped:
+      "Votre carnet s'ouvre par son lien : aucune de ses journées n'est donc publique. Elles s'ouvrent pour qui a le lien, et restent hors du fil et hors des moteurs de recherche. Repassez votre profil en public et chaque journée classée publique le redeviendra.",
+    autofillHide: "Ne pas afficher cette info sur l'entrée (elle reste enregistrée)",
     autofillShow: "Réafficher cette info",
     c2cSummaryTitle: "Résumé Camptocamp de la voie (CC BY-SA) :",
     c2cSummaryInclude: "Afficher ce résumé sur l'entrée",
@@ -1204,8 +1230,10 @@ const fr: Dict = {
     delete: "Supprimer l'entrée",
     deleting: "Suppression…",
     confirmDelete: "Supprimer cette entrée ? C'est irréversible.",
-    confirmDeleteShared:
-      "{names} partage cette journée et la perdra aussi. Supprimer ? C'est irréversible.",
+    confirmDeleteShared: (names: string, n: number) =>
+      n === 1
+        ? `${names} partage cette journée et la perdra aussi. Supprimer ? C'est irréversible.`
+        : `${names} partagent cette journée et la perdront aussi. Supprimer ? C'est irréversible.`,
     coAuthorsLabel: "✍️ Écrite avec",
     badges: { followers: "👥 Abonné·es", private: "🔗 Par lien" },
     visibilityPicker: "Qui peut voir cette journée",
@@ -1302,11 +1330,17 @@ const fr: Dict = {
     },
   },
   sharedDays: {
+    banner: (n: number) =>
+      n === 1
+        ? "Vous avez accepté une sortie écrite avec vous — l'afficher sur votre carnet ?"
+        : `Vous avez accepté ${n} sorties écrites avec vous — les afficher sur votre carnet ?`,
+    bannerLink: "Voyez toutes les journées partagées",
     title: "Les journées où vous apparaissez",
     intro:
       "Des journées écrites par quelqu'un d'autre, où vous êtes. Celles que vous co-écrivez peuvent figurer parmi vos entrées ; les autres sont leur récit, et le vôtre reste à écrire.",
     by: "écrite par {name}",
     coAuthorTag: "vous pouvez la modifier",
+    invited: "on vous propose la plume",
     showInJournal: "Afficher dans mon carnet",
     hideFromJournal: "La garder ici seulement",
     writeMine: "Écrire ma version",
@@ -1352,6 +1386,10 @@ const fr: Dict = {
     location: "Lieu",
     label: "🔎 Filtrer",
     noResults: "Aucune sortie ne correspond à ces filtres.",
+    sort: "Ordre",
+    sortDate: "🗓 Les plus récentes",
+    sortStars: "⭐ Les mieux notées",
+    sortBiggest: "🏔 Les plus majeures",
     clear: "Effacer",
   },
   follow: {

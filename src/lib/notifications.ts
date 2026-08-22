@@ -32,10 +32,18 @@ export type Notification = {
   actor_has_avatar: boolean;
 };
 
-// How many a person keeps. A notification is a nudge, not an archive — what
-// happened is in the journal, the wishlist and the profiles themselves — so
-// past this the older ones go rather than accumulating for years.
+// How many *read* ones a person keeps. A notification is a nudge, not an
+// archive — what happened is in the journal, the wishlist and the profiles
+// themselves — so past this the older ones go rather than accumulating for
+// years.
+//
+// Unread ones are never counted and never trimmed: coming back to eleven
+// things waiting and being shown ten of them loses the one thing the list is
+// for. Someone away for a month keeps everything until they have read it.
 export const NOTIFICATION_KEEP = 10;
+
+/** The ceiling that does apply to unread, so a runaway cannot fill a table. */
+export const NOTIFICATION_HARD_CAP = 200;
 
 // Insert a notification. No-op when the actor is the recipient (you don't get
 // notified about your own actions).
@@ -53,15 +61,25 @@ export async function notify(opts: {
   // Trimmed here rather than by a scheduled job: the only moment a list can
   // grow is the moment something is added to it, and one small delete beside
   // one small insert needs nothing watching it.
+  //
+  // Read rows keep their ten. Unread ones survive regardless of how many there
+  // are, up to a hard cap that exists only so nothing can run away.
   await pool.query(
     `delete from notifications
      where user_id = $1
        and id not in (
-         select id from notifications where user_id = $1
+         select id from notifications
+         where user_id = $1 and not read
+         order by created_at desc, id desc
+         limit $3
+       )
+       and id not in (
+         select id from notifications
+         where user_id = $1 and read
          order by created_at desc, id desc
          limit $2
        )`,
-    [opts.userId, NOTIFICATION_KEEP]
+    [opts.userId, NOTIFICATION_KEEP, NOTIFICATION_HARD_CAP]
   );
 }
 
@@ -80,9 +98,12 @@ export async function unreadCount(userId: string): Promise<number> {
   return Number(r.rows[0]?.n ?? 0);
 }
 
+// Everything still kept, which is the ten most recent read ones plus however
+// many are unread. Passing a smaller limit here would hide exactly the rows the
+// trim above went out of its way to preserve.
 export async function getNotifications(
   userId: string,
-  limit = NOTIFICATION_KEEP
+  limit = NOTIFICATION_KEEP + NOTIFICATION_HARD_CAP
 ): Promise<Notification[]> {
   const r = await pool.query<Notification>(
     `select n.id, n.type, n.data, n.read, to_char(n.created_at, 'YYYY-MM-DD') as created_at,
