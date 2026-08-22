@@ -65,6 +65,12 @@ export default async function GearPage({
   return (
     <div className="page-container gear-page">
       <h1 className="page-title">{g.title}</h1>
+      {/* Said before anything else: a register that is still being drawn must
+          not be mistaken for one you can trust your rope to. */}
+      <p className="gear-wip">
+        <strong>{g.wipTitle}</strong> — {g.wipBody}
+        <Link href="/feedback">{g.wipLink}</Link>.
+      </p>
       <p className="gear-intro">{g.intro}</p>
 
       <div className="gear-head">

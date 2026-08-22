@@ -190,7 +190,7 @@ export default async function EntryPage({
           )}
         </div>
       ) : (
-        <AutoCover entry={entry} locale={locale} className="notion-cover auto-cover" wide showPins={false} />
+        <AutoCover entry={entry} locale={locale} className="notion-cover auto-cover" wide />
       )}
 
       <div className="entry-edit-row">

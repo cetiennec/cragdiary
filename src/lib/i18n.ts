@@ -328,7 +328,7 @@ const en = {
     deleteButton: "Delete my account",
     visibilityLabel: "Profile visibility",
     visibilityShort: {
-      public: "🌍 Listed",
+      public: "🌍 Public",
       private: "🔗 By link",
     },
     hintDismiss: "Got it",
@@ -637,6 +637,10 @@ const en = {
   },
   gear: {
     title: "Gear register",
+    wipTitle: "Work in progress",
+    wipBody:
+      "This register is a sketch, not a tool to rely on: it is still being shaped, and nothing here should stand in for the inspection your gear actually owes you. Ideas about what it ought to do are very welcome — ",
+    wipLink: "tell me what you would want from it",
     intro:
       "What you climb on, when it was made, when it went into service, and when someone last looked at it properly. The dates below are the usual manufacturer's limits, offered so the register can sort by urgency — the notice that came with the gear is the authority, and the verdict is the inspector's.",
     add: "Add a piece of gear",
@@ -1242,7 +1246,7 @@ const fr: Dict = {
     deleteButton: "Supprimer mon compte",
     visibilityLabel: "Visibilité du profil",
     visibilityShort: {
-      public: "🌍 Listé",
+      public: "🌍 Public",
       private: "🔗 Par lien",
     },
     hintDismiss: "J'ai compris",
@@ -1553,6 +1557,10 @@ const fr: Dict = {
   },
   gear: {
     title: "Registre EPI",
+    wipTitle: "En chantier",
+    wipBody:
+      "Ce registre est une esquisse, pas un outil sur lequel compter : il se cherche encore, et rien ici ne remplace le contrôle que votre matériel mérite vraiment. Les idées sur ce qu'il devrait faire sont les bienvenues — ",
+    wipLink: "dites-moi ce que vous en attendriez",
     intro:
       "Ce sur quoi vous grimpez : sa date de fabrication, sa mise en service, et le dernier contrôle sérieux qu'il a reçu. Les échéances ci-dessous sont les limites habituelles des fabricants, affichées pour classer par urgence — la notice du matériel fait foi, et le verdict appartient au contrôleur.",
     add: "Ajouter un équipement",

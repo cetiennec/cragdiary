@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { formatDate, type Locale } from "@/lib/i18n";
 import type { EntryWithAuthor } from "@/lib/queries";
-import AutoCover, { CoverPins, CoverTag, CoverStars } from "@/components/AutoCover";
+import AutoCover, { CoverTag, CoverStars } from "@/components/AutoCover";
 import VisibilityPicker, { type VisibilityLabels } from "@/components/VisibilityPicker";
 import DemoBanner from "@/components/DemoBanner";
 import { isDemoAccount } from "@/lib/demo";
@@ -43,13 +43,12 @@ export default function EntryCard({
             <div className="entry-card-cover">
               {/* eslint-disable-next-line @next/next/no-img-element -- served from our own DB-backed route, already resized/compressed server-side */}
               <img src={`/api/photos/${cover.id}?t=1`} alt="" loading="lazy" />
-              {entry.show_pins && <CoverPins entry={entry} locale={locale} />}
               <CoverTag entry={entry} />
               <CoverStars entry={entry} locale={locale} />
               {demoLabel && isDemoAccount(entry.username) && <DemoBanner label={demoLabel} />}
             </div>
           ) : (
-            <AutoCover entry={entry} locale={locale} showPins={entry.show_pins} />
+            <AutoCover entry={entry} locale={locale} />
           )}
           <div className={`entry-card-body${visibilityLabels ? " has-visibility" : ""}`}>
             <h2 className="entry-crag">{entry.crag}</h2>

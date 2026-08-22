@@ -99,6 +99,9 @@ function coverTag(entry: EntryWithAuthor): string {
     .join(" · ");
 }
 
+// Kept, not drawn: the thumbnail pins were taken off the cards (they needed a
+// legend to be read at all). `coverEmojis` still feeds the bio pin suggestions
+// in profile settings, and this component is here for whenever they come back.
 export function CoverPins({ entry, locale }: { entry: EntryWithAuthor; locale: Locale }) {
   const emojis = coverEmojis(entry);
   return (
@@ -142,13 +145,11 @@ export default function AutoCover({
   locale,
   className = "entry-card-cover auto-cover",
   wide = false,
-  showPins = true,
 }: {
   entry: EntryWithAuthor;
   locale: Locale;
   className?: string;
   wide?: boolean;
-  showPins?: boolean;
 }) {
   const seed = hashCode(entry.id);
   const rand = mulberry32(seed);
@@ -190,7 +191,6 @@ export default function AutoCover({
           opacity="0.8"
         />
       </svg>
-      {showPins && <CoverPins entry={entry} locale={locale} />}
       {!wide && <CoverTag entry={entry} />}
       {!wide && <CoverStars entry={entry} locale={locale} />}
     </div>

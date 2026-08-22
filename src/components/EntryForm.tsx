@@ -1368,18 +1368,10 @@ export default function EntryForm({
               {fieldToggle("c2c_url")}
             </div>
           </div>
-          <div className="notion-prop">
-            <label htmlFor="show_pins">{t.showPins}</label>
-            <label className="profile-public-toggle notion-checkbox">
-              <input
-                id="show_pins"
-                type="checkbox"
-                name="show_pins"
-                value="1"
-                defaultChecked={entry?.show_pins ?? true}
-              />
-            </label>
-          </div>
+          {/* The thumbnail pins are no longer drawn, so there is nothing to
+              toggle — but the stored choice rides along untouched, ready if
+              they come back. */}
+          <input type="hidden" name="show_pins" value={(entry?.show_pins ?? true) ? "1" : "0"} />
           <div className="notion-prop">
             <label htmlFor="visibility">{t.visibility}</label>
             <select id="visibility" name="visibility" defaultValue={entry?.visibility ?? "public"}>
