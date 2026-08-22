@@ -615,6 +615,18 @@ export default async function ProfilePage({
         </div>
       )}
 
+      {/* Days you are on but have not written up — yours alone to see. Between
+          the journal and the wishlist: it belongs with what you have climbed,
+          not after what you would like to. */}
+      {isSelf && (
+        <SharedDaysTray
+          days={trayDays}
+          locale={locale}
+          // Accept and decline read the same here as on a follow request.
+          t={{ ...t.sharedDays, accept: t.follow.accept, decline: t.follow.decline }}
+        />
+      )}
+
       {showWishlist && (
         <section className="wishlist-section" id="wishlist">
           <div className="wishlist-header">
@@ -740,15 +752,6 @@ export default async function ProfilePage({
         </section>
       )}
 
-      {/* Days you are on but have not written up — yours alone to see. */}
-      {isSelf && (
-        <SharedDaysTray
-          days={trayDays}
-          locale={locale}
-          // Accept and decline read the same here as on a follow request.
-          t={{ ...t.sharedDays, accept: t.follow.accept, decline: t.follow.decline }}
-        />
-      )}
       </div>
     </>
   );

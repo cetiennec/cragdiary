@@ -216,6 +216,45 @@ export async function emailTagged(
   );
 }
 
+/**
+ * Someone has offered you the pen on a day you climbed together.
+ *
+ * Sent under the same permission as a tag — "when someone adds me to an
+ * outing", which this is, with a question attached — and suppressed when that
+ * very email has just gone out about the same outing. Offering the pen means
+ * first naming the person, so without the check the ordinary flow is two emails
+ * about one day, minutes apart.
+ */
+export async function emailCoAuthorInvite(
+  userId: string,
+  actor: { username: string; displayName: string },
+  entryId: string,
+  entry: TaggedEntry
+): Promise<void> {
+  const justTold = await pool.query(
+    `select 1 from notifications
+     where user_id = $1 and type = 'tagged'
+       and data->>'entry_id' = $2
+       and created_at > now() - interval '1 hour'
+     limit 1`,
+    [userId, entryId]
+  );
+  if (justTold.rows.length > 0) return;
+
+  const link = `${siteUrl()}/entries/${entryId}`;
+  await sendTo(
+    userId,
+    "tags",
+    `${actor.displayName} vous propose d'écrire une sortie à deux`,
+    `<p><strong>${escape(actor.displayName)}</strong> (@${escape(actor.username)}) vous propose
+      d'écrire cette sortie avec elle ou lui : une seule entrée, que vous pouvez modifier tous
+      les deux, et qui peut figurer dans vos deux carnets.</p>
+     ${entryCard(entry, entryId, link)}
+     <p><a href="${siteUrl()}/notifications">Accepter ou refuser</a> — la proposition vous attend
+       aussi au bas de votre carnet.</p>`
+  );
+}
+
 /** Text from a person, going into HTML: the one place this file can be hurt. */
 function escape(value: string): string {
   return value
@@ -280,8 +319,19 @@ export async function emailDigest(userId: string, asked = false): Promise<boolea
             exists (select 1 from photos p where p.entry_id = e.id) as has_photo
      from entries e
      join users u on u.id = e.user_id
-     where e.user_id in (select followee_id from follows
-                         where follower_id = $1 and status = 'accepted')
+     where (
+         e.user_id in (select followee_id from follows
+                       where follower_id = $1 and status = 'accepted')
+         -- A day someone you follow co-wrote is a day they climbed, even when
+         -- the row belongs to the other person on the rope. The feed learned
+         -- this at migration 039; the digest is the same question asked once a
+         -- month, and was still answering the old way.
+         or exists (select 1 from entry_authors ca
+                    where ca.entry_id = e.id and ca.status = 'accepted'
+                      and ca.user_id in (select followee_id from follows
+                                         where follower_id = $1 and status = 'accepted'))
+       )
+       and e.user_id <> $1
        and e.visibility = 'public'
        and e.entry_date > current_date - interval '1 month'
      order by e.entry_date desc

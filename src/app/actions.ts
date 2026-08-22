@@ -11,6 +11,7 @@ import { LOCALE_COOKIE, getLocale } from "@/lib/i18n";
 import { sendEmail } from "@/lib/email";
 import {
   emailDigest,
+  emailCoAuthorInvite,
   emailTagged,
   maybeSendDigest,
   unsubscribe,
@@ -158,6 +159,33 @@ export async function setLocale(formData: FormData): Promise<void> {
 // function it rides on is still alive.
 const PHOTO_SETTLE_MS = 4000;
 
+/** Enough of an outing for an email to show a card of it. */
+async function emailEntryCard(
+  actorId: string,
+  entryId: string
+): Promise<{ actor: { username: string; displayName: string }; entry: TaggedEntry } | null> {
+  const [actor, entry] = await Promise.all([
+    pool.query<{ username: string; display_name: string }>(
+      "select username, display_name from users where id = $1",
+      [actorId]
+    ),
+    // The crag is the outing's name here, `entries` having no title column.
+    pool.query<TaggedEntry>(
+      `select crag, location, to_char(entry_date, 'YYYY-MM-DD') as entry_date, month_only,
+              style, grade_max, pitches, height_m, routes, notes,
+              visibility <> 'private'
+                and exists (select 1 from photos p where p.entry_id = entries.id) as has_photo
+       from entries where id = $1`,
+      [entryId]
+    ),
+  ]);
+  if (!actor.rows[0] || !entry.rows[0]) return null;
+  return {
+    actor: { username: actor.rows[0].username, displayName: actor.rows[0].display_name },
+    entry: entry.rows[0],
+  };
+}
+
 // Notify climbers newly @-tagged as partners on an entry. `previousPartners`
 // lets updates skip people who were already tagged.
 async function notifyTaggedPartners(
@@ -184,31 +212,13 @@ async function notifyTaggedPartners(
     // no picture. Nothing about this email is urgent.
     await new Promise((resolve) => setTimeout(resolve, PHOTO_SETTLE_MS));
 
-    const [actor, entry] = await Promise.all([
-      pool.query<{ username: string; display_name: string }>(
-        "select username, display_name from users where id = $1",
-        [actorId]
-      ),
-      // Enough of the outing for the email to show a card of it — the crag is
-      // its name here, `entries` having no title column.
-      pool.query<TaggedEntry>(
-        `select crag, location, to_char(entry_date, 'YYYY-MM-DD') as entry_date, month_only,
-                style, grade_max, pitches, height_m, routes, notes,
-                visibility <> 'private'
-                  and exists (select 1 from photos p where p.entry_id = entries.id) as has_photo
-         from entries where id = $1`,
-        [entryId]
-      ),
-    ]);
-    if (!actor.rows[0] || !entry.rows[0]) return;
+    const card = await emailEntryCard(actorId, entryId);
+    if (!card) return;
     await Promise.all(
       users.map((u) =>
-        emailTagged(
-          u.id,
-          { username: actor.rows[0].username, displayName: actor.rows[0].display_name },
-          entryId,
-          entry.rows[0]
-        ).catch((e) => console.error("tag email failed —", e instanceof Error ? e.message : e))
+        emailTagged(u.id, card.actor, entryId, card.entry).catch((e) =>
+          console.error("tag email failed —", e instanceof Error ? e.message : e)
+        )
       )
     );
   });
@@ -1448,6 +1458,16 @@ export async function inviteCoAuthor(formData: FormData): Promise<void> {
     actorId: user.id,
     type: "coauthor_invite",
     data: { entry_id: entryId },
+  });
+
+  // An invitation asks something of you, and the person it asks may not be on
+  // the site this week. After the response, like every other email here.
+  after(async () => {
+    const card = await emailEntryCard(user.id, entryId);
+    if (!card) return;
+    await emailCoAuthorInvite(invitee.id, card.actor, entryId, card.entry).catch((e) =>
+      console.error("co-author invite email failed —", e instanceof Error ? e.message : e)
+    );
   });
 
   revalidatePath(`/entries/${entryId}`);
