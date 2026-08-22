@@ -27,6 +27,7 @@ const en = {
     added: "added a route to",
     wishTagged: "tagged you on a route",
     coAuthorInvite: "invites you to write this day with them",
+    coAuthorTook: "took the pen on your day",
     coAuthorAccepted: "Accepted — the day is waiting at the foot of your journal.",
     coAuthorAcceptedLink: "Go and see",
     addToJournal: "Add to my journal",
@@ -370,7 +371,12 @@ const en = {
   },
   sharedDays: {
     // The nudge at the top of your own journal. It stands only while there is
-    // something to decide, and goes as soon as you decide it.
+    // something to decide, and goes as soon as you decide it. An invitation
+    // still waiting is the more pressing of the two, so it speaks first.
+    bannerInvited: (n: number) =>
+      n === 1
+        ? "Someone has offered you the pen on a day you climbed together."
+        : `You have been offered the pen on ${n} days you climbed with others.`,
     banner: (n: number) =>
       n === 1
         ? "You accepted a day written with you — show it in your journal?"
@@ -989,6 +995,7 @@ const fr: Dict = {
     added: "a ajouté une voie à",
     wishTagged: "vous a ajouté·e à une voie",
     coAuthorInvite: "vous propose d'écrire cette journée avec elle ou lui",
+    coAuthorTook: "a pris la plume sur votre journée",
     coAuthorAccepted: "Acceptée — la journée vous attend au bas de votre carnet.",
     coAuthorAcceptedLink: "Aller voir",
     addToJournal: "Ajouter à mon carnet",
@@ -1330,6 +1337,10 @@ const fr: Dict = {
     },
   },
   sharedDays: {
+    bannerInvited: (n: number) =>
+      n === 1
+        ? "On vous propose d'écrire à deux une sortie faite ensemble."
+        : `On vous propose d'écrire à deux ${n} sorties faites ensemble.`,
     banner: (n: number) =>
       n === 1
         ? "Vous avez accepté une sortie écrite avec vous — l'afficher sur votre carnet ?"
@@ -1361,7 +1372,7 @@ const fr: Dict = {
     allTitle: "Tous les grimpeurs",
     following: "Suivi",
     climbedWith: "Grimpé ensemble",
-    climbedTimes: (n: number) => (n === 1 ? "1 sortie ensemble" : `${n} sorties ensemble`),
+    climbedTimes: (n: number) => (n === 1 ? "1 journée ensemble" : `${n} journées ensemble`),
     empty: "Aucune cordée pour l'instant — suivez des grimpeurs ou taguez vos partenaires avec @ dans vos entrées.",
   },
   welcome: {

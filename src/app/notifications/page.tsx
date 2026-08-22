@@ -28,6 +28,7 @@ function target(n: Notification, selfUsername: string): string {
       return n.actor_username ? `/u/${n.actor_username}` : "/climbers";
     case "tagged":
     case "coauthor_invite":
+    case "coauthor_accepted":
       return n.data?.entry_id ? `/entries/${n.data.entry_id}` : "/";
     case "wishlist_invite":
     case "wishlist_add":
@@ -124,6 +125,7 @@ export default async function NotificationsPage() {
               message = `${tn.added} « ${n.data?.list_name ?? ""} »`;
             else if (n.type === "wish_tagged") message = tn.wishTagged;
             else if (n.type === "coauthor_invite") message = tn.coAuthorInvite;
+            else if (n.type === "coauthor_accepted") message = tn.coAuthorTook;
             else if (n.type === "c2c_new")
               message = tn.c2cNew.replace("{n}", String(n.data?.count ?? 0));
             // An invitation already taken carries a line saying where the day
@@ -145,7 +147,10 @@ export default async function NotificationsPage() {
                     happened, but stops pretending to be a link. */}
                 {(() => {
                   const missing =
-                    (n.type === "tagged" || n.type === "coauthor_invite") && n.data?.entry_id
+                    (n.type === "tagged" ||
+                      n.type === "coauthor_invite" ||
+                      n.type === "coauthor_accepted") &&
+                    n.data?.entry_id
                       ? gone.has(n.data.entry_id)
                       : false;
                   const inner = (

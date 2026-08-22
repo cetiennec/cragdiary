@@ -159,7 +159,7 @@ create table if not exists notifications (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references users(id) on delete cascade,   -- recipient
   actor_id uuid references users(id) on delete cascade,           -- who triggered it
-  type text not null,                                             -- follow | follow_request | follow_accepted | tagged | wishlist_invite | wishlist_add | wish_tagged | c2c_new | coauthor_invite
+  type text not null,                                             -- follow | follow_request | follow_accepted | tagged | wishlist_invite | wishlist_add | wish_tagged | c2c_new | coauthor_invite | coauthor_accepted
   data jsonb,                                                     -- {entry_id, wishlist_id, list_name, wish_title}
   read boolean not null default false,
   created_at timestamptz not null default now()

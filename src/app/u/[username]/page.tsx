@@ -189,6 +189,10 @@ export default async function ProfilePage({
   const waitingToShow = trayDays.filter(
     (d) => d.co_status === "accepted" && !d.in_journal
   ).length;
+  // An invitation nobody has answered is the more pressing of the two, and the
+  // one most likely to be missed: its notification scrolls away, the day does
+  // not.
+  const invitedCount = trayDays.filter((d) => d.co_status === "pending").length;
   const wishes = [...wishlists, ...sharedWishlists].flatMap((l) => l.wishes);
   const showWishlist = isSelf || wishlists.length > 0;
 
@@ -314,9 +318,11 @@ export default async function ProfilePage({
       {/* A day you took the pen on lands at the foot of a long page, which is
           nowhere anyone looks. This says so at the top, and stands only until
           the choice is made either way. */}
-      {isSelf && waitingToShow > 0 && (
+      {isSelf && (invitedCount > 0 || waitingToShow > 0) && (
         <p className="shared-days-banner">
-          {t.sharedDays.banner(waitingToShow)}{" "}
+          {invitedCount > 0
+            ? t.sharedDays.bannerInvited(invitedCount)
+            : t.sharedDays.banner(waitingToShow)}{" "}
           <Link href="#shared-days">{t.sharedDays.bannerLink}</Link>
         </p>
       )}

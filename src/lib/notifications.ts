@@ -10,6 +10,8 @@ export type NotificationType =
   | "wish_tagged"
   /** Someone offered you the pen on a day you climbed with them (migration 039). */
   | "coauthor_invite"
+  /** …and the answer, so the person who offered it is not left wondering. */
+  | "coauthor_accepted"
   /** From the site itself: camptocamp has outings this journal doesn't. */
   | "c2c_new";
 

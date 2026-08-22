@@ -1497,10 +1497,24 @@ export async function acceptCoAuthor(formData: FormData): Promise<void> {
   const entryId = String(formData.get("entry_id") ?? "");
   if (!entryId) return;
 
-  await pool.query(
-    "update entry_authors set status = 'accepted' where entry_id = $1 and user_id = $2",
+  // Only a pending row becomes accepted, and only then is anyone told: pressing
+  // the button twice must not send the offer's author a second notification.
+  const taken = await pool.query<{ owner: string }>(
+    `update entry_authors a set status = 'accepted'
+     from entries e
+     where a.entry_id = $1 and a.user_id = $2 and a.status = 'pending'
+       and e.id = a.entry_id
+     returning e.user_id as owner`,
     [entryId, user.id]
   );
+  if (taken.rows[0]) {
+    await notify({
+      userId: taken.rows[0].owner,
+      actorId: user.id,
+      type: "coauthor_accepted",
+      data: { entry_id: entryId },
+    });
+  }
 
   revalidatePath("/");
   revalidatePath(`/entries/${entryId}`);

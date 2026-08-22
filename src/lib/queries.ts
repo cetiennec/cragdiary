@@ -527,24 +527,29 @@ export type Cordee = FollowUser & { i_follow: boolean; climbed_count: number };
 
 // A rope party ("cordée"): someone you follow, or someone you climbed with —
 // i.e. you tagged them as a partner, or they tagged you. Same definition as
-// the "My rope parties" feed. `climbed_count` is how many times you climbed
-// together (your entries tagging them + their entries tagging you); results
-// are ordered by that count, most-climbed-with first. Private profiles are
-// excluded (their pages aren't viewable anyway).
+// the "My rope parties" feed.
+//
+// `climbed_count` is **days**, not entries: a day you both wrote up is one day
+// out, and adding the two accounts of it together said you had climbed twice
+// as often as you had. The union of the dates from either side answers the
+// question the label actually asks. Results are ordered by it, most days
+// together first. Private profiles are excluded (their pages aren't viewable
+// anyway).
 export async function getCordees(userId: string, username: string): Promise<Cordee[]> {
   const result = await pool.query<Cordee>(
     `select u.username, u.display_name, u.avatar is not null as has_avatar,
             exists (select 1 from follows f
                     where f.follower_id = $1 and f.followee_id = u.id
                       and f.status = 'accepted') as i_follow,
-            (
-              (select count(*) from entries me
+            (select count(*) from (
+               select me.entry_date from entries me
                where me.user_id = $1
-                 and me.partners ~* ('@' || u.username || '([^a-z0-9-]|$)'))
-              + (select count(*) from entries th
-                 where th.user_id = u.id
-                   and th.partners ~* ('@' || $2 || '([^a-z0-9-]|$)'))
-            )::int as climbed_count
+                 and me.partners ~* ('@' || u.username || '([^a-z0-9-]|$)')
+               union
+               select th.entry_date from entries th
+               where th.user_id = u.id
+                 and th.partners ~* ('@' || $2 || '([^a-z0-9-]|$)')
+             ) days)::int as climbed_count
      from users u
      where u.id <> $1
        and (
