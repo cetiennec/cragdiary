@@ -3,6 +3,7 @@ import { Geist, Fraunces } from "next/font/google";
 import Link from "next/link";
 import "./globals.css";
 import { currentUser } from "@/lib/auth";
+import { isAdmin } from "@/lib/admin-stats";
 import { getDict } from "@/lib/i18n";
 import { unreadCount } from "@/lib/notifications";
 import { logout, setLocale } from "./actions";
@@ -84,6 +85,9 @@ export default async function RootLayout({
                   <Link href={`/u/${user.username}#wishlist`}>{t.nav.myWishlist}</Link>
                 </>
               )}
+              {/* Only the person who runs the site, and only if the site has
+                  been told who that is. */}
+              {isAdmin(user?.username) && <Link href="/admin">{t.admin.navLabel}</Link>}
               {/* Cragseeker sits where "New entry" used to: open to everyone,
                   logged in or not. */}
               <Link href="/cragseeker">{t.seeker.navLabel}</Link>

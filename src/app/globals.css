@@ -6344,3 +6344,164 @@ label:has(input:placeholder-shown) + .form-hint.form-warn {
   color: var(--text-muted);
   max-width: 68ch;
 }
+
+/* The owner's numbers page (/admin) */
+
+.admin-page .credits-intro {
+  max-width: 68ch;
+}
+
+.admin-page .pitch-notes-title {
+  margin-top: 1.8rem;
+}
+
+.admin-tile-hint {
+  margin: 0.3rem 0 0;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.admin-charts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.2rem;
+}
+
+.admin-chart {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: 0.9rem 1.1rem 0.7rem;
+}
+
+.admin-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.35rem;
+  height: 140px;
+  margin-top: 0.6rem;
+}
+
+.admin-bar-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  height: 100%;
+  gap: 0.2rem;
+}
+
+/* The bar grows from the baseline; the label and the figure keep their own
+   room, so a tall month never pushes the months off the card. */
+.admin-bar {
+  display: block;
+  width: 100%;
+  min-height: 2px;
+  background: var(--accent);
+  border-radius: 4px 4px 0 0;
+  opacity: 0.85;
+}
+
+.admin-bar-value,
+.admin-bar-month {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  line-height: 1;
+}
+
+.admin-split {
+  list-style: none;
+  margin: 0.4rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.admin-split li {
+  display: grid;
+  grid-template-columns: 8rem 1fr auto;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.85rem;
+}
+
+.admin-split-label {
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-split-track {
+  display: block;
+  height: 9px;
+  border-radius: 5px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.admin-split-fill {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  opacity: 0.85;
+}
+
+/* Private is the quietest of the three, and looks it. */
+.admin-split-fill.k-followers {
+  opacity: 0.55;
+}
+
+.admin-split-fill.k-private,
+.admin-split-fill.k-unlisted {
+  opacity: 0.3;
+}
+
+.admin-split-count {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.admin-cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.4rem 2rem;
+  align-items: start;
+}
+
+.admin-people {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.admin-people li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding-bottom: 0.45rem;
+  border-bottom: 1px dashed var(--border);
+}
+
+.admin-people .form-hint {
+  margin: 0;
+}
+
+/* Tiles keep one width whether a row holds two of them or six. */
+.admin-page .stats-row {
+  grid-template-columns: repeat(auto-fit, minmax(160px, 230px));
+  justify-content: start;
+  margin-bottom: 0.6rem;
+}
+
+@media (max-width: 560px) {
+  .admin-split li {
+    grid-template-columns: 5.5rem 1fr auto;
+    font-size: 0.8rem;
+  }
+}

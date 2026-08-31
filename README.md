@@ -27,7 +27,8 @@ Requires a `.env.local` with:
 ```
 DATABASE_URL=...
 SESSION_SECRET=...   # random string, signs the login session cookie
-ADMIN_PASSWORD=...   # the login password for posting entries
+ADMIN_USERNAME=...   # optional: the username allowed to open /admin, the
+                     # site's own numbers page. Unset means nobody can.
 ```
 
 Schema lives in `src/lib/schema.sql` — apply it once against the database with any
