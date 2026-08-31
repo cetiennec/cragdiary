@@ -3942,7 +3942,6 @@ a {
 
 .seeker-tagline {
   color: var(--text-muted);
-  max-width: 60ch;
   line-height: 1.55;
 }
 
