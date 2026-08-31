@@ -75,7 +75,9 @@ function ShowMore({
       <span className="form-hint">
         {Math.min(show, total)} / {total} {t.showCount}
       </span>
-      <Link href={`/?${sp.toString()}#${anchor}`} className="feed-more-btn">
+      {/* Reading on: the next batch is appended below, so the page stays
+          exactly where the reader was rather than jumping anywhere. */}
+      <Link href={`/?${sp.toString()}#${anchor}`} scroll={false} className="feed-more-btn">
         {t.showMore}
       </Link>
     </div>

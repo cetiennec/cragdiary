@@ -627,6 +627,8 @@ export default async function ProfilePage({
               ...(sp.sort && sp.sort !== "date" ? { sort: sp.sort } : {}),
               show: String(show + 24),
             })}#more`}
+            // Appended below; leave the reader where they were.
+            scroll={false}
             className="feed-more-btn"
           >
             {t.feed.showMore}

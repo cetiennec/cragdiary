@@ -1,17 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useZoomPan } from "@/lib/use-zoom-pan";
+import { useState } from "react";
+import PhotoLightbox, { type GalleryPhoto } from "@/components/PhotoLightbox";
 
-export type GalleryPhoto = {
-  id: string;
-  caption: string | null;
-  width: number | null;
-  height: number | null;
-};
+export type { GalleryPhoto };
 
-// Gallery grid whose photos open in a fullscreen lightbox — tap to zoom,
-// swipe (or arrow keys) to move between photos, Escape or tap outside to close.
+// Gallery grid whose photos open in the fullscreen lightbox.
 export default function PhotoGallery({
   photos,
   className,
@@ -27,44 +21,6 @@ export default function PhotoGallery({
   banner?: string;
 }) {
   const [open, setOpen] = useState<number | null>(null);
-  const touchX = useRef<number | null>(null);
-  // Fullscreen shows the whole photo; zoomed fills the frame and scrolls, and
-  // a mouse or a thumb can drag it around — see useZoomPan, which the profile
-  // photograph borrows word for word.
-  const {
-    zoomed,
-    zoomWidth,
-    frameRef,
-    imgRef,
-    panHandlers,
-    toggle: toggleZoom,
-    reset: stepReset,
-    wasDrag,
-  } = useZoomPan();
-
-  const step = useCallback(
-    (delta: number) => {
-      setOpen((cur) =>
-        cur === null ? cur : (cur + delta + photos.length) % photos.length
-      );
-    },
-    [photos.length]
-  );
-
-  useEffect(() => {
-    if (open === null) return;
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(null);
-      else if (e.key === "ArrowLeft") step(-1);
-      else if (e.key === "ArrowRight") step(1);
-    }
-    document.addEventListener("keydown", onKey);
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = "";
-    };
-  }, [open, step]);
 
   return (
     <>
@@ -85,97 +41,14 @@ export default function PhotoGallery({
         ))}
       </div>
       {open !== null && (
-        <div
-          className="lightbox"
-          onClick={() => setOpen(null)}
-          onTouchStart={(e) => {
-            // Zoomed, a swipe belongs to the photo, not to the gallery.
-            touchX.current = zoomed ? null : e.touches[0].clientX;
-          }}
-          onTouchEnd={(e) => {
-            const start = touchX.current;
-            touchX.current = null;
-            if (start === null) return;
-            const dx = e.changedTouches[0].clientX - start;
-            if (Math.abs(dx) > 40) {
-              stepReset();
-              step(dx > 0 ? -1 : 1);
-            }
-          }}
-        >
-          <figure
-            ref={frameRef}
-            className={`lightbox-figure${zoomed ? " zoomed" : ""}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              // A drag ends with a click; only a still pointer toggles.
-              if (wasDrag()) return;
-              toggleZoom();
-            }}
-            {...panHandlers}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element -- served from our own DB-backed route, already resized/compressed server-side */}
-            <img
-              ref={imgRef}
-              src={`/api/photos/${photos[open].id}`}
-              alt={photos[open].caption ?? ""}
-              style={zoomed && zoomWidth ? { width: `${zoomWidth}px` } : undefined}
-            />
-            {photos[open].caption && (
-              <figcaption className="lightbox-caption">{photos[open].caption}</figcaption>
-            )}
-          </figure>
-          <button
-            type="button"
-            className="lightbox-zoom"
-            aria-label={zoomLabel}
-            title={zoomLabel}
-            aria-pressed={zoomed}
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleZoom();
-            }}
-          >
-            {zoomed ? "－" : "＋"}
-          </button>
-          <button
-            type="button"
-            className="lightbox-close"
-            aria-label={closeLabel}
-            onClick={() => setOpen(null)}
-          >
-            ×
-          </button>
-          {photos.length > 1 && (
-            <>
-              <button
-                type="button"
-                className="lightbox-nav prev"
-                aria-label="←"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  step(-1);
-                }}
-              >
-                ‹
-              </button>
-              <button
-                type="button"
-                className="lightbox-nav next"
-                aria-label="→"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  step(1);
-                }}
-              >
-                ›
-              </button>
-              <span className="lightbox-counter">
-                {open + 1} / {photos.length}
-              </span>
-            </>
-          )}
-        </div>
+        <PhotoLightbox
+          photos={photos}
+          index={open}
+          onIndexChange={setOpen}
+          onClose={() => setOpen(null)}
+          closeLabel={closeLabel}
+          zoomLabel={zoomLabel}
+        />
       )}
     </>
   );

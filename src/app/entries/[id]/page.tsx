@@ -10,6 +10,7 @@ import DeleteEntryButton from "@/components/DeleteEntryButton";
 import AutoCover from "@/components/AutoCover";
 import ShareButton from "@/components/ShareButton";
 import PhotoGallery from "@/components/PhotoGallery";
+import NotesFlowZoom from "@/components/NotesFlowZoom";
 import DemoBanner from "@/components/DemoBanner";
 import { isDemoAccount } from "@/lib/demo";
 
@@ -23,7 +24,17 @@ type InlinePhoto = {
   caption: string | null;
 };
 
-async function NotesFlow({ notes, photos }: { notes: string | null; photos: InlinePhoto[] }) {
+async function NotesFlow({
+  notes,
+  photos,
+  closeLabel,
+  zoomLabel,
+}: {
+  notes: string | null;
+  photos: InlinePhoto[];
+  closeLabel: string;
+  zoomLabel: string;
+}) {
   const paragraphs = notes ? notes.split(/\n{2,}/) : [];
   // @climbers written in the story link to their profile, like the ones in the
   // partners field — one lookup for the whole text.
@@ -46,6 +57,8 @@ async function NotesFlow({ notes, photos }: { notes: string | null; photos: Inli
         src={`/api/photos/${photo.id}`}
         alt={photo.caption ?? ""}
         loading="lazy"
+        className="gallery-zoomable"
+        data-photo-id={photo.id}
         width={photo.width ?? undefined}
         height={photo.height ?? undefined}
       />
@@ -76,7 +89,16 @@ async function NotesFlow({ notes, photos }: { notes: string | null; photos: Inli
   };
 
   return (
-    <div className="notes-flow">
+    <NotesFlowZoom
+      photos={photos.map((p) => ({
+        id: p.id,
+        caption: p.caption,
+        width: p.width,
+        height: p.height,
+      }))}
+      closeLabel={closeLabel}
+      zoomLabel={zoomLabel}
+    >
       {rendered.map((nodes, i) => (
         <div key={i} className="notes-para-group">
           {renderGroup(byPara.get(i) ?? [])}
@@ -84,7 +106,7 @@ async function NotesFlow({ notes, photos }: { notes: string | null; photos: Inli
         </div>
       ))}
       {renderGroup(byPara.get(paragraphs.length) ?? [])}
-    </div>
+    </NotesFlowZoom>
   );
 }
 
@@ -445,7 +467,12 @@ export default async function EntryPage({
         )}
 
         {(entry.notes || inlinePhotos.length > 0) && (
-          <NotesFlow notes={entry.notes} photos={inlinePhotos} />
+          <NotesFlow
+            notes={entry.notes}
+            photos={inlinePhotos}
+            closeLabel={t.entry.lightboxClose}
+            zoomLabel={t.entry.lightboxZoom}
+          />
         )}
 
         {entry.pitch_notes && Object.keys(entry.pitch_notes).length > 0 && (
