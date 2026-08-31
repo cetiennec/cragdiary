@@ -152,7 +152,8 @@ export default async function Home({ searchParams }: { searchParams: Promise<SP>
     <div className="page-container">
       {/* Someone signed in came for the feed and knows what this is. Someone
           signed out — a search engine included — arrives at a wall of other
-          people's days with nothing saying what they are looking at. */}
+          people's days with nothing saying what they are looking at. The
+          heading and one line, running the full width of the cards below. */}
       {!user && (
         <section className="home-hero">
           <h1 className="home-hero-title">{t.meta.homeTitle}</h1>

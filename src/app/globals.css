@@ -6506,11 +6506,11 @@ label:has(input:placeholder-shown) + .form-hint.form-warn {
   }
 }
 
-/* The one line a signed-out visitor gets before the feed: what this is. */
+/* What a signed-out visitor is told before the feed: what this is. Full
+   width above the cards, like Cragseeker's own header. */
 
 .home-hero {
   margin: 0.5rem 0 1.8rem;
-  max-width: 46ch;
 }
 
 .home-hero-title {

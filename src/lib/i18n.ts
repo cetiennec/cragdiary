@@ -978,7 +978,7 @@ const en = {
       "A free climbing logbook: your routes, your crags and your days in the mountains, written down with your photos and the people you climbed with. No rankings, no tracking.",
     homeTitle: "Your climbing logbook",
     homeTagline:
-      "Days on rock, written down and kept — the routes, the photos, the people you climbed them with. Free, and yours.",
+      "Cragdiary lets you keep your own climbing logbook online, and share your days out with your friends.",
     profileDay: "One climbing day on Cragdiary",
     profileDays: "{n} climbing days on Cragdiary",
     profileNone: "A climbing journal on Cragdiary",
@@ -2001,7 +2001,7 @@ const fr: Dict = {
       "Un carnet de course gratuit : vos voies, vos falaises et vos journées en montagne, notées avec vos photos et vos cordées. Pas de classement, pas de tracking.",
     homeTitle: "Votre carnet de course",
     homeTagline:
-      "Les journées sur le rocher, notées et gardées — les voies, les photos, les gens avec qui vous les avez faites. Gratuit, et à vous.",
+      "Cragdiary vous permet de créer votre propre carnet de course en ligne et de partager vos sorties avec vos amis.",
     profileDay: "Une journée de grimpe sur Cragdiary",
     profileDays: "{n} journées de grimpe sur Cragdiary",
     profileNone: "Un carnet de grimpe sur Cragdiary",
