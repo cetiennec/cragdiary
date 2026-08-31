@@ -9,6 +9,7 @@ import {
   getPinCollection,
   getUserByUsername,
   getUserStats,
+  getPublicJournalSummary,
   getOwnedWishlists,
   getSharedWishlists,
   getWishesTaggingUser,
@@ -41,6 +42,7 @@ import AvatarZoom from "@/components/AvatarZoom";
 import ProfileCover from "@/components/ProfileCover";
 import ShareButton from "@/components/ShareButton";
 import WelcomeTour from "@/components/WelcomeTour";
+import { isDemoAccount } from "@/lib/demo";
 
 /**
  * What a personal link should read as: the site, not the URL. `https://` and a
@@ -68,14 +70,41 @@ export async function generateMetadata({
   const profile = await getUserByUsername(username);
   if (!profile) return {};
 
-  const description = profile.bio ?? `@${profile.username} on Cragdiary`;
+  const { t } = await getDict();
+  // A bio in the person's own words beats anything counted; failing that,
+  // what the journal actually holds beats "@name on Cragdiary", which told a
+  // reader nothing they could not already see in the title.
+  let description = profile.bio;
+  if (!description) {
+    const summary =
+      profile.visibility === "public"
+        ? await getPublicJournalSummary(profile.id)
+        : { days: 0, crags: [] };
+    description =
+      summary.days > 0
+        ? [
+            summary.days === 1
+              ? t.meta.profileDay
+              : t.meta.profileDays.replace("{n}", String(summary.days)),
+            summary.crags.join(", "),
+          ]
+            .filter(Boolean)
+            .join(" — ")
+        : t.meta.profileNone;
+  }
+
   return {
     title: `${profile.display_name} — Cragdiary`,
     description,
     // A by-link journal is meant to be sent to someone, so the link gets its
     // preview — but /u/<username> is an address a crawler can guess, which is
     // the one way an unlisted page could still end up found (migration 037).
-    robots: profile.visibility === "public" ? undefined : { index: false, follow: false },
+    // Demo journals hold camptocamp outings written by other people, imported
+    // to furnish an empty site. They belong on the site and not in an index.
+    robots:
+      profile.visibility === "public" && !isDemoAccount(profile.username)
+        ? undefined
+        : { index: false, follow: false },
     openGraph: {
       title: profile.display_name,
       description,

@@ -18,32 +18,39 @@ const fraunces = Fraunces({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  metadataBase: new URL(process.env.APP_URL ?? "https://cragdiary.com"),
-  title: "Cragdiary",
-  description: "A free, Notion-style journal for climbing days.",
-  openGraph: {
-    siteName: "Cragdiary",
-    type: "website",
-  },
-  // Declaring `icons` at all disables Next's icon file convention, so every rel
-  // has to be listed here — with only `apple` set, no <link rel="icon"> was
-  // emitted and Safari fell back to probing /favicon.ico.
-  icons: {
-    icon: [
-      { url: "/favicon.ico", sizes: "any" },
-      { url: "/icon-32.png", type: "image/png", sizes: "32x32" },
-      { url: "/icon.svg", type: "image/svg+xml" },
-    ],
-    shortcut: "/favicon.ico",
-    apple: "/apple-touch-icon.png",
-  },
-  appleWebApp: {
-    capable: true,
-    title: "Cragdiary",
-    statusBarStyle: "default",
-  },
-};
+// Async, so the title and description a search engine reads are in the same
+// language as the page under them — see `meta` in the dictionary.
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getDict();
+  return {
+    metadataBase: new URL(process.env.APP_URL ?? "https://cragdiary.com"),
+    title: t.meta.title,
+    description: t.meta.description,
+    openGraph: {
+      siteName: "Cragdiary",
+      type: "website",
+      title: t.meta.title,
+      description: t.meta.description,
+    },
+    // Declaring `icons` at all disables Next's icon file convention, so every rel
+    // has to be listed here — with only `apple` set, no <link rel="icon"> was
+    // emitted and Safari fell back to probing /favicon.ico.
+    icons: {
+      icon: [
+        { url: "/favicon.ico", sizes: "any" },
+        { url: "/icon-32.png", type: "image/png", sizes: "32x32" },
+        { url: "/icon.svg", type: "image/svg+xml" },
+      ],
+      shortcut: "/favicon.ico",
+      apple: "/apple-touch-icon.png",
+    },
+    appleWebApp: {
+      capable: true,
+      title: "Cragdiary",
+      statusBarStyle: "default",
+    },
+  };
+}
 
 export const viewport: Viewport = {
   themeColor: "#f3e8d8",

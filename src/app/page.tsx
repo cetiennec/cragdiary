@@ -150,6 +150,16 @@ export default async function Home({ searchParams }: { searchParams: Promise<SP>
 
   return (
     <div className="page-container">
+      {/* Someone signed in came for the feed and knows what this is. Someone
+          signed out — a search engine included — arrives at a wall of other
+          people's days with nothing saying what they are looking at. */}
+      {!user && (
+        <section className="home-hero">
+          <h1 className="home-hero-title">{t.meta.homeTitle}</h1>
+          <p className="home-hero-tagline">{t.meta.homeTagline}</p>
+        </section>
+      )}
+
       {onThisDay.length > 0 && !hasFilters && (
         <section className="feed-section on-this-day">
           <h2 className="feed-heading">{t.feed.onThisDay}</h2>

@@ -145,8 +145,14 @@ export async function generateMetadata({
     // saying "public" — switch the profile back and it is public again, with
     // nothing to re-file — but while the journal is by-link, so is everything
     // in it.
+    //
+    // A demo day is public and stays readable, but it is a camptocamp outing
+    // written by someone else and imported to furnish an empty site — the last
+    // thing this place should be found by.
     robots:
-      entry.visibility === "public" && entry.author_visibility === "public"
+      entry.visibility === "public" &&
+      entry.author_visibility === "public" &&
+      !isDemoAccount(entry.username)
         ? undefined
         : { index: false, follow: false },
     openGraph: {

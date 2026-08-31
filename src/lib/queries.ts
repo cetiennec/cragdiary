@@ -401,6 +401,28 @@ export async function getUserByUsername(username: string): Promise<User | null> 
   return result.rows[0] ?? null;
 }
 
+/**
+ * Enough to describe a journal to someone who has not opened it: how many days
+ * it shows the world, and a few of the places they happened.
+ *
+ * Public days only, and deliberately so — this feeds the page's <meta
+ * description>, which is served to anyone who asks for the HTML. A private day
+ * must not leak its crag into a search result.
+ */
+export async function getPublicJournalSummary(
+  userId: string
+): Promise<{ days: number; crags: string[] }> {
+  const result = await pool.query<{ days: number; crags: string[] }>(
+    `select count(*)::int as days,
+            (array_agg(distinct crag))[1:3] as crags
+     from entries
+     where user_id = $1 and visibility = 'public'`,
+    [userId]
+  );
+  const row = result.rows[0];
+  return { days: row?.days ?? 0, crags: row?.crags ?? [] };
+}
+
 export async function getEntriesByUser(
   userId: string,
   {

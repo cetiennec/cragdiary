@@ -6505,3 +6505,24 @@ label:has(input:placeholder-shown) + .form-hint.form-warn {
     font-size: 0.8rem;
   }
 }
+
+/* The one line a signed-out visitor gets before the feed: what this is. */
+
+.home-hero {
+  margin: 0.5rem 0 1.8rem;
+  max-width: 46ch;
+}
+
+.home-hero-title {
+  font-family: var(--heading-font), serif;
+  font-size: clamp(1.8rem, 5vw, 2.6rem);
+  line-height: 1.1;
+  margin: 0 0 0.5rem;
+}
+
+.home-hero-tagline {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 1rem;
+  line-height: 1.5;
+}

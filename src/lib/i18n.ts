@@ -969,6 +969,20 @@ const en = {
       psicobloc: "psicobloc",
     } as Record<string, string>,
   },
+  // What Google prints in a result, and what the site says to someone who
+  // arrives not knowing what it is. Both languages, because the metadata
+  // follows the reader's locale like everything else.
+  meta: {
+    title: "Cragdiary — a free climbing logbook",
+    description:
+      "A free climbing logbook: your routes, your crags and your days in the mountains, written down with your photos and the people you climbed with. No rankings, no tracking.",
+    homeTitle: "Your climbing logbook",
+    homeTagline:
+      "Days on rock, written down and kept — the routes, the photos, the people you climbed them with. Free, and yours.",
+    profileDay: "One climbing day on Cragdiary",
+    profileDays: "{n} climbing days on Cragdiary",
+    profileNone: "A climbing journal on Cragdiary",
+  },
   // The owner's own numbers page (/admin). Nobody else can open it, but the
   // site speaks two languages and so does this.
   admin: {
@@ -1980,6 +1994,17 @@ const fr: Dict = {
       bloc: "bloc",
       psicobloc: "psicobloc",
     } as Record<string, string>,
+  },
+  meta: {
+    title: "Cragdiary — carnet de course et de grimpe en ligne",
+    description:
+      "Un carnet de course gratuit : vos voies, vos falaises et vos journées en montagne, notées avec vos photos et vos cordées. Pas de classement, pas de tracking.",
+    homeTitle: "Votre carnet de course",
+    homeTagline:
+      "Les journées sur le rocher, notées et gardées — les voies, les photos, les gens avec qui vous les avez faites. Gratuit, et à vous.",
+    profileDay: "Une journée de grimpe sur Cragdiary",
+    profileDays: "{n} journées de grimpe sur Cragdiary",
+    profileNone: "Un carnet de grimpe sur Cragdiary",
   },
   admin: {
     navLabel: "Stats",
