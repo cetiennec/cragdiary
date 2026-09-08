@@ -45,6 +45,7 @@ jobs:
         env:
           SESSION_SECRET: ci-build-only
           DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+          DATABASE_SSL: "off"
       - run: npx tsc --noEmit
       - run: npm run lint -- --max-warnings 5
       # Advisory only: a CVE landing in a transitive dep must never fail an
