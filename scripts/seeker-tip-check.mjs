@@ -101,7 +101,13 @@ console.log(failures === 0 ? "OK — every card stayed inside the map" : `FAIL �
 await page.reload();
 await page.waitForSelector(".seeker-result", { timeout: 30000 });
 await page.waitForTimeout(1500);
-await page.locator(".seeker-map path.leaflet-interactive").first().hover();
+// Markers overlap (see `sweep` above), so the first one in the DOM is often
+// stacked under a sibling and a real hover can't land on it — Playwright
+// waits 30s for a click-through that will never come. `force` skips that
+// actionability check and fires the hover at the element's centre anyway,
+// same as `sweep`'s dispatchEvent, but through the real API so Leaflet's own
+// mouseover binding — not our stand-in — is what opens the card.
+await page.locator(".seeker-map path.leaflet-interactive").first().hover({ force: true });
 await page.waitForSelector(".seeker-tip");
 // The card carries a link to camptocamp, which has to be reachable.
 const link = page.locator(".seeker-tip-c2c").first();
