@@ -15,6 +15,18 @@ jobs:
   # production as a blank page.
   build:
     runs-on: ubuntu-latest
+    # /sitemap.xml queries the database at build time (Next prerenders it
+    # up front since it's revalidated on a schedule, not per-request), so
+    # this job needs a real, schema-loaded database like schema/journeys do.
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready --health-interval 5s
+          --health-timeout 5s --health-retries 10
+        ports: ["5432:5432"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -22,6 +34,10 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Create the schema
+        run: psql "$DATABASE_URL" -f src/lib/schema.sql
+        env:
+          DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
       # The build comes first because it generates the route types (`RouteContext`)
       # that the API handlers are typed against: on a clean checkout there is no
       # .next, and tsc alone can't see them. Found by this job's first run.
@@ -29,6 +45,7 @@ jobs:
         env:
           SESSION_SECRET: ci-build-only
           DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+          DATABASE_SSL: "off"
       - run: npx tsc --noEmit
       - run: npm run lint -- --max-warnings 5
       # Advisory only: a CVE landing in a transitive dep must never fail an
@@ -128,6 +145,15 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: psql "$DATABASE_URL" -f src/lib/schema.sql
+      # climbing_gyms is only ever filled by the monthly gyms-refresh workflow
+      # against the live database (see that workflow) — CI's database starts
+      # empty, and the pin check below expects a gym card near Chamonix.
+      - name: Seed a gym for the pin check to find
+        run: |
+          psql "$DATABASE_URL" -c "
+            insert into climbing_gyms (osm_id, name, lat, lon, bouldering)
+            values (1, 'Test Gym Chamonix', 45.92, 6.87, false)
+          "
       - run: npm run build
       - name: Start the app
         run: |
