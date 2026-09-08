@@ -145,6 +145,15 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: psql "$DATABASE_URL" -f src/lib/schema.sql
+      # climbing_gyms is only ever filled by the monthly gyms-refresh workflow
+      # against the live database (see that workflow) — CI's database starts
+      # empty, and the pin check below expects a gym card near Chamonix.
+      - name: Seed a gym for the pin check to find
+        run: |
+          psql "$DATABASE_URL" -c "
+            insert into climbing_gyms (osm_id, name, lat, lon, bouldering)
+            values (1, 'Test Gym Chamonix', 45.92, 6.87, false)
+          "
       - run: npm run build
       - name: Start the app
         run: |
