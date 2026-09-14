@@ -2799,12 +2799,46 @@ a {
   border-color: var(--accent);
 }
 
+/* The search field is the one that gives. Everything else in the bar is a
+   label of fixed length, and in French they are long enough — "Toutes les
+   années", "Les plus récentes" — that a rigid 200px search pushed the sort
+   onto a second line even on a full-width desktop. */
 .filter-bar input[type="search"] {
-  min-width: 200px;
+  flex: 1 1 8rem;
+  min-width: 0;
 }
 
 .filter-loc {
-  max-width: 140px;
+  flex: 0 1 140px;
+  min-width: 4.5rem;
+}
+
+/* Long option text sets a select's natural width; let them narrow a little
+   rather than wrap the row. */
+.filter-bar select {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+/* Wide enough for one line: say so, because a wrapping flex container never
+   shrinks its items — it wraps them instead, and the sort dropped below the
+   row while there was still room beside it. The breakpoint is where the page
+   column stops growing: below it there is genuinely not enough width, and
+   stacking — the old behaviour — is the right answer. */
+@media (min-width: 1000px) {
+  .filter-bar {
+    flex-wrap: nowrap;
+  }
+
+  /* And the round buttons belong on that same line, not under it: the bar
+     gives up the width they need. */
+  .filter-row {
+    flex-wrap: nowrap;
+  }
+
+  .filter-row .filter-bar {
+    min-width: 0;
+  }
 }
 
 .filter-bar button {
