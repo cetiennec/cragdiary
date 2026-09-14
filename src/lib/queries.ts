@@ -533,6 +533,29 @@ export async function getFollowRequests(userId: string): Promise<FollowUser[]> {
   return result.rows;
 }
 
+/**
+ * Where this climber stands towards each of these people: following them,
+ * waiting on a request, or neither. Asked about a list of names at once, so a
+ * page of followers costs one query rather than one each.
+ *
+ * It exists for the follow-back offer: accepting someone is the moment you are
+ * most likely to want to follow them, and until now the page said nothing
+ * about it — you had to go to their profile and remember why.
+ */
+export async function followStates(
+  viewerId: string,
+  usernames: string[]
+): Promise<Map<string, "pending" | "accepted">> {
+  if (usernames.length === 0) return new Map();
+  const result = await pool.query<{ username: string; status: "pending" | "accepted" }>(
+    `select lower(u.username) as username, f.status
+     from follows f join users u on u.id = f.followee_id
+     where f.follower_id = $1 and lower(u.username) = any($2)`,
+    [viewerId, usernames.map((u) => u.toLowerCase())]
+  );
+  return new Map(result.rows.map((r) => [r.username, r.status]));
+}
+
 // People this user follows.
 export async function getFollowing(userId: string): Promise<FollowUser[]> {
   const result = await pool.query<FollowUser>(

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { answerFollowRequest, removeFollower, setFollowApproval } from "@/app/actions";
+import { answerFollowRequest, removeFollower, setFollowApproval, toggleFollow } from "@/app/actions";
 import type { FollowUser } from "@/lib/queries";
 import type { Dict } from "@/lib/i18n";
 
@@ -16,16 +16,49 @@ function Avatar({ user }: { user: FollowUser }) {
   );
 }
 
+/**
+ * The offer to read someone back. It stands beside every follower you don't
+ * already follow — accepting someone is the moment you are most likely to want
+ * it, and until now nothing on this page said so: you had to go to their
+ * profile and remember why you went.
+ *
+ * One press either follows them or asks to, depending on how they keep their
+ * own profile; `toggleFollow` knows which, and the button says so afterwards.
+ */
+function FollowBack({
+  username,
+  state,
+  t,
+}: {
+  username: string;
+  state: "pending" | "accepted" | undefined;
+  t: Dict["follow"];
+}) {
+  if (state === "accepted") return null;
+  if (state === "pending") return <span className="follower-state">{t.backPending}</span>;
+  return (
+    <form action={toggleFollow}>
+      <input type="hidden" name="username" value={username} />
+      <button type="submit" className="follow-back">
+        {t.back}
+      </button>
+    </form>
+  );
+}
+
 // Who follows you, who's asking to, and whether asking is required at all.
 // Only ever rendered on your own profile.
 export default function FollowersPanel({
   followers,
   requests,
+  following,
   approveFollowers,
   t,
 }: {
   followers: FollowUser[];
   requests: FollowUser[];
+  /** Where you stand towards each of them, for the follow-back offer. */
+  following: Map<string, "pending" | "accepted">;
   approveFollowers: boolean;
   t: Dict["follow"];
 }) {
@@ -97,12 +130,19 @@ export default function FollowersPanel({
                   <span className="follower-handle">@{f.username}</span>
                 </span>
               </Link>
-              <form action={removeFollower}>
-                <input type="hidden" name="username" value={f.username} />
-                <button type="submit" className="follower-remove" title={t.removeHint}>
-                  {t.remove}
-                </button>
-              </form>
+              <span className="follower-actions">
+                <FollowBack
+                  username={f.username}
+                  state={following.get(f.username.toLowerCase())}
+                  t={t}
+                />
+                <form action={removeFollower}>
+                  <input type="hidden" name="username" value={f.username} />
+                  <button type="submit" className="follower-remove" title={t.removeHint}>
+                    {t.remove}
+                  </button>
+                </form>
+              </span>
             </li>
           ))}
         </ul>

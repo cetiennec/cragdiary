@@ -458,6 +458,10 @@ const en = {
     noFollowers: "Nobody follows you yet.",
     accept: "Accept",
     decline: "Decline",
+    // Offered where a new follower turns up: the moment you let someone in is
+    // the moment you are most likely to want to read them back.
+    back: "Follow back",
+    backPending: "Asked ✓",
     remove: "Remove",
     removeHint: "They stop following you. They aren't told, and can follow again unless you ask to approve new followers.",
     approvalOn: "New followers need your approval",
@@ -1495,6 +1499,8 @@ const fr: Dict = {
     noFollowers: "Personne ne vous suit pour l'instant.",
     accept: "Accepter",
     decline: "Refuser",
+    back: "Suivre en retour",
+    backPending: "Demandé ✓",
     remove: "Retirer",
     removeHint: "Cette personne cesse de vous suivre. Elle n'en est pas informée et peut vous suivre à nouveau, sauf si vous demandez à approuver les nouveaux abonnés.",
     approvalOn: "Les nouveaux abonnés doivent être approuvés",

@@ -166,6 +166,76 @@ await openPanel(alice);
 check("alice has no followers left", await alice.locator(".follower-list .follower-row").count(), 0);
 check("carol has to ask again", await followButton(carol, names.a), "Demander à suivre");
 
+// --- Reading someone back: the offer beside a new follower. ---
+// Carol asks again and alice accepts; the moment she does, the row should hold
+// the way to follow carol in return, which was the missing half of this page.
+await clickFollow(carol, names.a);
+await alice.goto(`${base}/u/${names.a}`);
+await openPanel(alice);
+await alice.locator(".follower-row", { hasText: names.c }).locator(".follower-accept").click();
+await alice.waitForTimeout(800);
+await alice.goto(`${base}/u/${names.a}`);
+await openPanel(alice);
+const carolRow = alice.locator(".follower-list .follower-row", { hasText: names.c });
+check(
+  "the new follower comes with the way to read them back",
+  (await carolRow.locator(".follow-back").innerText()).trim(),
+  "Suivre en retour"
+);
+
+// Carol screens her own followers, so following back is asking — and the row
+// must say which of the two happened.
+await carolRow.locator(".follow-back").click();
+await alice.waitForTimeout(800);
+await alice.goto(`${base}/u/${names.a}`);
+await openPanel(alice);
+check(
+  "and once asked, it says so rather than offering again",
+  (await alice
+    .locator(".follower-list .follower-row", { hasText: names.c })
+    .locator(".follower-state")
+    .innerText()).trim(),
+  "Demandé ✓"
+);
+check(
+  "carol has a request waiting",
+  await (async () => {
+    await carol.goto(`${base}/u/${names.c}`);
+    await openPanel(carol);
+    return carol.locator(".follower-badge").count();
+  })(),
+  1
+);
+
+// Accepted at the other end, the offer has nothing left to offer.
+await carol.locator(".follower-row", { hasText: names.a }).locator(".follower-accept").click();
+await carol.waitForTimeout(800);
+await alice.goto(`${base}/u/${names.a}`);
+await openPanel(alice);
+check(
+  "once they follow each other, neither button remains",
+  await alice
+    .locator(".follower-list .follower-row", { hasText: names.c })
+    .locator(".follow-back, .follower-state")
+    .count(),
+  0
+);
+
+// The same offer on the notification the follow left behind.
+await carol.goto(`${base}/u/${names.b}`);
+await carol.click(".btn-follow");
+await carol.waitForTimeout(600);
+await bob.goto(`${base}/u/${names.b}`);
+await openPanel(bob);
+await bob.locator(".follower-row", { hasText: names.c }).locator(".follower-accept").click();
+await bob.waitForTimeout(800);
+await bob.goto(`${base}/notifications`);
+check(
+  "the notification offers it too, once the request is answered",
+  await bob.locator(".notif-row .follow-back").count(),
+  1
+);
+
 await browser.close();
-console.log(failures === 0 ? "OK — follow requests and removal behave" : `FAIL — ${failures} checks`);
+console.log(failures === 0 ? "OK — follow requests, removal and following back behave" : `FAIL — ${failures} checks`);
 process.exit(failures === 0 ? 0 : 1);

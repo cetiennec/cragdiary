@@ -3006,6 +3006,7 @@ a {
 }
 
 .follower-accept,
+.follow-back,
 .follower-remove {
   font: inherit;
   font-size: 0.78rem;
@@ -6082,9 +6083,24 @@ label:has(input:placeholder-shown) + .form-hint.form-warn {
   font-weight: 600;
 }
 
-.coauthor-state {
+.coauthor-state,
+.follower-state {
   color: var(--text-muted);
   font-size: 0.8rem;
+}
+
+/* The offer to read someone back. Outlined rather than filled: it is a
+   suggestion, not the decision the row is there to take — and it must not be
+   mistaken for the accept button beside it. */
+.follow-back {
+  white-space: nowrap;
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.follow-back:hover {
+  border-color: var(--accent);
 }
 
 .shared-days-banner {

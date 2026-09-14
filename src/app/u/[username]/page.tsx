@@ -14,6 +14,7 @@ import {
   getSharedWishlists,
   getWishesTaggingUser,
   followState,
+  followStates,
   getFollowers,
   getFollowRequests,
   type EntryFilters,
@@ -213,6 +214,15 @@ export default async function ProfilePage({
     // Days someone else wrote that you are on — the tray at the foot of the page.
     isSelf ? getTrayDays(profile.id, profile.username) : Promise.resolve([]),
   ]);
+  // Which of these people you already follow — the follow-back offer beside
+  // each follower. One query for the whole panel, and only on your own page.
+  const following = isSelf
+    ? await followStates(
+        profile.id,
+        [...followers, ...followRequests].map((f) => f.username)
+      )
+    : new Map<string, "pending" | "accepted">();
+
   const entries = page.entries;
   // Days co-written and accepted, but not yet shown among their own entries —
   // the only ones there is anything left to decide about.
@@ -510,6 +520,7 @@ export default async function ProfilePage({
         <FollowersPanel
           followers={followers}
           requests={followRequests}
+          following={following}
           approveFollowers={profile.approve_followers}
           t={t.follow}
         />

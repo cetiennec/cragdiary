@@ -6,11 +6,18 @@ import { getNotifications, type Notification } from "@/lib/notifications";
 import {
   entriesGone,
   entriesNotOfferable,
+  followStates,
   getEmailPrefs,
   getFollowRequests,
   coAuthorInviteStates,
 } from "@/lib/queries";
-import { acceptCoAuthor, answerFollowRequest, copyEntryToJournal, removeCoAuthor } from "@/app/actions";
+import {
+  acceptCoAuthor,
+  answerFollowRequest,
+  copyEntryToJournal,
+  removeCoAuthor,
+  toggleFollow,
+} from "@/app/actions";
 import EmailPrefsForm from "@/components/EmailPrefsForm";
 import MarkNotificationsRead from "@/components/MarkNotificationsRead";
 
@@ -72,6 +79,15 @@ export default async function NotificationsPage() {
   // A request already answered leaves its notification behind; only the ones
   // still waiting get buttons.
   const pending = new Set(requests.map((r) => r.username));
+  // Someone new following you is the moment you are most likely to want to
+  // read them back, and the notification was a dead end about it: the row says
+  // what happened and led to a profile where you had to remember why you came.
+  const newFollowers = items.flatMap((n) =>
+    (n.type === "follow" || n.type === "follow_request") && n.actor_username
+      ? [n.actor_username]
+      : []
+  );
+  const iFollow = await followStates(user.id, newFollowers);
 
   return (
     <div className="page-container narrow">
@@ -228,6 +244,25 @@ export default async function NotificationsPage() {
                       <Link href={`/u/${user.username}#shared-days`}>{tn.coAuthorAcceptedLink}</Link>
                   </span>
                 )}
+                {/* Only once they are in: a request still waiting is a
+                    decision to take before anything else. */}
+                {(n.type === "follow" ||
+                  (n.type === "follow_request" && !pending.has(n.actor_username ?? ""))) &&
+                  n.actor_username &&
+                  iFollow.get(n.actor_username.toLowerCase()) !== "accepted" && (
+                    <span className="follower-actions">
+                      {iFollow.get(n.actor_username.toLowerCase()) === "pending" ? (
+                        <span className="follower-state">{t.follow.backPending}</span>
+                      ) : (
+                        <form action={toggleFollow}>
+                          <input type="hidden" name="username" value={n.actor_username} />
+                          <button type="submit" className="follow-back">
+                            {t.follow.back}
+                          </button>
+                        </form>
+                      )}
+                    </span>
+                  )}
                 {n.type === "follow_request" &&
                   n.actor_username &&
                   pending.has(n.actor_username) && (
