@@ -253,6 +253,13 @@ const en = {
     topo: "🔗 Topo",
     alsoWroteAbout: "Also wrote about this day:",
     photosBy: "{user}'s photos of the day",
+    // Breaking the link is offered to either climber, and it holds for both.
+    // The mention is untouched: it is their account of who they climbed with.
+    unlink: "Unlink these days",
+    unlinkHint: "Their photos stop showing here, and yours there. Nobody is un-named.",
+    unlinkedTitle: "Unlinked",
+    unlinkedFrom: "{user}'s day is no longer linked to this one.",
+    relink: "Link them again",
     story: "Trip report",
     topoLink: "See on Camptocamp",
     c2cSummarySource: "— Camptocamp (CC BY-SA)",
@@ -1288,6 +1295,12 @@ const fr: Dict = {
     topo: "🔗 Topo",
     alsoWroteAbout: "A aussi raconté cette journée :",
     photosBy: "Les photos de {user}",
+    unlink: "Délier ces journées",
+    unlinkHint:
+      "Leurs photos disparaissent d'ici, et les vôtres de là-bas. Personne n'est désidentifié.",
+    unlinkedTitle: "Journées déliées",
+    unlinkedFrom: "La journée de {user} n'est plus liée à celle-ci.",
+    relink: "Les relier",
     story: "Récit",
     topoLink: "Voir sur Camptocamp",
     c2cSummarySource: "— Camptocamp (CC BY-SA)",

@@ -1016,6 +1016,12 @@ export async function findLinkableDays(
                        where mine.user_id = $2
                          and mine.entry_date = e.entry_date
                          and mine.crag = e.crag)
+       -- Already refused: one of the two broke this pair, and the dialog is
+       -- not the place to argue about it.
+       and not exists (select 1 from entry_unlinks x
+                       join entries mine on mine.user_id = $2
+                       where (x.entry_id = e.id and x.other_entry_id = mine.id)
+                          or (x.entry_id = mine.id and x.other_entry_id = e.id))
        and (e.visibility = 'public'
             or e.partners ~* ('@' || $3 || '([^a-z0-9-]|$)')
             or (e.visibility = 'followers'
@@ -1041,6 +1047,8 @@ export type SharedDay = {
   id: string;
   username: string;
   display_name: string;
+  /** True when the other day is the viewer's own, read from someone else's page. */
+  yours: boolean;
   /** Their photos of the day, borrowed rather than copied — see below. */
   photos: Photo[];
 };
@@ -1049,8 +1057,13 @@ export async function getSharedDay(
   entryId: string,
   viewerId: string | null
 ): Promise<SharedDay[]> {
-  const result = await pool.query<{ id: string; username: string; display_name: string }>(
-    `select o.id, ou.username, ou.display_name
+  const result = await pool.query<{
+    id: string;
+    username: string;
+    display_name: string;
+    yours: boolean;
+  }>(
+    `select o.id, ou.username, ou.display_name, (o.user_id = $2::uuid) as yours
      from entries e
      join users u on u.id = e.user_id
      join entries o on o.entry_date = e.entry_date and o.user_id <> e.user_id
@@ -1060,6 +1073,10 @@ export async function getSharedDay(
             or e.partners ilike '%@' || ou.username || '%')
        and (o.visibility = 'public' or o.user_id = $2::uuid)
        and (ou.visibility = 'public' or ou.id = $2::uuid)
+       -- Unless one of the two climbers has said no (migration 041).
+       and not exists (select 1 from entry_unlinks x
+                       where x.entry_id = least(e.id, o.id)
+                         and x.other_entry_id = greatest(e.id, o.id))
      order by ou.display_name`,
     [entryId, viewerId]
   );
@@ -1086,6 +1103,36 @@ export async function getSharedDay(
     byEntry.set(photo.entry_id, list);
   }
   return result.rows.map((r) => ({ ...r, photos: byEntry.get(r.id) ?? [] }));
+}
+
+/**
+ * The days this one was unlinked from (migration 041), so that saying no is
+ * not a door that locks behind you: whoever may edit either side is offered
+ * the link back. Only days the viewer could have seen anyway are listed — an
+ * unlink must not become a way of learning that a private entry exists.
+ */
+export async function getUnlinkedDays(
+  entryId: string,
+  viewerId: string
+): Promise<{ id: string; username: string; display_name: string; yours: boolean }[]> {
+  const result = await pool.query<{
+    id: string;
+    username: string;
+    display_name: string;
+    yours: boolean;
+  }>(
+    `select o.id, ou.username, ou.display_name, (o.user_id = $2::uuid) as yours
+     from entry_unlinks x
+     join entries o
+       on o.id = case when x.entry_id = $1 then x.other_entry_id else x.entry_id end
+     join users ou on ou.id = o.user_id
+     where $1 in (x.entry_id, x.other_entry_id)
+       and (o.visibility = 'public' or o.user_id = $2::uuid)
+       and (ou.visibility = 'public' or ou.id = $2::uuid)
+     order by ou.display_name`,
+    [entryId, viewerId]
+  );
+  return result.rows;
 }
 
 export type SharedDayPair = {

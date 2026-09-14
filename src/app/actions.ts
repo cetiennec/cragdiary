@@ -1408,6 +1408,81 @@ export async function deleteEntry(formData: FormData): Promise<void> {
   redirect(`/u/${user.username}`);
 }
 
+/* ---- Linked days (migration 041) --------------------------------------- */
+
+/**
+ * Who may speak for one of two linked days: its author, anyone holding the pen
+ * on it, or — because a link is a pairing and not a possession — the author of
+ * the day at the other end. One query, so no half of it can be read as the
+ * whole.
+ */
+async function mayUnlink(userId: string, a: string, b: string): Promise<boolean> {
+  // Both are ids straight off a form, and postgres answers a malformed uuid
+  // with an error rather than an empty row.
+  const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuid.test(a) || !uuid.test(b)) return false;
+  const allowed = await pool.query(
+    `select 1 from entries e
+     where e.id in ($1, $2)
+       and (e.user_id = $3
+            or exists (select 1 from entry_authors x
+                       where x.entry_id = e.id and x.user_id = $3 and x.status = 'accepted'))
+     limit 1`,
+    [a, b, userId]
+  );
+  return (allowed.rowCount ?? 0) > 0;
+}
+
+/**
+ * Break the link between two days. The mention stays — it is someone's account
+ * of who they climbed with, and not ours to edit — but the two entries stop
+ * finding each other, and the borrowed photographs go back where they came
+ * from. It breaks for both sides: a link one climber has ended is not a link.
+ */
+export async function unlinkDay(formData: FormData): Promise<void> {
+  const user = await currentUser();
+  if (!user) throw new Error("Unauthorized");
+
+  const entryId = String(formData.get("entry_id") ?? "");
+  const otherId = String(formData.get("other_id") ?? "");
+  if (!entryId || !otherId || entryId === otherId) return;
+  if (!(await mayUnlink(user.id, entryId, otherId))) throw new Error("Not found");
+
+  // Always the same way round, so the pair is the key — see migration 041.
+  const [a, b] = [entryId, otherId].sort();
+  await pool.query(
+    `insert into entry_unlinks (entry_id, other_entry_id, unlinked_by)
+     values ($1, $2, $3)
+     on conflict (entry_id, other_entry_id) do nothing`,
+    [a, b, user.id]
+  );
+
+  revalidatePath(`/entries/${entryId}`);
+  revalidatePath(`/entries/${otherId}`);
+  revalidatePath(`/u/${user.username}`);
+}
+
+/** Change your mind: let the two days find each other again. */
+export async function relinkDay(formData: FormData): Promise<void> {
+  const user = await currentUser();
+  if (!user) throw new Error("Unauthorized");
+
+  const entryId = String(formData.get("entry_id") ?? "");
+  const otherId = String(formData.get("other_id") ?? "");
+  if (!entryId || !otherId || entryId === otherId) return;
+  if (!(await mayUnlink(user.id, entryId, otherId))) throw new Error("Not found");
+
+  const [a, b] = [entryId, otherId].sort();
+  await pool.query(
+    "delete from entry_unlinks where entry_id = $1 and other_entry_id = $2",
+    [a, b]
+  );
+
+  revalidatePath(`/entries/${entryId}`);
+  revalidatePath(`/entries/${otherId}`);
+  revalidatePath(`/u/${user.username}`);
+}
+
 /* ---- Co-authored days (migration 039) ---------------------------------- */
 
 /**

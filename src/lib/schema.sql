@@ -144,6 +144,21 @@ create table if not exists entry_authors (
 );
 create index if not exists entry_authors_user_idx on entry_authors(user_id, status);
 
+-- Migration 041. Two entries link themselves when they share a date and an @
+-- mention either way; nothing records that, so nothing could undo it. This is
+-- the refusal: one row per pair, always the smaller id first, so the pair is
+-- the key and neither climber owns it. Either of them may break the link, and
+-- it breaks for both — the mention stays, the borrowed photographs go.
+create table if not exists entry_unlinks (
+  entry_id uuid not null references entries(id) on delete cascade,
+  other_entry_id uuid not null references entries(id) on delete cascade,
+  unlinked_by uuid references users(id) on delete set null,
+  created_at timestamptz not null default now(),
+  primary key (entry_id, other_entry_id),
+  check (entry_id < other_entry_id)
+);
+create index if not exists entry_unlinks_other_idx on entry_unlinks(other_entry_id);
+
 create table if not exists follows (
   follower_id uuid not null references users(id) on delete cascade,
   followee_id uuid not null references users(id) on delete cascade,
