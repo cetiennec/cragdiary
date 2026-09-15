@@ -288,6 +288,10 @@ alter table entries add column if not exists c2c_route_url text;
 -- only by the publish proof of concept; see docs/publier-sur-camptocamp.md.
 alter table entries add column if not exists c2c_outing_id integer;
 
+-- Beta testers (migration 043): who sees what is half-built. The admin is one
+-- by definition and carries no flag — see `isBetaUser` in src/lib/beta.ts.
+alter table users add column if not exists beta boolean not null default false;
+
 -- Indoor climbing gyms (migration 031), for the Cragseeker map layer. A
 -- periodic snapshot rather than a live query: gyms barely change, and asking
 -- Overpass fresh on every request turned out to be unreliable from Vercel's

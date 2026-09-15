@@ -9,13 +9,13 @@ import {
 } from "@/app/actions";
 
 /**
- * Publishing a day to camptocamp — proof of concept, shown to the admin
- * account and nobody else (`ADMIN_USERNAME`). The enquiry behind it is in
- * `docs/publier-sur-camptocamp.md`.
+ * Publishing a day to camptocamp — proof of concept, shown to beta testers
+ * and nobody else (the admin, plus the list on /admin — see lib/beta.ts). The
+ * enquiry behind it is in `docs/publier-sur-camptocamp.md`.
  *
- * Deliberately unlovely, and deliberately not translated: one account sees it,
- * and it is here to find out whether the thing works at all before it is worth
- * a design or a second language.
+ * Deliberately unlovely, and deliberately not translated: a handful of people
+ * see it, and it is here to find out whether the thing works at all before it
+ * is worth a design or a second language.
  *
  * Two things it insists on, both because camptocamp lets the author delete an
  * outing for **24 hours only**:
@@ -58,7 +58,7 @@ export default function C2cPublishPoc({
       <summary>🏔️ Publish on camptocamp — proof of concept</summary>
 
       <p className="form-hint">
-        Admin only. Camptocamp lets you delete your own outing for <strong>24 hours</strong>;
+        Beta. Camptocamp lets you delete your own outing for <strong>24 hours</strong>;
         after that only a moderator can. Preview first. Photos are not published by this
         proof of concept.
       </p>

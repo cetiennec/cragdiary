@@ -1,5 +1,5 @@
-// The camptocamp publish proof of concept: who sees it, and what the preview
-// says before anything leaves.
+// The camptocamp publish proof of concept: who sees it — the admin and the
+// beta testers they name — and what the preview says before anything leaves.
 //
 // **Nothing here talks to camptocamp.** It cannot: an outing created by a test
 // could not be deleted after 24 hours, and the topoguide is not our sandbox.
@@ -41,7 +41,9 @@ async function signUp(username) {
 await db.query("delete from rate_limit_events");
 // ADMIN_USERNAME=bossman is set on the dev server this drives.
 const admin = await signUp("bossman");
-const other = await signUp(`plain${Date.now().toString(36).slice(-4)}`);
+const stamp = Date.now().toString(36).slice(-4);
+const tester = await signUp(`beta${stamp}`);
+const other = await signUp(`plain${stamp}`);
 const id = async (u) => (await db.query("select id from users where username=$1", [u])).rows[0].id;
 
 const today = new Date().toISOString().slice(0, 10);
@@ -57,13 +59,39 @@ async function write(userId, extra = {}) {
 }
 
 const adminEntry = await write(await id("bossman"));
-const otherEntry = await write(await id(await other.evaluate(() => location.pathname.split("/")[2])));
+const testerEntry = await write(await id(`beta${stamp}`));
+const otherEntry = await write(await id(`plain${stamp}`));
 
 // --- Who sees it ---
 await admin.goto(`${base}/entries/${adminEntry}/edit`);
 check("the admin sees the panel", (await admin.locator(".c2c-publish").count()) === 1);
 await other.goto(`${base}/entries/${otherEntry}/edit`);
-check("nobody else does", (await other.locator(".c2c-publish").count()) === 0);
+check("an ordinary member does not", (await other.locator(".c2c-publish").count()) === 0);
+
+// The admin adds a tester from their own page, and it takes effect at once —
+// no environment variable, no deploy.
+await admin.goto(`${base}/admin`);
+await admin.fill('.admin-beta-add input[name="username"]', `beta${stamp}`);
+await admin.click(".admin-beta-add button");
+await admin.waitForLoadState("networkidle");
+check(
+  "the tester is listed on the admin page",
+  (await admin.locator(".admin-beta-row").innerText()).includes(`beta${stamp}`)
+);
+await tester.goto(`${base}/entries/${testerEntry}/edit`);
+check("and now sees the panel", (await tester.locator(".c2c-publish").count()) === 1);
+
+// Taking them off again puts it back out of reach.
+await admin.goto(`${base}/admin`);
+await admin.locator(".admin-beta-row button").first().click();
+await admin.waitForLoadState("networkidle");
+await tester.goto(`${base}/entries/${testerEntry}/edit`);
+check("taken off the list, they stop seeing it", (await tester.locator(".c2c-publish").count()) === 0);
+check("and the list is empty again", (await admin.locator(".admin-beta-row").count()) === 0);
+check(
+  "the admin page is theirs alone",
+  (await (await tester.goto(`${base}/admin`)).status()) === 404
+);
 check(
   "and it is nowhere on the day itself",
   await (async () => {
@@ -106,7 +134,7 @@ check(
   (await admin.locator(".form-error").innerText()).includes("camptocamp route")
 );
 
-await db.query("delete from users where username like 'bossman' or username like 'plain%'");
+await db.query("delete from users where username = 'bossman' or username like 'plain%' or username like 'beta%'");
 await db.end();
 await browser.close();
 console.log(failures === 0 ? "OK — the proof of concept previews before it publishes" : `FAIL — ${failures}`);

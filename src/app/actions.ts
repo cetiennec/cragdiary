@@ -33,6 +33,7 @@ import { notify, extractMentions, userIdsByUsernames, markAllRead } from "@/lib/
 import { runPool } from "@/lib/pool";
 import { noteMissingC2cOutings } from "@/lib/c2c-check";
 import { isAdmin } from "@/lib/admin-stats";
+import { isBetaUser } from "@/lib/beta";
 import {
   buildOutingPayload,
   c2cCreateOuting,
@@ -1417,7 +1418,34 @@ export async function deleteEntry(formData: FormData): Promise<void> {
   redirect(`/u/${user.username}`);
 }
 
-/* ---- Publishing to camptocamp — proof of concept, admin only ----------- */
+/* ---- Beta testers (migration 043) -------------------------------------- */
+
+/**
+ * Add or drop a beta tester. The admin's own list, edited from the admin page,
+ * so trying something on a few people takes a click rather than a deploy.
+ *
+ * Silent about who exists: the form takes a username, and a wrong one simply
+ * changes nothing. There is nothing to enumerate here that /climbers does not
+ * already show, but there is no reason for this to be the place that answers.
+ */
+export async function setBetaTester(formData: FormData): Promise<void> {
+  const user = await currentUser();
+  if (!user) throw new Error("Unauthorized");
+  if (!isAdmin(user.username)) throw new Error("Not found");
+
+  const username = String(formData.get("username") ?? "")
+    .trim()
+    .replace(/^@/, "")
+    .toLowerCase();
+  if (!username) return;
+  const on = formData.get("beta") === "on";
+
+  await pool.query("update users set beta = $2 where lower(username) = $1", [username, on]);
+
+  revalidatePath("/admin");
+}
+
+/* ---- Publishing to camptocamp — proof of concept, beta testers --------- */
 
 export type PublishResult = {
   ok: boolean;
@@ -1432,16 +1460,16 @@ export type PublishResult = {
  * Load a day and say whether this person may publish it — one place, because
  * the preview and the publish must agree about it or the preview is a lie.
  *
- * Admin only, and only ever your own day: publishing puts words under
- * someone's name on a site where they cannot be taken down after 24 hours, so
- * a co-author's pen is not enough.
+ * Beta testers only (the admin among them), and only ever your own day:
+ * publishing puts words under someone's name on a site where they cannot be
+ * taken down after 24 hours, so a co-author's pen is not enough.
  */
 async function publishable(
   entryId: string
 ): Promise<{ entry: PublishableEntry; lang: string } | { error: string }> {
   const user = await currentUser();
   if (!user) throw new Error("Unauthorized");
-  if (!isAdmin(user.username)) throw new Error("Not found");
+  if (!isBetaUser(user)) throw new Error("Not found");
 
   const result = await pool.query<PublishableEntry>(
     `select id, to_char(entry_date, 'YYYY-MM-DD') as entry_date, month_only, crag, style,

@@ -14,7 +14,7 @@ import { getDict } from "@/lib/i18n";
 import EntryForm from "@/components/EntryForm";
 import DeleteEntryButton from "@/components/DeleteEntryButton";
 import C2cPublishPoc from "@/components/C2cPublishPoc";
-import { isAdmin } from "@/lib/admin-stats";
+import { isBetaUser } from "@/lib/beta";
 
 export default async function EditEntryPage({
   params,
@@ -103,10 +103,10 @@ export default async function EditEntryPage({
         </div>
       )}
 
-      {/* Publishing this day to camptocamp: one account sees this, and it
+      {/* Publishing this day to camptocamp: beta testers see this, and it
           writes to a site where an outing cannot be taken back after 24 hours.
           See docs/publier-sur-camptocamp.md. */}
-      {isAuthor && isAdmin(user.username) && (
+      {isAuthor && isBetaUser(user) && (
         <div className="page-container narrow">
           <C2cPublishPoc
             entryId={entry.id}

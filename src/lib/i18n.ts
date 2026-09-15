@@ -999,6 +999,17 @@ const en = {
   // site speaks two languages and so does this.
   admin: {
     navLabel: "Stats",
+    // The list of people who see what is half-built. Kept here rather than in
+    // an environment variable so that adding someone takes a click, not a
+    // deploy — see migration 043.
+    betaTitle: "Beta testers",
+    betaHint:
+      "They see features that aren't finished. You are one of them always, by being the admin — and nothing here lets anyone touch anyone else's days.",
+    betaPlaceholder: "username",
+    betaAdd: "Add",
+    betaRemove: "Remove",
+    betaEmpty: "Nobody yet — only you.",
+    betaUnknown: "No such member.",
     title: "How the site is doing",
     intro:
       "Counted from what people have made — there is no tracker on Cragdiary, so there are no visitors here, only members, days and photos.",
@@ -2029,6 +2040,14 @@ const fr: Dict = {
   },
   admin: {
     navLabel: "Stats",
+    betaTitle: "Bêta-testeurs",
+    betaHint:
+      "Ils voient des fonctionnalités inachevées. Vous en êtes toujours, en tant qu'administrateur — et rien ici ne permet de toucher aux journées de quelqu'un d'autre.",
+    betaPlaceholder: "pseudo",
+    betaAdd: "Ajouter",
+    betaRemove: "Retirer",
+    betaEmpty: "Personne pour l'instant — vous seul.",
+    betaUnknown: "Aucun membre de ce nom.",
     title: "Où en est le site",
     intro:
       "Compté à partir de ce que les gens ont écrit — il n'y a pas de traceur sur Cragdiary, donc pas de visiteurs ici, seulement des membres, des journées et des photos.",

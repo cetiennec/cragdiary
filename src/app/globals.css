@@ -5774,6 +5774,40 @@ label:has(input:placeholder-shown) + .form-hint.form-warn {
   font-size: 0.9rem;
 }
 
+/* The beta list on the admin page: the one thing there you do rather than
+   read, so it sits at the top and looks like a control. */
+
+.admin-beta {
+  margin-bottom: 1.6rem;
+}
+
+.admin-beta-add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin: 0.6rem 0;
+}
+
+.admin-beta-add input {
+  font: inherit;
+  font-size: 0.88rem;
+  padding: 0.35rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-elevated);
+  color: var(--text);
+  flex: 0 1 14rem;
+  min-width: 0;
+}
+
+.admin-beta-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.6rem;
+}
+
 /* Publishing to camptocamp — the admin-only proof of concept. Plain on
    purpose: one account sees it. */
 

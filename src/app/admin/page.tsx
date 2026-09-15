@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { currentUser } from "@/lib/auth";
 import { getDict, type Dict, type Locale } from "@/lib/i18n";
-import { getAdminStats, isAdmin, type Split } from "@/lib/admin-stats";
+import { getAdminStats, getBetaTesters, isAdmin, type Split } from "@/lib/admin-stats";
+import { setBetaTester } from "@/app/actions";
 
 // Numbers about the site are for the person who runs it, not for a search
 // engine and not for a link someone was handed.
@@ -86,7 +87,7 @@ export default async function AdminPage() {
   // Not "403": a page you may not open should not announce that it exists.
   if (!isAdmin(user?.username)) notFound();
 
-  const stats = await getAdminStats();
+  const [stats, testers] = await Promise.all([getAdminStats(), getBetaTesters()]);
   const a: Dict["admin"] = t.admin;
   const nf = new Intl.NumberFormat(locale === "fr" ? "fr-FR" : "en-US");
   const num = (n: number) => nf.format(n);
@@ -109,6 +110,45 @@ export default async function AdminPage() {
     <div className="page-container admin-page">
       <h1 className="page-title">{a.title}</h1>
       <p className="credits-intro">{a.intro}</p>
+
+      {/* Who sees what isn't finished. First, because it is the one thing on
+          this page you *do* rather than read. */}
+      <section className="admin-beta">
+        <h2 className="pitch-notes-title">{a.betaTitle}</h2>
+        <p className="form-hint">{a.betaHint}</p>
+        <form action={setBetaTester} className="admin-beta-add">
+          <input type="hidden" name="beta" value="on" />
+          <input
+            type="text"
+            name="username"
+            placeholder={a.betaPlaceholder}
+            autoComplete="off"
+            aria-label={a.betaPlaceholder}
+          />
+          <button type="submit" className="follower-accept">
+            {a.betaAdd}
+          </button>
+        </form>
+        {testers.length === 0 ? (
+          <p className="form-hint">{a.betaEmpty}</p>
+        ) : (
+          <ul className="admin-people">
+            {testers.map((b) => (
+              <li key={b.username} className="admin-beta-row">
+                <Link href={`/u/${b.username}`}>{b.display_name}</Link>
+                <span className="form-hint">@{b.username}</span>
+                <form action={setBetaTester}>
+                  <input type="hidden" name="username" value={b.username} />
+                  <input type="hidden" name="beta" value="off" />
+                  <button type="submit" className="follower-remove">
+                    {a.betaRemove}
+                  </button>
+                </form>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <div className="stats-row">
         <Tile

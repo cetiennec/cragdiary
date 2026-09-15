@@ -16,6 +16,17 @@ export function isAdmin(username: string | null | undefined): boolean {
   return admin.split(/\s*,\s*/).includes(username.toLowerCase());
 }
 
+/** The accounts flagged as testers (migration 043). The admin is not one of them
+ *  in the database — being admin is enough; see `isBetaUser` in lib/beta.ts. */
+export type BetaTester = { username: string; display_name: string };
+
+export async function getBetaTesters(): Promise<BetaTester[]> {
+  const result = await pool.query<BetaTester>(
+    "select username, display_name from users where beta order by display_name"
+  );
+  return result.rows;
+}
+
 export type MonthPoint = { month: string; users: number; entries: number };
 
 export type Split = { key: string; count: number };

@@ -10,6 +10,8 @@ export type SessionUser = {
   id: string;
   username: string;
   displayName: string;
+  /** Flagged as a beta tester (migration 043) — read it through `isBetaUser`. */
+  beta: boolean;
 };
 
 function secret(): string {
@@ -110,7 +112,8 @@ export const currentUser = cache(async function currentUser(): Promise<SessionUs
     username: string;
     display_name: string;
     session_version: number;
-  }>("select id, username, display_name, session_version from users where id = $1", [
+    beta: boolean;
+  }>("select id, username, display_name, session_version, beta from users where id = $1", [
     claims.userId,
   ]);
   if (result.rows.length === 0) return null;
@@ -118,5 +121,10 @@ export const currentUser = cache(async function currentUser(): Promise<SessionUs
   // A token minted before the last revocation is no longer good, however valid
   // its signature and expiry.
   if (row.session_version !== claims.version) return null;
-  return { id: row.id, username: row.username, displayName: row.display_name };
+  return {
+    id: row.id,
+    username: row.username,
+    displayName: row.display_name,
+    beta: row.beta,
+  };
 })
