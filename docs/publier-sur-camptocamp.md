@@ -208,3 +208,33 @@ création d'itinéraires.
   de la base à des fins commerciales et le scraping non autorisé. Publier *ses
   propres* sorties avec *son propre* compte n'entre pas là-dedans, mais c'est à
   garder en tête si l'outil venait à écrire à grande échelle.
+
+---
+
+## 7. Ce qui a été construit — POC, compte admin seulement (15 septembre 2026)
+
+Une première mise à l'épreuve, derrière `ADMIN_USERNAME`, dans la page de
+modification d'une journée à soi. Ce n'est pas la fonctionnalité : c'est de quoi
+savoir si elle tient debout.
+
+| | |
+|---|---|
+| Où | `src/lib/c2c-publish.ts`, `src/components/C2cPublishPoc.tsx`, actions dans `src/app/actions.ts` |
+| Migration | **042** — `entries.c2c_outing_id`, la sortie *créée* (à ne pas confondre avec `c2c_url`, la sortie *importée*) |
+| Test | `scripts/c2c-publish-check.mjs` (serveur lancé avec `ADMIN_USERNAME=bossman`) |
+
+Ce qu'il fait : aperçu du document exact avant tout envoi, publication à la
+demande d'**une** journée, et un bouton « retirer » qui marche tant que la
+fenêtre de 24 h est ouverte. Le mot de passe sert une fois, en mémoire ; on
+déconnecte le jeton derrière. Un champ qui ne tombe pas dans le vocabulaire c2c
+est omis et signalé dans l'aperçu, jamais approximé.
+
+Ce qu'il ne fait pas : les photos (§3), les journées sans itinéraire c2c (§2.2),
+les journées au mois près, et celles déjà importées de camptocamp.
+
+**Le `POST /outings` n'a jamais été exécuté pour de vrai.** Le test ne parle
+pas à camptocamp, exprès : une sortie de test ne serait plus supprimable le
+lendemain. Le premier vrai essai doit donc être une vraie journée qu'on voulait
+publier — et le bouton « retirer » est là pour les 24 h qui suivent. Vérifié en
+revanche que la requête de connexion est bien formée : `POST /users/login` avec
+un compte inexistant répond `401 Login failed`, pas une erreur de schéma.
