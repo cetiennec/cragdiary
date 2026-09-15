@@ -1421,26 +1421,38 @@ export async function deleteEntry(formData: FormData): Promise<void> {
 /* ---- Beta testers (migration 043) -------------------------------------- */
 
 /**
- * Add or drop a beta tester. The admin's own list, edited from the admin page,
+ * Add or drop beta testers. The admin's own list, edited from the admin page,
  * so trying something on a few people takes a click rather than a deploy.
  *
- * Silent about who exists: the form takes a username, and a wrong one simply
- * changes nothing. There is nothing to enumerate here that /climbers does not
- * already show, but there is no reason for this to be the place that answers.
+ * Named the way climbers are named everywhere else here — "@lea @marc", picked
+ * from the same menu as a rope party — and several at once, because that is how
+ * you think of a group of testers. A bare name with no @ works too, for someone
+ * the menu will not offer.
+ *
+ * Silent about who exists: a name that matches nobody simply changes nothing.
+ * The list below the field is the answer — whoever is on it, is on it.
  */
 export async function setBetaTester(formData: FormData): Promise<void> {
   const user = await currentUser();
   if (!user) throw new Error("Unauthorized");
   if (!isAdmin(user.username)) throw new Error("Not found");
 
-  const username = String(formData.get("username") ?? "")
-    .trim()
-    .replace(/^@/, "")
-    .toLowerCase();
-  if (!username) return;
+  const typed = String(formData.get("username") ?? "").trim();
+  // Every @name in the field, or — when nothing was tagged — the bare name.
+  const named = extractMentions(typed);
+  const usernames =
+    named.length > 0
+      ? named
+      : /^[a-z0-9-]{3,20}$/i.test(typed)
+        ? [typed.toLowerCase()]
+        : [];
+  if (usernames.length === 0) return;
   const on = formData.get("beta") === "on";
 
-  await pool.query("update users set beta = $2 where lower(username) = $1", [username, on]);
+  await pool.query("update users set beta = $2 where lower(username) = any($1)", [
+    usernames,
+    on,
+  ]);
 
   revalidatePath("/admin");
 }

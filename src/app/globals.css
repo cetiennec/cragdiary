@@ -5789,6 +5789,13 @@ label:has(input:placeholder-shown) + .form-hint.form-warn {
   margin: 0.6rem 0;
 }
 
+/* The @ menu needs its wrapper to be the flex item and to keep its own
+   positioning context, so the field is sized through it. */
+.admin-beta-add .combobox {
+  flex: 0 1 20rem;
+  min-width: 0;
+}
+
 .admin-beta-add input {
   font: inherit;
   font-size: 0.88rem;
@@ -5797,7 +5804,7 @@ label:has(input:placeholder-shown) + .form-hint.form-warn {
   border-radius: 999px;
   background: var(--bg-elevated);
   color: var(--text);
-  flex: 0 1 14rem;
+  width: 100%;
   min-width: 0;
 }
 

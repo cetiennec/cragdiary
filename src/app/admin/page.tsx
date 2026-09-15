@@ -5,6 +5,7 @@ import { currentUser } from "@/lib/auth";
 import { getDict, type Dict, type Locale } from "@/lib/i18n";
 import { getAdminStats, getBetaTesters, isAdmin, type Split } from "@/lib/admin-stats";
 import { setBetaTester } from "@/app/actions";
+import MentionInput from "@/components/MentionInput";
 
 // Numbers about the site are for the person who runs it, not for a search
 // engine and not for a link someone was handed.
@@ -118,12 +119,12 @@ export default async function AdminPage() {
         <p className="form-hint">{a.betaHint}</p>
         <form action={setBetaTester} className="admin-beta-add">
           <input type="hidden" name="beta" value="on" />
-          <input
-            type="text"
+          {/* Named with an @, from the same menu as a rope party — and as many
+              at once as you like. */}
+          <MentionInput
             name="username"
             placeholder={a.betaPlaceholder}
-            autoComplete="off"
-            aria-label={a.betaPlaceholder}
+            ariaLabel={a.betaPlaceholder}
           />
           <button type="submit" className="follower-accept">
             {a.betaAdd}

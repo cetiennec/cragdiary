@@ -71,8 +71,11 @@ check("an ordinary member does not", (await other.locator(".c2c-publish").count(
 // The admin adds a tester from their own page, and it takes effect at once —
 // no environment variable, no deploy.
 await admin.goto(`${base}/admin`);
-await admin.fill('.admin-beta-add input[name="username"]', `beta${stamp}`);
-await admin.click(".admin-beta-add button");
+// Named with an @, from the menu — the same way a rope party is named.
+const betaField = admin.locator('.admin-beta-add input[name="username"]');
+await betaField.pressSequentially(`@beta${stamp}`, { delay: 30 });
+await admin.locator(".admin-beta-add .combobox-list button").first().click();
+await admin.click(".admin-beta-add button[type=submit]");
 await admin.waitForLoadState("networkidle");
 check(
   "the tester is listed on the admin page",
@@ -88,6 +91,17 @@ await admin.waitForLoadState("networkidle");
 await tester.goto(`${base}/entries/${testerEntry}/edit`);
 check("taken off the list, they stop seeing it", (await tester.locator(".c2c-publish").count()) === 0);
 check("and the list is empty again", (await admin.locator(".admin-beta-row").count()) === 0);
+// Several at once, because that is how a group of testers is thought of.
+await admin.goto(`${base}/admin`);
+await admin.locator('.admin-beta-add input[name="username"]').fill(`@beta${stamp} @plain${stamp}`);
+await admin.click(".admin-beta-add button[type=submit]");
+await admin.waitForLoadState("networkidle");
+check("two named in one go are both added", (await admin.locator(".admin-beta-row").count()) === 2);
+for (const row of await admin.locator(".admin-beta-row button").all()) {
+  await row.click();
+  await admin.waitForLoadState("networkidle");
+}
+
 check(
   "the admin page is theirs alone",
   (await (await tester.goto(`${base}/admin`)).status()) === 404

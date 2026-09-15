@@ -1005,7 +1005,7 @@ const en = {
     betaTitle: "Beta testers",
     betaHint:
       "They see features that aren't finished. You are one of them always, by being the admin — and nothing here lets anyone touch anyone else's days.",
-    betaPlaceholder: "username",
+    betaPlaceholder: "@ a climber — several if you like",
     betaAdd: "Add",
     betaRemove: "Remove",
     betaEmpty: "Nobody yet — only you.",
@@ -2043,7 +2043,7 @@ const fr: Dict = {
     betaTitle: "Bêta-testeurs",
     betaHint:
       "Ils voient des fonctionnalités inachevées. Vous en êtes toujours, en tant qu'administrateur — et rien ici ne permet de toucher aux journées de quelqu'un d'autre.",
-    betaPlaceholder: "pseudo",
+    betaPlaceholder: "@ un grimpeur — plusieurs si vous voulez",
     betaAdd: "Ajouter",
     betaRemove: "Retirer",
     betaEmpty: "Personne pour l'instant — vous seul.",
