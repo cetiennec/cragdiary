@@ -211,9 +211,10 @@ création d'itinéraires.
 
 ---
 
-## 7. Ce qui a été construit — POC, compte admin seulement (15 septembre 2026)
+## 7. Ce qui a été construit — POC, bêta-testeurs (15 septembre 2026)
 
-Une première mise à l'épreuve, derrière `ADMIN_USERNAME`, dans la page de
+Une première mise à l'épreuve, réservée aux bêta-testeurs (l'admin, plus la
+liste tenue sur `/admin` — migration 043, `src/lib/beta.ts`), dans la page de
 modification d'une journée à soi. Ce n'est pas la fonctionnalité : c'est de quoi
 savoir si elle tient debout.
 
@@ -221,6 +222,7 @@ savoir si elle tient debout.
 |---|---|
 | Où | `src/lib/c2c-publish.ts`, `src/components/C2cPublishPoc.tsx`, actions dans `src/app/actions.ts` |
 | Migration | **042** — `entries.c2c_outing_id`, la sortie *créée* (à ne pas confondre avec `c2c_url`, la sortie *importée*) |
+| Qui | `isBetaUser` — `ADMIN_USERNAME`, plus les comptes marqués `beta` |
 | Test | `scripts/c2c-publish-check.mjs` (serveur lancé avec `ADMIN_USERNAME=bossman`) |
 
 Ce qu'il fait : aperçu du document exact avant tout envoi, publication à la
