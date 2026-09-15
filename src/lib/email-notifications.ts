@@ -255,6 +255,52 @@ export async function emailCoAuthorInvite(
   );
 }
 
+/**
+ * "You are a beta tester now" — sent once, when the admin adds someone to the
+ * list on /admin.
+ *
+ * The only email here that is not governed by one of the two switches, and the
+ * reason is worth writing down: those switch off a *stream* — the outings you
+ * are tagged on, the monthly digest — and this is neither. It is one message
+ * about the account itself, like a password reset, and there is nothing
+ * recurring to unsubscribe from. Being added again changes nothing and sends
+ * nothing: only the crossing from not-a-tester to tester does (see
+ * `setBetaTester`, which is the only caller).
+ *
+ * An account with no address hears nothing, and that is all right — the
+ * features simply appear the next time they visit.
+ */
+export async function emailBetaInvite(
+  userId: string,
+  by: { displayName: string }
+): Promise<void> {
+  const result = await pool.query<{ email: string | null; display_name: string }>(
+    "select email, display_name from users where id = $1",
+    [userId]
+  );
+  const row = result.rows[0];
+  if (!row?.email) return;
+
+  await sendEmail(
+    row.email,
+    "Vous testez Cragdiary en avant-première",
+    `<p>Bonjour ${escape(row.display_name)},</p>
+     <p><strong>${escape(by.displayName)}</strong> vous a ajouté aux bêta-testeurs de
+       Cragdiary. Vous verrez désormais, dans votre carnet, des fonctionnalités qui ne sont
+       pas encore ouvertes à tout le monde — signalées comme telles, et parfois inachevées.</p>
+     <p>Rien ne change à vos journées ni à qui peut les lire. Si quelque chose casse ou vous
+       paraît de travers, dites-le : c'est exactement à ça que ça sert.</p>
+     <p><a href="${siteUrl()}">Ouvrir Cragdiary</a></p>
+     <hr style="border:none;border-top:1px solid #ddd;margin:24px 0">
+     <p style="font-size:13px;color:#666">
+       Vous recevez ce message unique parce que votre compte vient d'être ajouté aux
+       bêta-testeurs — il n'y a rien à désabonner. Vos
+       <a href="${siteUrl()}/notifications">préférences d'email</a> sont inchangées, et vous
+       pouvez demander à quitter la bêta en répondant à ce message.
+     </p>`
+  );
+}
+
 /** Text from a person, going into HTML: the one place this file can be hurt. */
 function escape(value: string): string {
   return value

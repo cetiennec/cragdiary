@@ -10,8 +10,9 @@ import { GEAR_KINDS } from "@/lib/gear";
 import { LOCALE_COOKIE, getLocale } from "@/lib/i18n";
 import { sendEmail } from "@/lib/email";
 import {
-  emailDigest,
+  emailBetaInvite,
   emailCoAuthorInvite,
+  emailDigest,
   emailTagged,
   maybeSendDigest,
   unsubscribe,
@@ -1449,10 +1450,28 @@ export async function setBetaTester(formData: FormData): Promise<void> {
   if (usernames.length === 0) return;
   const on = formData.get("beta") === "on";
 
-  await pool.query("update users set beta = $2 where lower(username) = any($1)", [
-    usernames,
-    on,
-  ]);
+  // `is distinct from` so the rows that come back are the ones that actually
+  // changed: adding someone who is already a tester must not send them a
+  // second letter saying so.
+  const changed = await pool.query<{ id: string }>(
+    `update users set beta = $2
+     where lower(username) = any($1) and beta is distinct from $2
+     returning id`,
+    [usernames, on]
+  );
+
+  // Being let in is worth hearing about, and a tester who never opens the site
+  // is no tester at all. Only on the way in: leaving the list happens quietly.
+  if (on && changed.rows.length > 0) {
+    const admin = { displayName: user.displayName };
+    after(async () => {
+      for (const row of changed.rows) {
+        await emailBetaInvite(row.id, admin).catch((e) =>
+          console.error("beta invite email failed —", e instanceof Error ? e.message : e)
+        );
+      }
+    });
+  }
 
   revalidatePath("/admin");
 }

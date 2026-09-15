@@ -9,7 +9,8 @@
 // The app must be started with RESEND_API_URL pointing at this script's port
 // and RESEND_API_KEY set to anything at all:
 //
-//   RESEND_API_URL=http://127.0.0.1:3210/emails RESEND_API_KEY=test npx next dev -p 3111
+//   RESEND_API_URL=http://127.0.0.1:3210/emails RESEND_API_KEY=test \
+//     ADMIN_USERNAME=bossman npx next dev -p 3111
 //   node scripts/email-check.mjs [baseUrl] [databaseUrl] [mailboxPort]
 import { createServer } from "node:http";
 import { chromium } from "playwright";
@@ -183,7 +184,45 @@ check(
   digest?.subject
 );
 
-await db.query("delete from users where username = any($1)", [[author, mate, quiet, fan]]);
+// --- Being made a beta tester says so, once, whatever the switches say ---
+// The two notification switches govern a stream — outings you are named on, the
+// monthly digest. This is one message about the account itself, so the person
+// who turned tag emails off still hears it.
+const quietBefore = to(mail(quiet)).length;
+const boss = await signUp("bossman"); // ADMIN_USERNAME on the server under test
+await db.query("update users set email = 'bossman@example.test' where username = 'bossman'");
+await boss.goto(`${base}/admin`);
+await boss.locator('.admin-beta-add input[name="username"]').fill(`@${mate} @${quiet}`);
+await boss.click(".admin-beta-add button[type=submit]");
+await settle();
+
+const betaMail = to(mail(mate)).at(-1);
+check("a new tester is told", betaMail?.subject?.includes("avant-première"), betaMail?.subject);
+check(
+  "including one who switched notifications off",
+  to(mail(quiet)).length === quietBefore + 1,
+  to(mail(quiet)).length
+);
+check(
+  "and it offers nothing to unsubscribe from, having nothing recurring",
+  !betaMail?.headers?.["List-Unsubscribe"] && betaMail?.html?.includes("rien à désabonner")
+);
+
+// Adding someone already on the list is not news.
+const again = to(mail(mate)).length;
+await boss.goto(`${base}/admin`);
+await boss.locator('.admin-beta-add input[name="username"]').fill(`@${mate}`);
+await boss.click(".admin-beta-add button[type=submit]");
+await settle();
+check("adding them twice writes once", to(mail(mate)).length === again, to(mail(mate)).length);
+
+// And leaving the list happens quietly.
+await boss.goto(`${base}/admin`);
+await boss.locator(".admin-beta-row", { hasText: mate }).locator("button").click();
+await settle();
+check("dropping a tester sends nothing", to(mail(mate)).length === again, to(mail(mate)).length);
+
+await db.query("delete from users where username = any($1)", [[author, mate, quiet, fan, "bossman"]]);
 await db.end();
 await browser.close();
 mailbox.close();
