@@ -32,6 +32,15 @@ import { c2cImageUrl, importOuting, parseProfileId } from "@/lib/c2c";
 import { notify, extractMentions, userIdsByUsernames, markAllRead } from "@/lib/notifications";
 import { runPool } from "@/lib/pool";
 import { noteMissingC2cOutings } from "@/lib/c2c-check";
+import { isAdmin } from "@/lib/admin-stats";
+import {
+  buildOutingPayload,
+  c2cCreateOuting,
+  c2cDeleteOuting,
+  c2cLogin,
+  c2cLogout,
+  type PublishableEntry,
+} from "@/lib/c2c-publish";
 
 // 1600 px keeps photos crisp in the fullscreen lightbox (incl. high-DPI
 // screens); quality 86 is visibly cleaner than 82 at a modest size cost. The
@@ -1406,6 +1415,125 @@ export async function deleteEntry(formData: FormData): Promise<void> {
   // Back to your own journal, not the feed: you were reading your diary, and
   // deleting a page of it should leave you holding the diary.
   redirect(`/u/${user.username}`);
+}
+
+/* ---- Publishing to camptocamp — proof of concept, admin only ----------- */
+
+export type PublishResult = {
+  ok: boolean;
+  /** The exact document that would be, or was, sent. */
+  payload?: unknown;
+  warnings?: string[];
+  url?: string;
+  error?: string;
+};
+
+/**
+ * Load a day and say whether this person may publish it — one place, because
+ * the preview and the publish must agree about it or the preview is a lie.
+ *
+ * Admin only, and only ever your own day: publishing puts words under
+ * someone's name on a site where they cannot be taken down after 24 hours, so
+ * a co-author's pen is not enough.
+ */
+async function publishable(
+  entryId: string
+): Promise<{ entry: PublishableEntry; lang: string } | { error: string }> {
+  const user = await currentUser();
+  if (!user) throw new Error("Unauthorized");
+  if (!isAdmin(user.username)) throw new Error("Not found");
+
+  const result = await pool.query<PublishableEntry>(
+    `select id, to_char(entry_date, 'YYYY-MM-DD') as entry_date, month_only, crag, style,
+            grade_max, rating, equipment, height_m, notes, partners,
+            c2c_url, c2c_route_url, c2c_outing_id
+     from entries where id = $1 and user_id = $2`,
+    [entryId, user.id]
+  );
+  const entry = result.rows[0];
+  if (!entry) return { error: "No such day of yours." };
+  return { entry, lang: await getLocale() };
+}
+
+/** What would leave, shown before anything does. Sends nothing. */
+export async function previewC2cOuting(formData: FormData): Promise<PublishResult> {
+  const found = await publishable(String(formData.get("entry_id") ?? ""));
+  if ("error" in found) return { ok: false, error: found.error };
+
+  // A preview needs no password, so it asks for none: the member id is the one
+  // thing it cannot know, and a placeholder says so plainly.
+  const built = buildOutingPayload(
+    found.entry,
+    { token: "", userId: 0, username: "", lang: found.lang },
+    found.lang
+  );
+  if (!built.ok) return { ok: false, error: built.error };
+  return { ok: true, payload: built.payload, warnings: built.warnings };
+}
+
+/**
+ * Publish, for real. The password crosses this function and is gone: it is
+ * exchanged for a token, the token is used, and then handed back.
+ */
+export async function publishToC2c(formData: FormData): Promise<PublishResult> {
+  const entryId = String(formData.get("entry_id") ?? "");
+  const found = await publishable(entryId);
+  if ("error" in found) return { ok: false, error: found.error };
+
+  const username = String(formData.get("c2c_user") ?? "").trim();
+  const password = String(formData.get("c2c_password") ?? "");
+  if (!username || !password) return { ok: false, error: "Camptocamp login and password needed." };
+
+  const login = await c2cLogin(username, password);
+  if (!login.ok) return { ok: false, error: login.error };
+
+  try {
+    const built = buildOutingPayload(found.entry, login.session, found.lang);
+    if (!built.ok) return { ok: false, error: built.error };
+
+    const created = await c2cCreateOuting(login.session, built.payload);
+    if (!created.ok) return { ok: false, error: created.error, payload: built.payload };
+
+    await pool.query("update entries set c2c_outing_id = $2 where id = $1", [
+      entryId,
+      created.id,
+    ]);
+    revalidatePath(`/entries/${entryId}`);
+    revalidatePath(`/entries/${entryId}/edit`);
+    return { ok: true, url: created.url, payload: built.payload, warnings: built.warnings };
+  } finally {
+    await c2cLogout(login.session);
+  }
+}
+
+/**
+ * Take it back down — which camptocamp allows the author for 24 hours and not
+ * a minute more. Past that it says so, and the only recourse is a moderator.
+ */
+export async function unpublishFromC2c(formData: FormData): Promise<PublishResult> {
+  const entryId = String(formData.get("entry_id") ?? "");
+  const found = await publishable(entryId);
+  if ("error" in found) return { ok: false, error: found.error };
+  const outingId = found.entry.c2c_outing_id;
+  if (!outingId) return { ok: false, error: "This day is not published." };
+
+  const username = String(formData.get("c2c_user") ?? "").trim();
+  const password = String(formData.get("c2c_password") ?? "");
+  if (!username || !password) return { ok: false, error: "Camptocamp login and password needed." };
+
+  const login = await c2cLogin(username, password);
+  if (!login.ok) return { ok: false, error: login.error };
+
+  try {
+    const removed = await c2cDeleteOuting(login.session, outingId);
+    if (!removed.ok) return { ok: false, error: removed.error };
+    await pool.query("update entries set c2c_outing_id = null where id = $1", [entryId]);
+    revalidatePath(`/entries/${entryId}`);
+    revalidatePath(`/entries/${entryId}/edit`);
+    return { ok: true };
+  } finally {
+    await c2cLogout(login.session);
+  }
 }
 
 /* ---- Linked days (migration 041) --------------------------------------- */

@@ -5774,6 +5774,49 @@ label:has(input:placeholder-shown) + .form-hint.form-warn {
   font-size: 0.9rem;
 }
 
+/* Publishing to camptocamp — the admin-only proof of concept. Plain on
+   purpose: one account sees it. */
+
+.c2c-publish {
+  margin-bottom: 1.6rem;
+}
+
+.c2c-publish-creds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin: 0.5rem 0;
+}
+
+.c2c-publish-creds input {
+  font: inherit;
+  font-size: 0.88rem;
+  padding: 0.35rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-elevated);
+  color: var(--text);
+  min-width: 0;
+  flex: 1 1 10rem;
+}
+
+.c2c-publish-warnings {
+  margin: 0.5rem 0;
+  padding-left: 1.1rem;
+}
+
+.c2c-publish-payload {
+  max-height: 22rem;
+  overflow: auto;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-photo, 8px);
+  background: var(--bg-elevated);
+}
+
 .borrowed-photos-title {
   font-size: 0.85rem;
   font-weight: 600;

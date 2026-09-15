@@ -283,6 +283,11 @@ alter table photos add column if not exists c2c_filename text;
 -- outing — the story — and the route's own page was lost on import.
 alter table entries add column if not exists c2c_route_url text;
 
+-- The camptocamp outing a day was *published* as (migration 042) — the other
+-- direction from `c2c_url`, which is the outing a day was imported from. Set
+-- only by the publish proof of concept; see docs/publier-sur-camptocamp.md.
+alter table entries add column if not exists c2c_outing_id integer;
+
 -- Indoor climbing gyms (migration 031), for the Cragseeker map layer. A
 -- periodic snapshot rather than a live query: gyms barely change, and asking
 -- Overpass fresh on every request turned out to be unreliable from Vercel's

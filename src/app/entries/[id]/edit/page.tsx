@@ -13,6 +13,8 @@ import { currentUser } from "@/lib/auth";
 import { getDict } from "@/lib/i18n";
 import EntryForm from "@/components/EntryForm";
 import DeleteEntryButton from "@/components/DeleteEntryButton";
+import C2cPublishPoc from "@/components/C2cPublishPoc";
+import { isAdmin } from "@/lib/admin-stats";
 
 export default async function EditEntryPage({
   params,
@@ -98,6 +100,19 @@ export default async function EditEntryPage({
             ))}
           </ul>
           {linked.length > 0 && <p className="form-hint">{t.entry.unlinkHint}</p>}
+        </div>
+      )}
+
+      {/* Publishing this day to camptocamp: one account sees this, and it
+          writes to a site where an outing cannot be taken back after 24 hours.
+          See docs/publier-sur-camptocamp.md. */}
+      {isAuthor && isAdmin(user.username) && (
+        <div className="page-container narrow">
+          <C2cPublishPoc
+            entryId={entry.id}
+            publishedId={entry.c2c_outing_id ?? null}
+            hasRoute={Boolean(entry.c2c_route_url)}
+          />
         </div>
       )}
 
