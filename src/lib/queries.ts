@@ -974,37 +974,40 @@ export type LinkableDay = {
   same_place: boolean;
 };
 
-/** `%` and `_` typed into a crag name would widen an ilike into a net. */
-function likeLiteral(value: string): string {
-  return value.replace(/[\\%_]/g, (c) => `\\${c}`);
-}
-
-// Days this climber logged that could be the same day as yours: same date (give
-// or take a couple of days) or same place. Among those the viewer may see: the
-// public ones, and — because accepting a follower is saying "you may read me" —
-// the link-only ones when they accepted the viewer's follow. Never the private
-// ones.
+// Days this climber logged that could be the same day as yours: the day before,
+// the day itself or the day after, or the very same route. Among those the
+// viewer may see: the public ones, and — because accepting a follower is saying
+// "you may read me" — the link-only ones when they accepted the viewer's follow.
+// Never the private ones.
+//
+// Both tests used to be looser, and the dialog came up on days that plainly
+// were not the same outing: a two-day window either side, and a place that
+// matched on any part of the crag *or* the area, so "Presles" in March met
+// "Presles" in May. A day out is one date and one route; the match is now
+// exactly that — one day either side for a trip that crossed midnight or a
+// date typed a day off, and otherwise the same route name, spelt the same way.
 //
 // Two kinds of day are deliberately never offered, because there is nothing
 // left to do with them: the ones that already name the viewer (linked already)
-// and the ones the viewer has already written up themselves. And a match on the
-// place alone is a weak signal — the same crag a fortnight apart is not the same
-// day — so it only speaks when no date matches at all.
+// and the ones the viewer has already written up themselves. A match on the
+// route alone is still the weaker signal — the same crag a fortnight apart is
+// not the same day — so it only speaks when no date matches at all.
 export async function findLinkableDays(
   viewerId: string,
   viewerUsername: string,
   username: string,
   date: string,
-  { crag = "", location = "", dayWindow = 2 }: {
+  { crag = "", dayWindow = 1 }: {
     crag?: string;
-    location?: string;
     dayWindow?: number;
   } = {}
 ): Promise<LinkableDay[]> {
-  const place = [crag, location]
-    .map((v) => v.trim())
-    .filter((v) => v.length >= 3)
-    .map(likeLiteral);
+  // The route, and only the route: an area ("Vercors") is where a hundred
+  // different days happen. Compared whole, case and edge spaces aside, so
+  // matching is a name rather than a fragment of one.
+  const place = [crag]
+    .map((v) => v.trim().toLowerCase())
+    .filter((v) => v.length >= 3);
 
   const result = await pool.query<LinkableDay>(
     `select e.id, to_char(e.entry_date, 'YYYY-MM-DD') as entry_date, e.crag, e.location,
@@ -1015,18 +1018,14 @@ export async function findLinkableDays(
              order by p.position asc limit 1) as photo_id,
             abs(e.entry_date - $4::date) <= $5 as same_date,
             (cardinality($6::text[]) > 0
-             and exists (select 1 from unnest($6::text[]) as q
-                         where e.crag ilike '%' || q || '%'
-                            or e.location ilike '%' || q || '%')) as same_place
+             and lower(btrim(e.crag)) = any($6::text[])) as same_place
      from entries e
      join users u on u.id = e.user_id
      where lower(u.username) = lower($1)
        and u.id <> $2
        and (abs(e.entry_date - $4::date) <= $5
             or (cardinality($6::text[]) > 0
-                and exists (select 1 from unnest($6::text[]) as q
-                            where e.crag ilike '%' || q || '%'
-                               or e.location ilike '%' || q || '%')))
+                and lower(btrim(e.crag)) = any($6::text[])))
        -- Already linked: their day names the viewer, so offering it again is
        -- offering to do what is done. Coalesced, because a day with no rope
        -- party at all has a null partners column, and null !~* anything is

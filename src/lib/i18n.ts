@@ -165,7 +165,7 @@ const en = {
       link: "Link",
       ignore: "Not the same day",
       matchedDate: "same dates",
-      matchedPlace: "same place",
+      matchedPlace: "same route",
       linked: "Linked to @{user}'s day",
     },
     copiedFrom:
@@ -1211,7 +1211,7 @@ const fr: Dict = {
       link: "Lier",
       ignore: "Pas la même journée",
       matchedDate: "mêmes dates",
-      matchedPlace: "même lieu",
+      matchedPlace: "même voie",
       linked: "Liée à la journée de @{user}",
     },
     copiedFrom:

@@ -20,14 +20,11 @@ export async function GET(req: Request) {
     return Response.json({ days: [] });
   }
 
-  // The place of the day being written, so a match on where can stand in for a
-  // match on when.
+  // The route of the day being written, so a match on which route can stand in
+  // for a match on when. The area is deliberately not part of it: a region is
+  // where a hundred different days happen.
   const crag = (searchParams.get("crag") ?? "").slice(0, 120);
-  const location = (searchParams.get("loc") ?? "").slice(0, 120);
 
-  const days = await findLinkableDays(user.id, user.username, username, date, {
-    crag,
-    location,
-  });
+  const days = await findLinkableDays(user.id, user.username, username, date, { crag });
   return Response.json({ days }, { headers: { "Cache-Control": "no-store" } });
 }

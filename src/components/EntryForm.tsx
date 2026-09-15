@@ -242,8 +242,9 @@ export default function EntryForm({
     askedToLink.current.add(who);
     try {
       const params = new URLSearchParams({ user: username, date });
+      // The route only: the area is too broad to say two people were out
+      // together, and used to bring the dialog up on days months apart.
       if (title.trim()) params.set("crag", title.trim());
-      if (location.trim()) params.set("loc", location.trim());
       const res = await fetch(`/api/entries/linkable?${params}`);
       if (!res.ok) return;
       const { days } = (await res.json()) as { days: LinkableDay[] };

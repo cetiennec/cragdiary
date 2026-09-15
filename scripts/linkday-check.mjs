@@ -66,6 +66,10 @@ async function write(userId, crag, date, partners = null) {
 
 const sameDay = await write(yId, `Presles ${stamp}`, today);
 const samePlaceOtherDay = await write(yId, `Presles ${stamp}`, day(40));
+// The window is one day either side, and the place match is the whole route
+// name: these two are the nearest misses on each side of that line.
+const twoDaysOff = await write(yId, `Buoux ${stamp}`, day(2));
+const nearlyTheSamePlace = await write(yId, `Presles ${stamp} secteur nord`, day(40));
 const alreadyLinked = await write(yId, `Ceuse ${stamp}`, today, `@${me}`);
 const iHaveThisOne = await write(yId, `Verdon ${stamp}`, today);
 await write(xId, `Verdon ${stamp}`, today); // my own version of that same day
@@ -92,6 +96,7 @@ const offered = await dialog.locator(".link-day-row").count();
 const text = (await dialog.innerText()).replace(/\s+/g, " ");
 
 check("it offers the day that shares the date", text.includes(`Presles ${stamp}`));
+check("but nothing two days either side", !text.includes(`Buoux ${stamp}`));
 check("it offers nothing already linked", !text.includes(`Ceuse ${stamp}`));
 check("nor a day I have already written up", !text.includes(`Verdon ${stamp}`));
 check("and never more than three at once", offered <= 3, offered);
@@ -113,8 +118,14 @@ if ((await far.count()) === 0) {
   check("with no date match, the place still speaks", false, "no dialog");
 } else {
   const farText = (await far.innerText()).replace(/\s+/g, " ");
-  check("with no date match, the place still speaks", farText.includes(`Presles ${stamp}`));
+  check("with no date match, the route still speaks", farText.includes(`Presles ${stamp}`));
   check("and it is still nothing already linked", !farText.includes(`Ceuse ${stamp}`));
+  // "Presles X secteur nord" contains "Presles X" — a substring match would
+  // have offered it, which is how the dialog used to turn up months out.
+  check(
+    "a route that merely contains the name is not the same route",
+    !farText.includes("secteur nord")
+  );
 }
 
 // --- Asked once ---
@@ -127,8 +138,25 @@ check(
   await X.locator(".link-day").count()
 );
 
+// --- One day either side is still the same outing. ---
+await X.goto(`${base}/entries/new`);
+await X.fill('input[name="crag"]', `Buoux ${stamp}`);
+await X.keyboard.press("Escape");
+await X.locator('input[name="date"]').fill(day(1)).catch(async () => {
+  await X.locator('input[type="date"]').first().fill(day(1));
+});
+await tagFromMenu(X, mate);
+const nextDoor = X.locator(".link-day");
+check(
+  "a day either side of yours is offered",
+  (await nextDoor.count()) === 1 &&
+    (await nextDoor.innerText()).replace(/\s+/g, " ").includes(`Buoux ${stamp}`)
+);
+
 void sameDay;
 void samePlaceOtherDay;
+void twoDaysOff;
+void nearlyTheSamePlace;
 void alreadyLinked;
 void iHaveThisOne;
 
