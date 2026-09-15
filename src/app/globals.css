@@ -5738,34 +5738,40 @@ label:has(input:placeholder-shown) + .form-hint.form-warn {
   margin-top: 0.6rem;
 }
 
-/* Breaking the pairing, and mending it. Quiet: it is an answer to a link
-   nobody asked for, not an action the page is pressing on anyone. */
+/* Breaking the pairing, and mending it. In the editor, not on the day: the
+   entry page is what the day looks like to a reader, and this is a thing you
+   do to it. */
 
-.shared-day-unlink {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.4rem 0.8rem;
-  margin-top: 0.3rem;
+.linked-days {
+  margin-bottom: 1.6rem;
 }
 
-.shared-day-unlink .form-hint {
+.linked-day-list {
+  list-style: none;
   margin: 0;
-  flex: 1 1 14rem;
+  padding: 0;
 }
 
-.unlinked-days .shared-day {
-  color: var(--text-muted);
-}
-
-.unlinked-day-row {
+.linked-day-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 0.9rem;
+  gap: 0.6rem;
+  padding: 0.45rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.linked-day-row:last-child {
+  border-bottom: none;
+}
+
+.linked-day-row > :first-child {
+  flex: 1 1 10rem;
+}
+
+.linked-day-row.unlinked {
   color: var(--text-muted);
-  margin-top: 0.3rem;
+  font-size: 0.9rem;
 }
 
 .borrowed-photos-title {

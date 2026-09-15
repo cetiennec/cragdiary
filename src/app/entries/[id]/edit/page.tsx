@@ -1,5 +1,14 @@
 import { notFound, redirect } from "next/navigation";
-import { canEditEntry, getCoAuthors, getEntry, isProfileListed } from "@/lib/queries";
+import {
+  canEditEntry,
+  getCoAuthors,
+  getEntry,
+  getSharedDay,
+  getUnlinkedDays,
+  isProfileListed,
+} from "@/lib/queries";
+import { relinkDay, unlinkDay } from "@/app/actions";
+import Link from "next/link";
 import { currentUser } from "@/lib/auth";
 import { getDict } from "@/lib/i18n";
 import EntryForm from "@/components/EntryForm";
@@ -27,6 +36,15 @@ export default async function EditEntryPage({
 
   const profileListed = await isProfileListed(user.id);
 
+  // Days this one found by a shared date and a mention, and the pairs somebody
+  // has since broken (migration 041). Both belong here rather than on the day
+  // itself: the entry page is what the day looks like to a reader, and this is
+  // a thing you do to it.
+  const [linked, unlinked] = await Promise.all([
+    getSharedDay(entry.id, user.id),
+    getUnlinkedDays(entry.id, user.id),
+  ]);
+
   const { locale, t } = await getDict();
   return (
     <>
@@ -46,6 +64,42 @@ export default async function EditEntryPage({
         locale={locale}
         profileListed={profileListed}
       />
+
+      {/* Outside the editor's own <form> — a form can't nest. Either climber
+          may break the pair, and it breaks for both; the mention stays, since
+          it is their account of who they climbed with. */}
+      {(linked.length > 0 || unlinked.length > 0) && (
+        <div className="page-container narrow linked-days">
+          <h2 className="wishlist-subheading">{t.entry.linkedTitle}</h2>
+          <ul className="linked-day-list">
+            {linked.map((other) => (
+              <li key={other.id} className="linked-day-row">
+                <Link href={`/entries/${other.id}`}>{other.display_name}</Link>
+                <form action={unlinkDay}>
+                  <input type="hidden" name="entry_id" value={entry.id} />
+                  <input type="hidden" name="other_id" value={other.id} />
+                  <button type="submit" className="follower-remove">
+                    {t.entry.unlink}
+                  </button>
+                </form>
+              </li>
+            ))}
+            {unlinked.map((other) => (
+              <li key={other.id} className="linked-day-row unlinked">
+                <span>{t.entry.unlinkedFrom.replace("{user}", other.display_name)}</span>
+                <form action={relinkDay}>
+                  <input type="hidden" name="entry_id" value={entry.id} />
+                  <input type="hidden" name="other_id" value={other.id} />
+                  <button type="submit" className="follow-back">
+                    {t.entry.relink}
+                  </button>
+                </form>
+              </li>
+            ))}
+          </ul>
+          {linked.length > 0 && <p className="form-hint">{t.entry.unlinkHint}</p>}
+        </div>
+      )}
 
       {/* Outside the editor's own <form> — a form can't nest — and last on the
           page, so deleting is never a click away from saving. A co-author

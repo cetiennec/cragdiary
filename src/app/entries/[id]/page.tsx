@@ -2,15 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import {
-  entryReadState,
-  getCoAuthors,
-  getEntry,
-  getSharedDay,
-  getUnlinkedDays,
-  mayRead,
-} from "@/lib/queries";
-import { relinkDay, unlinkDay } from "@/app/actions";
+import { entryReadState, getCoAuthors, getEntry, getSharedDay, mayRead } from "@/lib/queries";
 import { currentUser } from "@/lib/auth";
 import { formatDate, getDict } from "@/lib/i18n";
 import { renderMentions, renderMentionsAll } from "@/lib/mentions";
@@ -216,10 +208,6 @@ export default async function EntryPage({
   const isDemo = isDemoAccount(entry.username);
   // Someone who climbed this day with you and wrote their own version of it.
   const sharedDay = await getSharedDay(entry.id, user?.id ?? null);
-  // Pairs one of the two climbers has broken (migration 041), offered back to
-  // whoever may speak for either side — never to a passing reader.
-  const unlinked = user ? await getUnlinkedDays(entry.id, user.id) : [];
-  const mendable = unlinked.filter((other) => canEdit || other.yours);
 
   // A folded-away row: its value is still on the entry, it simply is not shown.
   const hidden = new Set(entry.hidden_fields ?? []);
@@ -447,26 +435,6 @@ export default async function EntryPage({
               ))}
             </p>
 
-            {/* Either climber may end the pairing, and it ends for both. */}
-            {sharedDay.some((other) => canEdit || other.yours) && (
-              <div className="shared-day-unlink">
-                {sharedDay
-                  .filter((other) => canEdit || other.yours)
-                  .map((other) => (
-                    <form key={`${other.id}-unlink`} action={unlinkDay}>
-                      <input type="hidden" name="entry_id" value={entry.id} />
-                      <input type="hidden" name="other_id" value={other.id} />
-                      <button type="submit" className="follower-remove">
-                        {sharedDay.length > 1
-                          ? `${t.entry.unlink} — ${other.display_name}`
-                          : t.entry.unlink}
-                      </button>
-                    </form>
-                  ))}
-                <p className="form-hint">{t.entry.unlinkHint}</p>
-              </div>
-            )}
-
             {/* Their photos, shown from their entry rather than copied into
                 this one — so they stay theirs, and cost nothing twice. */}
             {sharedDay
@@ -495,22 +463,6 @@ export default async function EntryPage({
                   </div>
                 </section>
               ))}
-          </div>
-        )}
-
-        {mendable.length > 0 && (
-          <div className="shared-day-block unlinked-days">
-            <p className="shared-day">{t.entry.unlinkedTitle}</p>
-            {mendable.map((other) => (
-              <form key={`${other.id}-relink`} action={relinkDay} className="unlinked-day-row">
-                <span>{t.entry.unlinkedFrom.replace("{user}", other.display_name)}</span>
-                <input type="hidden" name="entry_id" value={entry.id} />
-                <input type="hidden" name="other_id" value={other.id} />
-                <button type="submit" className="follower-accept">
-                  {t.entry.relink}
-                </button>
-              </form>
-            ))}
           </div>
         )}
 

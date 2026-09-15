@@ -255,7 +255,8 @@ const en = {
     photosBy: "{user}'s photos of the day",
     // Breaking the link is offered to either climber, and it holds for both.
     // The mention is untouched: it is their account of who they climbed with.
-    unlink: "Unlink these days",
+    linkedTitle: "Days linked to this one",
+    unlink: "Unlink",
     unlinkHint: "Their photos stop showing here, and yours there. Nobody is un-named.",
     unlinkedTitle: "Unlinked",
     unlinkedFrom: "{user}'s day is no longer linked to this one.",
@@ -1299,7 +1300,8 @@ const fr: Dict = {
     topo: "🔗 Topo",
     alsoWroteAbout: "A aussi raconté cette journée :",
     photosBy: "Les photos de {user}",
-    unlink: "Délier ces journées",
+    linkedTitle: "Journées liées à celle-ci",
+    unlink: "Délier",
     unlinkHint:
       "Leurs photos disparaissent d'ici, et les vôtres de là-bas. Personne n'est désidentifié.",
     unlinkedTitle: "Journées déliées",

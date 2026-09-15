@@ -4,9 +4,10 @@
 // someone named you on their day, their photographs sat at the foot of yours
 // and nothing on the page would take them off it.
 //
-// What must hold: either climber may break the pair; it breaks for both sides;
-// the mention itself is untouched; a passing reader is offered nothing; and the
-// link can be mended by whoever may speak for either day.
+// What must hold: either climber may break the pair, from the editor where
+// changes to a day belong; it breaks for both sides; the mention itself is
+// untouched; a passing reader is offered nothing; and the link can be mended
+// by whoever may speak for either day.
 //
 //   node scripts/unlink-check.mjs [baseUrl] [databaseUrl]
 import { chromium } from "playwright";
@@ -70,19 +71,28 @@ const clean = async (page) => (await page.innerText("body")).replace(/\s+/g, " "
 
 await X.goto(`${base}/entries/${mine}`);
 check("the two days start out linked", (await clean(X)).includes("Also wrote about this day"));
-check("and the author is offered the way out", (await X.locator(".shared-day-unlink button").count()) === 1);
+check(
+  "the day itself offers no buttons — it is what a reader sees",
+  (await X.locator(".linked-days").count()) === 0
+);
+await X.goto(`${base}/entries/${mine}/edit`);
+check(
+  "the way out is in the editor",
+  (await X.locator(".linked-day-row .follower-remove").count()) === 1
+);
 
 await anon.goto(`${base}/entries/${mine}`);
 check("a passing reader sees the link", (await clean(anon)).includes("Also wrote about this day"));
 check(
   "but is offered nothing to do about it",
-  (await anon.locator(".shared-day-unlink").count()) === 0
+  (await anon.locator(".linked-days").count()) === 0
 );
 
 // --- The climber at the other end breaks it, from their own page ---
-await Y.goto(`${base}/entries/${theirs}`);
-await Y.locator(".shared-day-unlink button").first().click();
+await Y.goto(`${base}/entries/${theirs}/edit`);
+await Y.locator(".linked-day-row .follower-remove").first().click();
 await Y.waitForLoadState("networkidle");
+await Y.goto(`${base}/entries/${theirs}`);
 check("their page drops the link", !(await clean(Y)).includes("Also wrote about this day"));
 
 await X.goto(`${base}/entries/${mine}`);
@@ -99,10 +109,12 @@ await anon.goto(`${base}/entries/${mine}`);
 const anonText = await clean(anon);
 check("the reader sees neither the link nor the breaking of it", !anonText.includes("Also wrote about this day") && !anonText.includes("Unlinked"));
 
-// --- Mending it ---
+// --- Mending it, from the same panel ---
+await X.goto(`${base}/entries/${mine}/edit`);
 check("the author is offered the link back", (await clean(X)).includes("Link them again"));
-await X.locator(".unlinked-day-row button").first().click();
+await X.locator(".linked-day-row.unlinked .follow-back").first().click();
 await X.waitForLoadState("networkidle");
+await X.goto(`${base}/entries/${mine}`);
 check("and taking it restores the pair", (await clean(X)).includes("Also wrote about this day"));
 await Y.goto(`${base}/entries/${theirs}`);
 check("on both sides again", (await clean(Y)).includes("Also wrote about this day"));
@@ -112,8 +124,11 @@ const zPage = await signUp(`uc${stamp}`);
 await zPage.goto(`${base}/entries/${mine}`);
 check(
   "a reader who climbed neither day is offered nothing",
-  (await zPage.locator(".shared-day-unlink").count()) === 0
+  (await zPage.locator(".linked-days").count()) === 0
 );
+// And the editor those buttons live in was never theirs to open.
+const forbidden = await zPage.goto(`${base}/entries/${mine}/edit`);
+check("nor the editor they hold", forbidden.status() === 404, forbidden.status());
 await db.query("delete from users where username = any($1)", [[me, mate, `uc${stamp}`]]);
 await db.end();
 await browser.close();

@@ -1458,7 +1458,9 @@ export async function unlinkDay(formData: FormData): Promise<void> {
   );
 
   revalidatePath(`/entries/${entryId}`);
+  revalidatePath(`/entries/${entryId}/edit`);
   revalidatePath(`/entries/${otherId}`);
+  revalidatePath(`/entries/${otherId}/edit`);
   revalidatePath(`/u/${user.username}`);
 }
 
@@ -1479,7 +1481,9 @@ export async function relinkDay(formData: FormData): Promise<void> {
   );
 
   revalidatePath(`/entries/${entryId}`);
+  revalidatePath(`/entries/${entryId}/edit`);
   revalidatePath(`/entries/${otherId}`);
+  revalidatePath(`/entries/${otherId}/edit`);
   revalidatePath(`/u/${user.username}`);
 }
 
