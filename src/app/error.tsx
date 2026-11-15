@@ -29,9 +29,9 @@ export default function ErrorPage({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  const lang = useSyncExternalStore(
+  const lang = useSyncExternalStore<keyof typeof COPY>(
     () => () => {},
-    (): keyof typeof COPY => (document.documentElement.lang === "fr" ? "fr" : "en"),
+    () => (document.documentElement.lang === "fr" ? "fr" : "en"),
     () => "en"
   );
   useEffect(() => {
