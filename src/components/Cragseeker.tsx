@@ -213,6 +213,38 @@ function GradeLadder({
           : `→ ${max}`;
   const inRange = (i: number) =>
     lo >= 0 && hi >= 0 ? i >= lo && i <= hi : i === lo || i === hi;
+
+  // One slide as well as two taps: press on a grade and drag, and the range
+  // follows the finger. The pointer is captured on the row, so the grade under
+  // it is read from the point rather than from which button fires; a press
+  // that never moved is a tap, and a keyboard "click" (detail 0) is handled
+  // by the button itself.
+  const drag = useRef<{ start: string; moved: boolean; last: string } | null>(null);
+  const gradeAt = (e: React.PointerEvent) =>
+    (document.elementFromPoint(e.clientX, e.clientY)?.closest("[data-grade]") as HTMLElement | null)
+      ?.dataset.grade ?? null;
+  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return;
+    const start = (e.target as HTMLElement).closest<HTMLElement>("[data-grade]")?.dataset.grade;
+    if (!start) return;
+    drag.current = { start, moved: false, last: start };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const d = drag.current;
+    if (!d) return;
+    const at = gradeAt(e);
+    if (!at || at === d.last) return;
+    d.moved = true;
+    d.last = at;
+    const [a, b] = [scale.indexOf(d.start), scale.indexOf(at)].sort((x, y) => x - y);
+    onChange({ min: scale[a], max: scale[b] });
+  };
+  const onPointerUp = () => {
+    const d = drag.current;
+    drag.current = null;
+    if (d && !d.moved) onChange(ladderStep(scale, min, max, d.start));
+  };
   return (
     <fieldset className="seeker-ladder" data-min={min} data-max={max}>
       <legend className="seeker-field-label">
@@ -222,7 +254,13 @@ function GradeLadder({
           {chosen}
         </strong>
       </legend>
-      <div className="seeker-ladder-steps">
+      <div
+        className="seeker-ladder-steps"
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={() => (drag.current = null)}
+      >
         <button
           type="button"
           className="seeker-ladder-any"
@@ -242,7 +280,10 @@ function GradeLadder({
             }
             aria-pressed={inRange(i)}
             aria-label={`${label} ${v}`}
-            onClick={() => onChange(ladderStep(scale, min, max, v))}
+            data-grade={v}
+            onClick={(e) => {
+              if (e.detail === 0) onChange(ladderStep(scale, min, max, v));
+            }}
           >
             {v}
           </button>

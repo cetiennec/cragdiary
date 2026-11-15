@@ -21,7 +21,16 @@ if (!process.env.DATABASE_URL) {
   process.exit(1);
 }
 
-const OVERPASS_API = "https://overpass-api.de/api/interpreter";
+// The main instance first, then its sibling machines, then an independent
+// one. October's and November's refreshes both died on a single 502 answered
+// within the second — a busy instance shedding load, not a broken query — so
+// one answer from one machine is not grounds to give up a month's refresh.
+const OVERPASS_APIS = [
+  "https://overpass-api.de/api/interpreter",
+  "https://lz4.overpass-api.de/api/interpreter",
+  "https://z.overpass-api.de/api/interpreter",
+  "https://overpass.private.coffee/api/interpreter",
+];
 const QUERY = `
 [out:json][timeout:180];
 (
@@ -31,20 +40,36 @@ out center;
 `;
 
 console.log("Querying Overpass worldwide — this takes a minute or two…");
-const res = await fetch(OVERPASS_API, {
-  method: "POST",
-  body: `data=${encodeURIComponent(QUERY)}`,
-  headers: {
-    "Content-Type": "application/x-www-form-urlencoded",
-    "User-Agent": "cragdiary.com climbing-gyms refresh (contact: cragdiary@pm.me)",
-  },
-  signal: AbortSignal.timeout(200_000),
-});
-if (!res.ok) {
-  console.error(`Overpass answered ${res.status}`);
+async function askOverpass() {
+  // Two rounds over every instance, with a pause that grows: 429/5xx and a
+  // dropped connection are the instance's mood, and the next one may differ.
+  for (let round = 0; round < 2; round++) {
+    for (const api of OVERPASS_APIS) {
+      try {
+        const res = await fetch(api, {
+          method: "POST",
+          body: `data=${encodeURIComponent(QUERY)}`,
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "User-Agent": "cragdiary.com climbing-gyms refresh (contact: cragdiary@pm.me)",
+          },
+          signal: AbortSignal.timeout(200_000),
+        });
+        if (res.ok) return await res.json();
+        console.error(`${new URL(api).host} answered ${res.status}`);
+      } catch (err) {
+        console.error(`${new URL(api).host} failed: ${err?.message ?? err}`);
+      }
+      await new Promise((r) => setTimeout(r, (round + 1) * 15_000));
+    }
+  }
+  return null;
+}
+const data = await askOverpass();
+if (!data) {
+  console.error("No Overpass instance answered — leaving climbing_gyms as it is.");
   process.exit(1);
 }
-const data = await res.json();
 
 // The Overpass filter above (`sport=climbing` on a sports_centre or a climbing
 // leisure area) is the widest net OSM offers, and it catches plenty that is not

@@ -28,8 +28,8 @@ jobs:
           --health-timeout 5s --health-retries 10
         ports: ["5432:5432"]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -47,7 +47,9 @@ jobs:
           DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
           DATABASE_SSL: "off"
       - run: npx tsc --noEmit
-      - run: npm run lint -- --max-warnings 5
+      # Zero: a warning that is tolerated is a warning nobody reads, and the
+      # allowance of five was down to one before anyone noticed.
+      - run: npm run lint -- --max-warnings 0
       # Advisory only: a CVE landing in a transitive dep must never fail an
       # unrelated PR at 2am. `--omit=dev` skips advisories in tooling
       # (Playwright, eslint…) that never ships to production.
@@ -67,8 +69,8 @@ jobs:
           --health-timeout 5s --health-retries 10
         ports: ["5432:5432"]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -96,8 +98,8 @@ jobs:
       DATABASE_SSL: "off"
       SESSION_SECRET: ci-journeys-only
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -137,8 +139,8 @@ jobs:
       DATABASE_SSL: "off"
       SESSION_SECRET: ci-c2c-only
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -188,8 +190,8 @@ jobs:
           --health-timeout 5s --health-retries 10
         ports: ["5432:5432"]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm

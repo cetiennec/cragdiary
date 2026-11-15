@@ -5215,6 +5215,11 @@ a {
   display: flex;
   flex-wrap: wrap;
   gap: 0.25rem;
+  /* A sideways drag along the row picks a range; an up-and-down one still
+     scrolls the page, which matters on a phone where the ladder is tall. */
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .seeker-ladder-step,

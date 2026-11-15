@@ -45,12 +45,11 @@ import {
 } from "@/lib/c2c-publish";
 
 // 1600 px keeps photos crisp in the fullscreen lightbox (incl. high-DPI
-// screens); quality 86 is visibly cleaner than 82 at a modest size cost. The
-// browser already resizes to the same bound before upload — keep the two in
-// step (see MAX_DIMENSION in lib/client-image.ts), since whichever is smaller
-// is the one that actually applies.
+// screens). The browser already resizes to the same bound before upload —
+// keep the two in step (see MAX_DIMENSION in lib/client-image.ts), since
+// whichever is smaller is the one that actually applies. Quality lives with
+// the AVIF settings below.
 const MAX_PHOTO_DIMENSION = 1600;
-const PHOTO_QUALITY = 86;
 
 // AVIF rather than WebP. Measured on a real photo at 1600 px: 545 kB against
 // WebP's 644 kB at matched quality, encoding in 202 ms against 360 ms — smaller

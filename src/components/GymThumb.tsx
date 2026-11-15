@@ -60,6 +60,9 @@ export default function GymThumb({
       const wrapped = ((x % 2 ** ZOOM) + 2 ** ZOOM) % 2 ** ZOOM;
       if (y < 0 || y >= 2 ** ZOOM) continue;
       tiles.push(
+        // Raster tiles straight from OpenStreetMap: already sized, already
+        // cached by their CDN, and not ours to run through next/image.
+        // eslint-disable-next-line @next/next/no-img-element
         <img
           key={`${x},${y}`}
           src={`https://tile.openstreetmap.org/${ZOOM}/${wrapped}/${y}.png`}
