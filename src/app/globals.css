@@ -3954,27 +3954,6 @@ a {
   margin-bottom: 0.5rem;
 }
 
-.seeker-beta {
-  text-decoration: none;
-  transition: background 0.15s ease, color 0.15s ease;
-  font-family: var(--font-geist-sans), sans-serif;
-  font-size: 0.7rem;
-  font-weight: 600;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-  color: var(--accent);
-  border: 1px solid var(--accent);
-  border-radius: 999px;
-  padding: 0.15rem 0.55rem;
-  vertical-align: middle;
-  white-space: nowrap;
-}
-
-.seeker-beta:hover {
-  background: var(--accent);
-  color: var(--accent-contrast);
-}
-
 .seeker-tagline {
   color: var(--text-muted);
   line-height: 1.55;
@@ -5189,6 +5168,77 @@ a {
 /* The activity's own settings get a little air above them. */
 .seeker-row-settings {
   padding-top: 0.2rem;
+}
+
+/* The folded-away filters, on a native <details>. The toggle reads as a
+   quiet link with a count, not a button; opened, the rows inside stack the
+   same way the ones above do. */
+.seeker-extra {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.seeker-extra-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  width: fit-content;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.seeker-extra-summary::-webkit-details-marker {
+  display: none;
+}
+
+.seeker-extra-summary::before {
+  content: "▸";
+  font-size: 0.7rem;
+  transition: transform 0.15s ease;
+}
+
+.seeker-extra[open] > .seeker-extra-summary::before {
+  transform: rotate(90deg);
+}
+
+.seeker-extra-summary:hover {
+  color: var(--text);
+}
+
+.seeker-extra-count {
+  font-size: 0.7rem;
+  line-height: 1;
+  padding: 0.2rem 0.45rem;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+
+/* On a phone the min→max pairs read as a table — label on the left, the pair
+   on the right — instead of a column of identical-looking stacks. */
+@media (max-width: 640px) {
+  .seeker-row-settings .seeker-field {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  .seeker-row-settings .seeker-field-label {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.3;
+  }
+
+  .seeker-row-settings .seeker-field-hint {
+    font-size: 0.72rem;
+  }
 }
 
 .seeker-row-end {

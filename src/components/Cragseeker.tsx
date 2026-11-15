@@ -22,6 +22,8 @@ import type { C2cSuggestion } from "@/app/api/c2c/search/route";
 import type { GeoSuggestion } from "@/app/api/geo/search/route";
 import {
   ACTIVITY_HEIGHT_PARAM,
+  ACTIVITY_MORE_RANGES,
+  ACTIVITY_PRIMARY_RANGE,
   ACTIVITY_RANGE_FILTERS,
   C2C_ACTIVITIES,
   C2C_EQUIPMENT_RATINGS,
@@ -267,7 +269,11 @@ export default function Cragseeker({
     [sources, activity]
   );
 
+  // One grade is asked up front, beside the activity; the rest fold away under
+  // "more filters" — a phone was showing six min→max pairs in a column.
   const activeRanges = ACTIVITY_RANGE_FILTERS[activity];
+  const primaryRange = ACTIVITY_PRIMARY_RANGE[activity];
+  const moreRanges = ACTIVITY_MORE_RANGES[activity];
   const heightLabel = ACTIVITY_HEIGHT_PARAM[activity] === "hdif" ? t.heightGain : t.height;
 
   // Multi-pitch vs single-pitch is a rock-climbing distinction; c2c doesn't
@@ -283,6 +289,18 @@ export default function Cragseeker({
   // Narrows what came back, as opposed to what was asked for: the search above
   // goes to the databases, this one only reads the answer.
   const [contains, setContains] = useState("");
+
+  // How many of the folded-away filters are set — shown on the toggle, so a
+  // search narrowed by something out of sight says so.
+  const moreCount =
+    moreRanges.filter((key) => ranges[key]?.min || ranges[key]?.max).length +
+    (height.min || height.max ? 1 : 0) +
+    (elevation.min || elevation.max ? 1 : 0) +
+    (facing.length > 0 ? 1 : 0) +
+    (contains ? 1 : 0);
+  // Folded by default, but a shared link that set one of these opens it: the
+  // person it was sent to should see what narrowed their results.
+  const [moreOpen, setMoreOpen] = useState(() => moreCount > 0);
 
   const [results, setResults] = useState<SeekerResult[]>([]);
   // c2c counts its bounding box; the circle keeps only ~π/4 of it, so this is an
@@ -976,12 +994,7 @@ export default function Cragseeker({
   return (
     <div className="page-container seeker">
       <header className="seeker-head">
-        <h1 className="page-title">
-          {t.title}{" "}
-          <a href="/feedback" className="seeker-beta">
-            {t.beta}
-          </a>
-        </h1>
+        <h1 className="page-title">{t.title}</h1>
         <p className="seeker-tagline">{t.tagline}</p>
       </header>
 
@@ -1054,6 +1067,17 @@ export default function Cragseeker({
               ))}
             </select>
           </label>
+
+          <RangeSelect
+            label={t.ranges[primaryRange]}
+            hint={t.rangeHints[primaryRange]}
+            scale={C2C_RANGE_SCALES[primaryRange]}
+            min={ranges[primaryRange]?.min ?? ""}
+            max={ranges[primaryRange]?.max ?? ""}
+            onMin={(v) => setRange(primaryRange, "min", v)}
+            onMax={(v) => setRange(primaryRange, "max", v)}
+            t={t}
+          />
 
           {showOutdoorType && (
             <fieldset className="seeker-facing seeker-styles">
@@ -1230,9 +1254,21 @@ export default function Cragseeker({
           </label>
         </div>
 
-        {/* 4. The settings that belong to the chosen activity. */}
-        <div className="seeker-row seeker-row-settings">
-          {activeRanges.map((key) => (
+        {/* 4. Everything else, folded away: the activity's other grades, the
+            size of the route, and the narrowing of what came back. The toggle
+            counts what is set inside, so nothing filters from out of sight. */}
+        <details
+          className="seeker-extra"
+          open={moreOpen}
+          onToggle={(e) => setMoreOpen(e.currentTarget.open)}
+        >
+          <summary className="seeker-extra-summary">
+            {t.moreFilters}
+            {moreCount > 0 && <span className="seeker-extra-count">{moreCount}</span>}
+          </summary>
+
+          <div className="seeker-row seeker-row-settings">
+          {moreRanges.map((key) => (
             <RangeSelect
               key={key}
               label={t.ranges[key]}
@@ -1328,6 +1364,7 @@ export default function Cragseeker({
             ))}
           </fieldset>
         </div>
+        </details>
 
         {/* 6. The search-wide actions, anchored bottom right. */}
         <div className="seeker-row seeker-row-end">

@@ -329,6 +329,26 @@ export const ACTIVITY_RANGE_FILTERS: Record<C2cActivity, readonly C2cRangeKey[]>
   hiking: ["hrat"],
 };
 
+// The one grade worth asking for up front — the rest wait behind "more
+// filters", so a phone shows one min→max pair rather than six.
+export const ACTIVITY_PRIMARY_RANGE: Record<C2cActivity, C2cRangeKey> = {
+  rock_climbing: "frat",
+  mountain_climbing: "grat",
+  snow_ice_mixed: "grat",
+  ice_climbing: "grat",
+  via_ferrata: "krat",
+  skitouring: "srat",
+  hiking: "hrat",
+};
+
+// The rest of each activity's grades — what sits behind "more filters".
+export const ACTIVITY_MORE_RANGES = {} as Record<C2cActivity, readonly C2cRangeKey[]>;
+for (const activity of Object.keys(ACTIVITY_RANGE_FILTERS) as C2cActivity[]) {
+  ACTIVITY_MORE_RANGES[activity] = ACTIVITY_RANGE_FILTERS[activity].filter(
+    (key) => key !== ACTIVITY_PRIMARY_RANGE[activity]
+  );
+}
+
 export const C2C_ORIENTATIONS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"] as const;
 
 // `climbing_outdoor_type` — how the route is climbed, not how hard it is.

@@ -781,7 +781,7 @@ const en = {
     title: "Cragseeker",
     tagline:
       "Find your next route around a place or a pin on the map, then narrow it down by activity, grade and orientation. Camptocamp covers the Alps and beyond; OpenBeta covers the United States.",
-    beta: "Beta — click to send feedback",
+    moreFilters: "More filters",
     where: "Where",
     placePlaceholder: "A crag, a summit, a town…",
     whereHint: "A place, a crag or a street address — anything OpenStreetMap knows.",
@@ -1834,7 +1834,7 @@ const fr: Dict = {
     title: "Cragseeker",
     tagline:
       "Trouvez votre prochaine voie autour d'un lieu ou d'un point posé sur la carte, puis affinez par activité, cotation et orientation. Camptocamp couvre les Alpes et au-delà, OpenBeta les États-Unis.",
-    beta: "Bêta — cliquer pour faire des retours",
+    moreFilters: "Plus de filtres",
     where: "Où",
     placePlaceholder: "Une falaise, un sommet, une ville…",
     whereHint: "Un lieu, une falaise ou une adresse postale — tout ce que connaît OpenStreetMap.",
