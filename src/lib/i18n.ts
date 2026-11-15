@@ -986,6 +986,12 @@ const en = {
   // What Google prints in a result, and what the site says to someone who
   // arrives not knowing what it is. Both languages, because the metadata
   // follows the reader's locale like everything else.
+  notFound: {
+    title: "No such page",
+    text: "The address may be mistyped, or the page may have gone. Nothing of yours is lost.",
+    feed: "Back to the feed",
+    seeker: "Find a route",
+  },
   meta: {
     title: "Cragdiary — a free climbing logbook",
     description:
@@ -2029,6 +2035,12 @@ const fr: Dict = {
       bloc: "bloc",
       psicobloc: "psicobloc",
     } as Record<string, string>,
+  },
+  notFound: {
+    title: "Cette page n'existe pas",
+    text: "L'adresse est peut-être mal tapée, ou la page a disparu. Rien de ce qui est à vous n'est perdu.",
+    feed: "Retour au fil",
+    seeker: "Chercher une voie",
   },
   meta: {
     title: "Cragdiary — carnet de course et de grimpe en ligne",

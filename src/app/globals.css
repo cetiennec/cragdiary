@@ -3944,6 +3944,22 @@ a {
   }
 }
 
+/* ---- Missing page, broken page ------------------------------------------ */
+
+.not-found-text {
+  color: var(--text-muted);
+  line-height: 1.55;
+  max-width: 36rem;
+}
+
+.not-found-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 1.2rem;
+}
+
 /* ---- Cragseeker: route search over the camptocamp database --------------- */
 
 .seeker-head {

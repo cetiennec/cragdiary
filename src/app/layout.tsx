@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Fraunces } from "next/font/google";
 import Link from "next/link";
+import FeedbackFab from "@/components/FeedbackFab";
 import "./globals.css";
 import { currentUser } from "@/lib/auth";
 import { isAdmin } from "@/lib/admin-stats";
@@ -139,9 +140,7 @@ export default async function RootLayout({
           </div>
         </header>
         <main className="flex-1">{children}</main>
-        <Link href="/feedback" className="feedback-fab" title={t.feedback.title}>
-          💬 {t.feedback.linkLabel}
-        </Link>
+        <FeedbackFab label={t.feedback.linkLabel} title={t.feedback.title} />
         <footer className="site-footer">
           <p className="footer-tagline">{t.footer}</p>
           <p className="footer-links">
