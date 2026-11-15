@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getAllUsers, getCordees } from "@/lib/queries";
 import { currentUser } from "@/lib/auth";
-import { getDict } from "@/lib/i18n";
+import { getDict, titled } from "@/lib/i18n";
 
 type Row = { username: string; display_name: string; has_avatar: boolean };
 
@@ -17,6 +17,8 @@ function Avatar({ user }: { user: Row }) {
     </span>
   );
 }
+
+export const generateMetadata = titled((t) => t.climbers.title);
 
 export default async function ClimbersPage() {
   const [users, user, { t }] = await Promise.all([getAllUsers(), currentUser(), getDict()]);

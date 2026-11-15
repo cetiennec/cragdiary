@@ -135,7 +135,7 @@ export async function generateMetadata({
     bits || entry.notes?.slice(0, 140) || "A climbing day on Cragdiary.";
 
   return {
-    title: `${entry.crag} — Cragdiary`,
+    title: entry.crag,
     description,
     // Only a public day belongs in a search index. The other two are reached
     // by a link someone was handed, or by following the person who wrote it.

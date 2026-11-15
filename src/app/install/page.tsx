@@ -1,4 +1,11 @@
+import type { Metadata } from "next";
 import { getDict } from "@/lib/i18n";
+
+// "Cragdiary on your phone" names the site already, so no suffix here.
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getDict();
+  return { title: { absolute: t.install.title } };
+}
 
 export default async function InstallPage() {
   const { t } = await getDict();

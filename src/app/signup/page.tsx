@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { signup } from "@/app/actions";
-import { getDict } from "@/lib/i18n";
+import { getDict, titled } from "@/lib/i18n";
 import PasswordField from "@/components/PasswordField";
+
+export const generateMetadata = titled((t) => t.signup.title);
 
 export default async function SignupPage({
   searchParams,

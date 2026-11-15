@@ -1,5 +1,7 @@
 import { resetPassword } from "@/app/actions";
-import { getDict } from "@/lib/i18n";
+import { getDict, titled } from "@/lib/i18n";
+
+export const generateMetadata = titled((t) => t.reset.title);
 
 export default async function ResetPage({
   params,

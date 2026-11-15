@@ -24,7 +24,10 @@ export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getDict();
   return {
     metadataBase: new URL(process.env.APP_URL ?? "https://cragdiary.com"),
-    title: t.meta.title,
+    // Pages set their own title and get the site's name after it, so a tab,
+    // a bookmark and the browser history say which page they hold rather than
+    // the same tagline for every one. A page that sets none keeps the tagline.
+    title: { default: t.meta.title, template: "%s — Cragdiary" },
     description: t.meta.description,
     openGraph: {
       siteName: "Cragdiary",

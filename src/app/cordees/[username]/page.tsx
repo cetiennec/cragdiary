@@ -1,13 +1,15 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
-import { getDict } from "@/lib/i18n";
+import { getDict, titled } from "@/lib/i18n";
 import { getDaysWith, getUserByUsername } from "@/lib/queries";
 import EntryCard from "@/components/EntryCard";
 
 // The days two climbers spent together: one page per rope partner, reached
 // from the climbers list. A day counts when either of them wrote it up naming
 // the other — so it works even when only one of you keeps a journal.
+export const generateMetadata = titled((t) => t.cordees.title);
+
 export default async function DaysWithPage({
   params,
 }: {

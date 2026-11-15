@@ -1,13 +1,15 @@
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
 import { getUserByUsername } from "@/lib/queries";
-import { getDict } from "@/lib/i18n";
+import { getDict, titled } from "@/lib/i18n";
 import ImportTool from "@/components/ImportTool";
 import C2cAccountImport from "@/components/C2cAccountImport";
 
 // Bulk c2c import (server action per outing) fetches + processes photos, which
 // can take a while — allow up to the platform max instead of the ~10s default.
 export const maxDuration = 60;
+
+export const generateMetadata = titled((t) => t.importer.title);
 
 export default async function ImportPage() {
   const user = await currentUser();

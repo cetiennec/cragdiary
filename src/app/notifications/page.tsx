@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
-import { getDict } from "@/lib/i18n";
+import { getDict, titled } from "@/lib/i18n";
 import { getNotifications, type Notification } from "@/lib/notifications";
 import {
   entriesGone,
@@ -50,6 +50,8 @@ function target(n: Notification, selfUsername: string): string {
       return "/";
   }
 }
+
+export const generateMetadata = titled((t) => t.notifications.title);
 
 export default async function NotificationsPage() {
   const user = await currentUser();

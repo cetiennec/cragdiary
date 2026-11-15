@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { login } from "@/app/actions";
-import { getDict } from "@/lib/i18n";
+import { getDict, titled } from "@/lib/i18n";
+
+export const generateMetadata = titled((t) => t.login.title);
 
 export default async function LoginPage({
   searchParams,

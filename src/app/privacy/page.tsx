@@ -1,4 +1,6 @@
-import { getDict } from "@/lib/i18n";
+import { getDict, titled } from "@/lib/i18n";
+
+export const generateMetadata = titled((t) => t.privacy.title);
 
 export default async function PrivacyPage() {
   const { t } = await getDict();

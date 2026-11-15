@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getDict } from "@/lib/i18n";
+import { getDict, titled } from "@/lib/i18n";
 import { verifyUnsubscribe } from "@/lib/email-notifications";
 import { confirmUnsubscribe } from "@/app/actions";
 
@@ -9,6 +9,8 @@ import { confirmUnsubscribe } from "@/app/actions";
  * it acts: mail clients and security scanners follow links in emails on their
  * own, and a GET that switched a setting off would be switched off by robots.
  */
+export const generateMetadata = titled((t) => t.unsubscribe.title);
+
 export default async function UnsubscribePage({
   searchParams,
 }: {

@@ -1,5 +1,7 @@
-import { getDict } from "@/lib/i18n";
+import { getDict, titled } from "@/lib/i18n";
 import FeedbackForm from "@/components/FeedbackForm";
+
+export const generateMetadata = titled((t) => t.feedback.title);
 
 export default async function FeedbackPage({
   searchParams,

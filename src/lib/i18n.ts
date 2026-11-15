@@ -1,4 +1,5 @@
 import { cookies, headers } from "next/headers";
+import type { Metadata } from "next";
 
 export type Locale = "en" | "fr";
 
@@ -2108,6 +2109,16 @@ export async function getLocale(): Promise<Locale> {
   const headerStore = await headers();
   const acceptLanguage = headerStore.get("accept-language") ?? "";
   return acceptLanguage.toLowerCase().startsWith("fr") ? "fr" : "en";
+}
+
+// A page's `generateMetadata`, for the common case of a title that is one of
+// the page's own strings — in the page's language, with the site's name
+// appended by the layout's template.
+export function titled(pick: (t: Dict) => string): () => Promise<Metadata> {
+  return async () => {
+    const { t } = await getDict();
+    return { title: pick(t) };
+  };
 }
 
 export async function getDict(): Promise<{ locale: Locale; t: Dict }> {

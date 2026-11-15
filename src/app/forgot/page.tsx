@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { requestPasswordReset } from "@/app/actions";
-import { getDict } from "@/lib/i18n";
+import { getDict, titled } from "@/lib/i18n";
+
+export const generateMetadata = titled((t) => t.reset.forgotTitle);
 
 export default async function ForgotPage({
   searchParams,

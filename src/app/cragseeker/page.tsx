@@ -5,7 +5,7 @@ import { getClimbedRouteIds, getEditableWishlists } from "@/lib/queries";
 import Cragseeker, { type SeekerParams } from "@/components/Cragseeker";
 
 export const metadata: Metadata = {
-  title: "Cragseeker — Cragdiary",
+  title: "Cragseeker",
   description:
     "Search the Camptocamp route database around a place or a pin on the map, by activity, grade and orientation.",
 };

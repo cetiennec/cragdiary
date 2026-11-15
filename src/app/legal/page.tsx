@@ -1,4 +1,6 @@
-import { getDict } from "@/lib/i18n";
+import { getDict, titled } from "@/lib/i18n";
+
+export const generateMetadata = titled((t) => t.legal.title);
 
 export default async function LegalPage() {
   const { t } = await getDict();

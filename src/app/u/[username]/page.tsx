@@ -95,7 +95,7 @@ export async function generateMetadata({
   }
 
   return {
-    title: `${profile.display_name} — Cragdiary`,
+    title: profile.display_name,
     description,
     // A by-link journal is meant to be sent to someone, so the link gets its
     // preview — but /u/<username> is an address a crawler can guess, which is
