@@ -5170,6 +5170,83 @@ a {
   padding-top: 0.2rem;
 }
 
+/* The grade asked up front, as a ladder of taps: the first sets the low end,
+   the second the high end, the chosen stretch lights up between them. Its
+   steps are smaller than the chips above, since there are thirty-odd. */
+.seeker-ladder {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  flex: 1 1 100%;
+  border: none;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+
+.seeker-ladder legend {
+  padding: 0;
+  margin-bottom: 0.35rem;
+}
+
+.seeker-ladder-chosen {
+  margin-left: 0.5rem;
+  color: var(--text);
+  font-weight: 700;
+}
+
+.seeker-ladder-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.seeker-ladder-step,
+.seeker-ladder-any {
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 600;
+  line-height: 1;
+  min-width: 2.2rem;
+  padding: 0.38rem 0.3rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.seeker-ladder-any {
+  padding-inline: 0.6rem;
+}
+
+.seeker-ladder-step:hover,
+.seeker-ladder-any:hover {
+  border-color: var(--accent);
+}
+
+/* Inside the range, a soft wash; at its two ends, the full colour, so the
+   stretch reads as a bar with its handles. */
+.seeker-ladder-step.on,
+.seeker-ladder-any[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  color: var(--text);
+}
+
+.seeker-ladder-step.end {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-contrast);
+}
+
+.seeker-ladder-step:focus-visible,
+.seeker-ladder-any:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 /* The folded-away filters, on a native <details>. The toggle reads as a
    quiet link with a count, not a button; opened, the rows inside stack the
    same way the ones above do. */

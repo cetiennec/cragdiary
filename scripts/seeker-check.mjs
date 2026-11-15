@@ -31,8 +31,8 @@ console.log("place search:", await status(), "-", await count(), "cards");
 await page.screenshot({ path: `${out}/seeker-1-place.png`, fullPage: true });
 
 // 2. Narrow by free grade and orientation.
-await page.getByLabel(/(Free grade|Cotation libre) (min|min)/).selectOption("6a");
-await page.getByLabel(/(Free grade|Cotation libre) (max|max)/).selectOption("6c");
+await page.getByRole("button", { name: /^(Free grade|Cotation libre) 6a$/ }).click();
+await page.getByRole("button", { name: /^(Free grade|Cotation libre) 6c$/ }).click();
 await page.locator(".seeker-chip", { hasText: /^S$/ }).click();
 await page.waitForTimeout(2500);
 console.log("filtered:", await status(), "-", await count(), "cards");

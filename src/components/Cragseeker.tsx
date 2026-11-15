@@ -154,6 +154,104 @@ function RangeSelect({
   );
 }
 
+// The next range after tapping `pick` on a ladder. The first tap sets the low
+// end, the second the high end; a tap inside a range narrows it to that one
+// grade, a tap outside stretches the nearer end; tapping the only grade set
+// clears it. Positions, not strings, so "6a" < "6a+" compares the way the
+// scale is ordered.
+function ladderStep(
+  scale: readonly string[],
+  min: string,
+  max: string,
+  pick: string
+): { min: string; max: string } {
+  const lo = scale.indexOf(min);
+  const hi = scale.indexOf(max);
+  const at = scale.indexOf(pick);
+  if (lo < 0 && hi < 0) return { min: pick, max: "" };
+  if (lo < 0 || hi < 0) {
+    const only = lo < 0 ? hi : lo;
+    if (at === only) return { min: "", max: "" };
+    return at < only ? { min: pick, max: scale[only] } : { min: scale[only], max: pick };
+  }
+  if (lo === hi && at === lo) return { min: "", max: "" };
+  if (at < lo) return { min: pick, max };
+  if (at > hi) return { min, max: pick };
+  return { min: pick, max: pick };
+}
+
+// The scale laid out to tap on, for the one grade asked up front — two taps
+// and no list to scroll, where a pair of dropdowns took four and a scroll.
+function GradeLadder({
+  label,
+  hint,
+  scale,
+  min,
+  max,
+  onChange,
+  t,
+}: {
+  label: string;
+  hint?: string;
+  scale: readonly string[];
+  min: string;
+  max: string;
+  onChange: (next: { min: string; max: string }) => void;
+  t: Dict["seeker"];
+}) {
+  const lo = scale.indexOf(min);
+  const hi = scale.indexOf(max);
+  const chosen =
+    lo < 0 && hi < 0
+      ? t.anyGrade
+      : lo >= 0 && hi >= 0
+        ? lo === hi
+          ? min
+          : `${min} → ${max}`
+        : lo >= 0
+          ? `${min} →`
+          : `→ ${max}`;
+  const inRange = (i: number) =>
+    lo >= 0 && hi >= 0 ? i >= lo && i <= hi : i === lo || i === hi;
+  return (
+    <fieldset className="seeker-ladder" data-min={min} data-max={max}>
+      <legend className="seeker-field-label">
+        {label}
+        {hint && <em className="seeker-field-hint"> {hint}</em>}
+        <strong className="seeker-ladder-chosen" aria-live="polite">
+          {chosen}
+        </strong>
+      </legend>
+      <div className="seeker-ladder-steps">
+        <button
+          type="button"
+          className="seeker-ladder-any"
+          aria-pressed={lo < 0 && hi < 0}
+          onClick={() => onChange({ min: "", max: "" })}
+        >
+          {t.anyGrade}
+        </button>
+        {scale.map((v, i) => (
+          <button
+            key={v}
+            type="button"
+            className={
+              "seeker-ladder-step" +
+              (inRange(i) ? " on" : "") +
+              (i === lo || i === hi ? " end" : "")
+            }
+            aria-pressed={inRange(i)}
+            aria-label={`${label} ${v}`}
+            onClick={() => onChange(ladderStep(scale, min, max, v))}
+          >
+            {v}
+          </button>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
+
 // A shared link carries the whole search, so state starts from the query
 // string. Anything unrecognised falls back to the default rather than failing.
 export type SeekerParams = Record<string, string | undefined>;
@@ -1068,14 +1166,13 @@ export default function Cragseeker({
             </select>
           </label>
 
-          <RangeSelect
+          <GradeLadder
             label={t.ranges[primaryRange]}
             hint={t.rangeHints[primaryRange]}
             scale={C2C_RANGE_SCALES[primaryRange]}
             min={ranges[primaryRange]?.min ?? ""}
             max={ranges[primaryRange]?.max ?? ""}
-            onMin={(v) => setRange(primaryRange, "min", v)}
-            onMax={(v) => setRange(primaryRange, "max", v)}
+            onChange={(next) => setRanges((prev) => ({ ...prev, [primaryRange]: next }))}
             t={t}
           />
 
