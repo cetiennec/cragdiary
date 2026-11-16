@@ -13,6 +13,7 @@
 // table is replaced wholesale each run — a closed gym just stops being
 // written, nothing tracks deletions separately.
 import { Client } from "pg";
+import { repairAll } from "./gym-links.mjs";
 
 const apply = process.argv.includes("--apply");
 
@@ -182,6 +183,19 @@ console.log(
   `Parsed ${deduped.length} gyms from ${data.elements?.length ?? 0} raw elements ` +
     `(${outdoors} dropped as outdoor crags, rope courses or via ferratas, ` +
     `${siteless} with no website, ${duplicates} as duplicates of a gym already kept).`
+);
+
+// OSM's links drift: pages move, subdomains go, gyms close. Each one is
+// checked and, if dead, repaired from the site's own home page (see
+// gym-links.mjs). A gym whose site has nothing behind it at all goes, by the
+// same rule that keeps siteless ones out.
+console.log("Checking gym websites…");
+const linkCounts = await repairAll(deduped);
+const before = deduped.length;
+for (let i = deduped.length - 1; i >= 0; i--) if (!deduped[i].website) deduped.splice(i, 1);
+console.log(
+  `Websites: ${linkCounts.ok} fine, ${linkCounts.moved} moved to the gym's new page, ` +
+    `${linkCounts.home} sent to the site's home page, ${before - deduped.length} gyms dropped with a dead site.`
 );
 
 if (!apply) {
