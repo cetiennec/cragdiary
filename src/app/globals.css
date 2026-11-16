@@ -8537,18 +8537,31 @@ label:has(input:placeholder-shown) + .form-hint.form-warn {
   font-size: 0.9rem;
 }
 
+/* Light tints, so the forecast reads without outweighing the route. */
 .wish-wx {
-  font-size: 0.72rem;
+  --wx: var(--text-muted);
+  font-size: 0.68rem;
   font-weight: 600;
   white-space: nowrap;
-  padding: 0.12rem 0.55rem;
+  padding: 0.05rem 0.45rem;
   border-radius: 999px;
-  color: var(--text-muted);
+  color: var(--wx);
+  background: color-mix(in srgb, var(--wx) 13%, transparent);
 }
 
-.wish-wx.is-dry { background: #4d7c3a; color: #fff; }
-.wish-wx.is-unsure { background: #b7832a; color: #fff; }
-.wish-wx.is-wet { background: #4a6e9c; color: #fff; }
+.wish-wx.is-dry { --wx: #4d7c3a; }
+.wish-wx.is-unsure { --wx: #a8761f; }
+.wish-wx.is-wet { --wx: #4a6e9c; }
+
+.wish-line-list {
+  align-self: flex-start;
+  margin-top: 0.15rem;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0 0.45rem;
+}
 
 @media (max-width: 760px) {
   .profile2-stats {
@@ -8591,4 +8604,17 @@ label:has(input:placeholder-shown) + .form-hint.form-warn {
   .wish-line .wish-actions {
     margin-left: auto;
   }
+}
+
+/* A starred day: gold stars straight on the cover, no pill, as drawn in the
+   card prototypes. The shadow keeps them readable on a bright photo. */
+.cover-stars.is-gold {
+  background: none;
+  border: 0;
+  backdrop-filter: none;
+  padding: 0;
+  font-size: 1rem;
+  letter-spacing: 0.04em;
+  color: #e3a92b;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
 }

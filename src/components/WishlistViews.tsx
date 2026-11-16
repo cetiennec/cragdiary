@@ -21,6 +21,8 @@ export type ViewWish = {
   note: string | null;
   point: { lat: number; lon: number } | null;
   parking: { lat: number; lon: number; name: string | null } | null;
+  /** The list it is on, said in the views that mix lists. */
+  list: string;
   /** The viewer may mark it done (owner or member of its list). */
   canEdit: boolean;
 };
@@ -121,6 +123,8 @@ export default function WishlistViews({
     return days.map((d) => (f ? tone(f, d) : null));
   };
 
+  const manyLists = new Set(wishes.map((w) => w.list)).size > 1;
+
   const row = (w: ViewWish, badges?: ReactNode) => (
     <li key={w.id} className="wish-row wish-line">
       <span className="wish-line-grade">{w.grade ?? "·"}</span>
@@ -138,6 +142,7 @@ export default function WishlistViews({
           {[w.area, w.height ? `${w.height} m` : null].filter(Boolean).join(" · ")}
           {w.note && <em className="wish-line-note"> « {w.note} »</em>}
         </span>
+        {manyLists && <span className="wish-line-list">{w.list}</span>}
       </div>
       <div className="wish-line-icons">
         {badges}

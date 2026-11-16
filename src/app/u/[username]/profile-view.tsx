@@ -122,9 +122,9 @@ export async function generateMetadata({
 
 /**
  * A journal, read by whoever is at its link. The same page serves /u/<name>
- * and /u/<name>/v2: the second lays it out anew (stats over a year, a menu that
- * stays at the top, the partners, the wishlist three ways) while every tool an
- * owner has stays the same in both.
+ * (the v2 layout: stats over a year, a menu that stays at the top, the
+ * partners, the wishlist three ways) and /u/<name>/classic, the layout before
+ * it. Every tool an owner has is the same in both.
  */
 export async function ProfileView({
   params,
@@ -172,7 +172,7 @@ export async function ProfileView({
   if (!profile) notFound();
   // One spelling per journal: /u/Etienne and /u/etienne find the same account,
   // and the address bar settles on the one its owner chose.
-  const base = v2 ? `/u/${profile.username}/v2` : `/u/${profile.username}`;
+  const base = v2 ? `/u/${profile.username}` : `/u/${profile.username}/classic`;
   if (profile.username !== username) redirect(base);
 
   const isSelf = user?.id === profile.id;
@@ -424,6 +424,7 @@ export async function ProfileView({
         w.parking_lat != null && w.parking_lon != null
           ? { lat: w.parking_lat, lon: w.parking_lon, name: w.parking_name }
           : null,
+      list: list.name,
       canEdit: list.can_edit,
     }))
   );
@@ -717,7 +718,7 @@ export async function ProfileView({
               {t.profileV2.tabPartners} <span>{partnerCounts.size}</span>
             </a>
           )}
-          <Link href={`/u/${profile.username}`} className="profile2-classic">
+          <Link href={`/u/${profile.username}/classic`} className="profile2-classic">
             {t.profileV2.classic}
           </Link>
         </nav>

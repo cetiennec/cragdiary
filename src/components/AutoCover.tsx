@@ -134,8 +134,8 @@ export function CoverStars({ entry, locale }: { entry: EntryWithAuthor; locale: 
   if (!entry.star_level || entry.star_level < 1) return null;
   const label = STAR_LABELS[locale][entry.star_level - 1];
   return (
-    <span className="cover-stars" title={label} aria-label={label}>
-      {"⭐".repeat(entry.star_level)}
+    <span className="cover-stars is-gold" title={label} aria-label={label}>
+      {"★".repeat(entry.star_level)}
     </span>
   );
 }
