@@ -453,6 +453,67 @@ export async function ProfileView({
     </>
   );
 
+  // The owner's own tools: gear, settings, followers.
+  const ownerTools = (
+    <>
+      {/* Your own gear, kept beside your own journal — a link rather than a
+          panel, the register being a page of its own. */}
+      {isSelf && !v2 && (
+        <p className="profile-gear-link">
+          <Link href={`/u/${profile.username}/gear`}>🔩 {t.gear.title}</Link>
+        </p>
+      )}
+
+      {isSelf && (
+        <details className="profile-settings">
+          <summary>{t.profile.settingsTitle}</summary>
+          <ProfileSettingsForm
+            bio={profile.bio ?? ""}
+            email={profile.email ?? ""}
+            website={profile.website ?? ""}
+            c2cProfileId={profile.c2c_profile_id}
+            hasAvatar={profile.has_avatar}
+            hasCover={profile.has_cover}
+            pinSuggestions={pinSuggestions}
+            t={{
+              bioPinsHint: t.profile.bioPinsHint,
+              bioLabel: t.profile.bioLabel,
+              avatarLabel: t.profile.avatarLabel,
+              avatarRemove: t.profile.avatarRemove,
+              settingsSave: t.profile.settingsSave,
+              emailLabel: t.profile.emailLabel,
+              emailHint: t.profile.emailHint,
+              websiteLabel: t.profile.websiteLabel,
+              websiteHint: t.profile.websiteHint,
+              c2cAccountFieldLabel: t.profile.c2cAccountFieldLabel,
+              c2cAccountFieldHint: t.profile.c2cAccountFieldHint,
+              coverLabel: t.profile.coverLabel,
+              coverRemove: t.profile.coverRemove,
+              dangerTitle: t.profile.dangerTitle,
+              deleteLabel: t.profile.deleteLabel,
+              exportLabel: t.exportLabel,
+              exportCarnetLabel: t.exportCarnetLabel,
+              importLabel: t.importLabel,
+              importC2cAccountLabel: t.importC2cAccountLabel,
+              deleteConfirmPassword: t.profile.deleteConfirmPassword,
+              deleteButton: t.profile.deleteButton,
+            }}
+          />
+        </details>
+      )}
+
+      {isSelf && (
+        <FollowersPanel
+          followers={followers}
+          requests={followRequests}
+          following={following}
+          approveFollowers={profile.approve_followers}
+          t={t.follow}
+        />
+      )}
+    </>
+  );
+
   return (
     <>
       {isSelf && <WelcomeTour t={t.welcome} force={sp.tour === "1"} />}
@@ -572,60 +633,28 @@ export async function ProfileView({
         )}
       </header>
 
-      {/* Your own gear, kept beside your own journal — a link rather than a
-          panel, the register being a page of its own. */}
-      {isSelf && (
-        <p className="profile-gear-link">
-          <Link href={`/u/${profile.username}/gear`}>🔩 {t.gear.title}</Link>
-        </p>
-      )}
-
-      {isSelf && (
-        <details className="profile-settings">
-          <summary>{t.profile.settingsTitle}</summary>
-          <ProfileSettingsForm
-            bio={profile.bio ?? ""}
-            email={profile.email ?? ""}
-            website={profile.website ?? ""}
-            c2cProfileId={profile.c2c_profile_id}
-            hasAvatar={profile.has_avatar}
-            hasCover={profile.has_cover}
-            pinSuggestions={pinSuggestions}
-            t={{
-              bioPinsHint: t.profile.bioPinsHint,
-              bioLabel: t.profile.bioLabel,
-              avatarLabel: t.profile.avatarLabel,
-              avatarRemove: t.profile.avatarRemove,
-              settingsSave: t.profile.settingsSave,
-              emailLabel: t.profile.emailLabel,
-              emailHint: t.profile.emailHint,
-              websiteLabel: t.profile.websiteLabel,
-              websiteHint: t.profile.websiteHint,
-              c2cAccountFieldLabel: t.profile.c2cAccountFieldLabel,
-              c2cAccountFieldHint: t.profile.c2cAccountFieldHint,
-              coverLabel: t.profile.coverLabel,
-              coverRemove: t.profile.coverRemove,
-              dangerTitle: t.profile.dangerTitle,
-              deleteLabel: t.profile.deleteLabel,
-              exportLabel: t.exportLabel,
-              exportCarnetLabel: t.exportCarnetLabel,
-              importLabel: t.importLabel,
-              importC2cAccountLabel: t.importC2cAccountLabel,
-              deleteConfirmPassword: t.profile.deleteConfirmPassword,
-              deleteButton: t.profile.deleteButton,
-            }}
-          />
+      {v2 && isSelf ? (
+        // Everything only the owner uses, in one place: visitors see a clean
+        // page, and the owner one button. It opens by itself when someone is
+        // waiting to follow.
+        <details className="profile2-manage" open={followRequests.length > 0}>
+          <summary>
+            <span aria-hidden>⚙︎</span> {t.profileV2.manage}
+            {followRequests.length > 0 && (
+              <span className="profile2-manage-count">{followRequests.length}</span>
+            )}
+          </summary>
+          <div className="profile2-manage-links">
+            <Link href={`/u/${profile.username}/gear`}>🔩 {t.gear.title}</Link>
+            <Link href="/import">⬆︎ {t.importLabel}</Link>
+            <a href="/api/export">📦 {t.exportLabel}</a>
+            <a href="/api/export/csv">📊 {t.exportCsvLabel}</a>
+            <a href="/api/carnet">📕 {t.exportCarnetLabel}</a>
+          </div>
+          {ownerTools}
         </details>
-      )}
-
-      {isSelf && (
-        <FollowersPanel
-          followers={followers}
-          requests={followRequests}
-          following={following}
-          approveFollowers={profile.approve_followers}
-          t={t.follow}
-        />
+      ) : (
+        ownerTools
       )}
 
       {/* A day you took the pen on lands at the foot of a long page, which is
@@ -744,10 +773,11 @@ export async function ProfileView({
             >
               ＋
             </Link>
-            {importPill}
-            {carnetPill}
+            {/* On v2 these live in "Manage my profile". */}
+            {!v2 && importPill}
+            {!v2 && carnetPill}
             {profile.c2c_profile_id && (
-              <C2cSync profileId={profile.c2c_profile_id} locale={locale} t={t.profile.sync} />
+              <C2cSync profileId={profile.c2c_profile_id} locale={locale} t={t.profile.sync} auto />
             )}
           </div>
         )}

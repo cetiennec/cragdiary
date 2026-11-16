@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { importOneC2cOuting, refreshAfterImport } from "@/app/actions";
 import { runPool } from "@/lib/pool";
@@ -35,16 +35,28 @@ function fill(template: string, value: number): string {
   return template.replace("{n}", String(value));
 }
 
+// How long a quiet check counts: opening your profile asks camptocamp again
+// only after this, so a few visits in an afternoon cost one request.
+const AUTO_EVERY_MS = 3 * 60 * 60 * 1000;
+const stampKey = (profileId: number) => `cragdiary-c2c-checked-${profileId}`;
+
 // "Sync with camptocamp": find the outings on the linked account that aren't in
 // the journal yet, then import them. Own profile only.
 export default function C2cSync({
   profileId,
   locale,
   t,
+  auto = false,
 }: {
   profileId: number;
   locale: Locale;
   t: SyncLabels;
+  /**
+   * Check on its own when the profile opens, and speak only if there is
+   * something new: no "nothing to import", no error, for a question nobody
+   * asked out loud.
+   */
+  auto?: boolean;
 }) {
   const router = useRouter();
   const [checking, setChecking] = useState(false);
@@ -55,11 +67,13 @@ export default function C2cSync({
   const [imported, setImported] = useState<number | null>(null);
   const [error, setError] = useState(false);
   const [asking, setAsking] = useState(false);
+  const [quiet, setQuiet] = useState(false);
 
   const importing = progress !== null && progress.done < progress.total;
 
-  async function check() {
+  async function check(silent = false) {
     if (checking || importing) return;
+    setQuiet(silent);
     setChecking(true);
     setError(false);
     setImported(null);
@@ -70,14 +84,38 @@ export default function C2cSync({
       const { outings } = (await res.json()) as { outings: Outing[] };
       // The endpoint flags what's already in the journal by outing URL, which
       // is what makes syncing twice harmless.
-      setMissing(outings.filter((o) => !o.imported));
+      const fresh = outings.filter((o) => !o.imported);
+      // A quiet check that found nothing says nothing, and is not repeated
+      // for a while. One that found something keeps asking until it's dealt
+      // with.
+      if (silent && fresh.length === 0) {
+        try {
+          localStorage.setItem(stampKey(profileId), String(Date.now()));
+        } catch {}
+        return;
+      }
+      setMissing(fresh);
       setExisting(outings.filter((o) => o.imported));
     } catch {
-      setError(true);
+      if (!silent) setError(true);
     } finally {
       setChecking(false);
     }
   }
+
+  useEffect(() => {
+    if (!auto) return;
+    let last = 0;
+    try {
+      last = Number(localStorage.getItem(stampKey(profileId)) ?? 0);
+    } catch {}
+    if (Date.now() - last < AUTO_EVERY_MS) return;
+    // After first paint, so the page is never held up by camptocamp.
+    const timer = setTimeout(() => void check(true), 1200);
+    return () => clearTimeout(timer);
+    // Once per page view; check() is stable enough for that.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [auto, profileId]);
 
   async function run(choice: {
     visibility: Visibility;
@@ -131,7 +169,11 @@ export default function C2cSync({
         onClick={() => void check()}
         disabled={checking || importing}
       >
-        <span aria-hidden>⟳</span> {checking ? "…" : t.syncShort}
+        <span aria-hidden>⟳</span> {checking && !quiet ? "…" : t.syncShort}
+        {/* New outings found by the quiet check, until they're imported. */}
+        {missing && missing.length > 0 && !importing && imported == null && (
+          <span className="c2c-sync-count">{missing.length}</span>
+        )}
       </button>
 
       {/* Everything it has to say floats under the button: written into the

@@ -298,6 +298,7 @@ const en = {
   },
   profileV2: {
     tabsLabel: "Profile sections",
+    manage: "Manage my profile",
     tabDays: "Days",
     tabMap: "Map",
     tabWishlist: "Wishlist",
@@ -1610,6 +1611,7 @@ const fr: Dict = {
   },
   profileV2: {
     tabsLabel: "Sections du profil",
+    manage: "Gérer mon profil",
     tabDays: "Sorties",
     tabMap: "Carte",
     tabWishlist: "Wishlist",

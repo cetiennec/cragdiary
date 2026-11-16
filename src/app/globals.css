@@ -9007,3 +9007,101 @@ label:has(input:placeholder-shown) + .form-hint.form-warn {
 .seeker-refine-field select:focus {
   outline: none;
 }
+
+/* New camptocamp outings, found by the quiet check on opening the profile. */
+.c2c-sync-btn {
+  position: relative;
+}
+
+.c2c-sync-count {
+  position: absolute;
+  top: -0.4rem;
+  right: -0.4rem;
+  min-width: 1.15rem;
+  height: 1.15rem;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.15rem;
+  text-align: center;
+  box-shadow: 0 0 0 2px var(--bg);
+}
+
+/* "Manage my profile": the owner's tools behind one button (profile v2). */
+.profile2-manage {
+  margin: -0.4rem 0 1.2rem;
+}
+
+.profile2-manage > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  list-style: none;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  border-radius: 999px;
+  padding: 0.3rem 0.85rem;
+}
+
+.profile2-manage > summary::-webkit-details-marker {
+  display: none;
+}
+
+.profile2-manage > summary:hover,
+.profile2-manage[open] > summary {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+.profile2-manage-count {
+  min-width: 1.1rem;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-size: 0.68rem;
+  text-align: center;
+}
+
+.profile2-manage[open] {
+  padding: 0.9rem 1rem 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: color-mix(in srgb, var(--bg-elevated) 60%, transparent);
+}
+
+.profile2-manage[open] > summary {
+  margin-bottom: 0.8rem;
+}
+
+.profile2-manage-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.8rem;
+}
+
+.profile2-manage-links a {
+  font-size: 0.82rem;
+  text-decoration: none;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  border-radius: 999px;
+  padding: 0.25rem 0.75rem;
+}
+
+.profile2-manage-links a:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.profile2-manage .profile-settings:last-of-type {
+  margin-bottom: 0.6rem;
+}
