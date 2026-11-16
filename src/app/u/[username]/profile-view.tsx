@@ -13,7 +13,6 @@ import {
   getOwnedWishlists,
   getSharedWishlists,
   getWishesTaggingUser,
-  getExistingUsernames,
   followState,
   followStates,
   getFollowers,
@@ -124,7 +123,7 @@ export async function generateMetadata({
 /**
  * A journal, read by whoever is at its link. The same page serves /u/<name>
  * (the v2 layout: stats over a year, a menu that stays at the top, the
- * partners, the wishlist three ways) and /u/<name>/classic, the layout before
+ * wishlist three ways) and /u/<name>/classic, the layout before
  * it. Every tool an owner has is the same in both.
  */
 export async function ProfileView({
@@ -365,8 +364,8 @@ export async function ProfileView({
   ];
 
   // Where this journal goes most, and how often over the last year. Read from
-  // every day the reader may see, not just the ones on screen, and a place or
-  // partner the author hid on a day stays out of the count.
+  // every day the reader may see, not just the ones on screen, and a place
+  // the author hid on a day stays out of the count.
   const areaCounts = new Map<string, number>();
   for (const e of pinEntries) {
     if (!e.location || e.hidden_fields?.includes("location")) continue;
@@ -388,45 +387,6 @@ export async function ProfileView({
     if (month) month.n++;
   }
   const busiest = Math.max(1, ...months.map((m) => m.n));
-
-  // Who this journal climbs with. Partners are written as "@name, Someone",
-  // a mention counts by account, a plain name by its spelling.
-  const partnerCounts = new Map<string, { text: string; n: number }>();
-  for (const e of v2 ? pinEntries : []) {
-    if (!e.partners || e.hidden_fields?.includes("partners")) continue;
-    // "Agathe et Antoine" is two people, as is "@a @b".
-    const names = e.partners.split(/,|\s+(?:et|and|&)\s+/i).flatMap((piece) => {
-      const p = piece.trim();
-      return /^(@[\w-]+\s*)+$/.test(p) ? p.split(/\s+/) : [p];
-    });
-    for (const name of new Set(names.filter(Boolean))) {
-      if (name.toLowerCase() === `@${profile.username.toLowerCase()}`) continue;
-      const key = name.toLowerCase();
-      const seen = partnerCounts.get(key);
-      partnerCounts.set(key, { text: name, n: (seen?.n ?? 0) + 1 });
-    }
-  }
-  const partners = [...partnerCounts.values()].sort((a, b) => b.n - a.n).slice(0, 16);
-  // A partner with an account links to it, by name and without the @, like
-  // the names on a day's card.
-  const partnerAccounts = await getExistingUsernames(
-    partners.filter((p) => p.text.startsWith("@")).map((p) => p.text.slice(1).toLowerCase())
-  );
-  const partnerChips = partners.map((p) => {
-    const name = p.text.replace(/^@/, "");
-    return {
-      ...p,
-      name,
-      account: p.text.startsWith("@") ? partnerAccounts.get(name.toLowerCase()) : undefined,
-      initials: name
-        .split(/[\s_-]+/)
-        .filter(Boolean)
-        .slice(0, 2)
-        .map((w) => w[0].toUpperCase())
-        .join(""),
-      hue: [...name].reduce((a, c) => a + c.charCodeAt(0), 0) % 6,
-    };
-  });
 
   // Every route the reader may see, for the wishlist's by-area and weekend
   // views, which read across lists.
@@ -733,11 +693,6 @@ export async function ProfileView({
               {t.profileV2.tabWishlist} <span>{wishes.length}</span>
             </a>
           )}
-          {partners.length > 0 && (
-            <a href="#partners">
-              {t.profileV2.tabPartners} <span>{partnerCounts.size}</span>
-            </a>
-          )}
           {isSelf && trayDays.length > 0 && (
             <a href="#shared-days">
               {t.sharedDays.tab} <span>{trayDays.length}</span>
@@ -882,23 +837,6 @@ export async function ProfileView({
             {t.feed.showMore}
           </Link>
         </div>
-      )}
-
-      {v2 && partners.length > 0 && (
-        <section className="profile2-partners profile-anchor" id="partners">
-          <h2 className="pitch-notes-title">{t.profileV2.partnersTitle}</h2>
-          <ul>
-            {partnerChips.map((p) => (
-              <li key={p.text}>
-                <i className={`profile2-initial hue-${p.hue}`} aria-hidden>
-                  {p.initials}
-                </i>
-                {p.account ? <Link href={`/u/${p.account}`}>{p.name}</Link> : p.name}{" "}
-                <span>{t.profileV2.together(p.n)}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
       )}
 
       {/* Days you are on but have not written up — yours alone to see. Between
