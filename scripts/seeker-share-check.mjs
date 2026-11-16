@@ -34,14 +34,14 @@ await page.addInitScript(() => localStorage.setItem("cragdiary-welcome-v1", "1")
 // and it does not answer every network a runner sits on. The geocoder is
 // still exercised below — as a probe that reports, never as a wait that
 // decides the run.
-await page.goto(`${base}/cragseeker?lat=45.92&lon=6.87&radius=25&place=Chamonix&act=rock_climbing`);
+await page.goto(`${base}/cragseeker/classic?lat=45.92&lon=6.87&radius=25&place=Chamonix&act=rock_climbing`);
 await page.waitForSelector(".seeker-map");
 await page.waitForSelector(".seeker-result", { timeout: 30000 });
 
 // 0. The geocoder, when reachable: typing a place offers suggestions.
 const probe = await ctx.newPage();
 await probe.addInitScript(() => localStorage.setItem("cragdiary-welcome-v1", "1"));
-await probe.goto(`${base}/cragseeker`);
+await probe.goto(`${base}/cragseeker/classic`);
 await probe.waitForSelector(".seeker-map");
 await probe.locator(".seeker-where input").first().fill("Chamonix");
 const suggestions = await probe
@@ -59,7 +59,7 @@ await probe.close();
 await setGrade(page, "6a", "6c");
 await page.waitForTimeout(2500);
 const shared = page.url();
-console.log("url after filtering:", shared.split("/cragseeker")[1]);
+console.log("url after filtering:", shared.split("/cragseeker/classic")[1]);
 const status = await page.locator(".seeker-status").first().innerText();
 console.log("status:", status.split("\n")[0]);
 

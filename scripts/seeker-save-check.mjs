@@ -20,7 +20,7 @@ await page.getByRole("button", { name: /Log in|Se connecter/ }).click();
 await page.waitForURL((u) => !u.pathname.includes("/login"));
 console.log("logged in as", username);
 
-await page.goto(`${base}/cragseeker`);
+await page.goto(`${base}/cragseeker/classic`);
 await page.locator(".seeker-where input").first().fill("Chamonix");
 await page.waitForSelector(".combobox-list button");
 await page.locator(".combobox-list button").first().click();

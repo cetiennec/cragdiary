@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import SeekerMap, {
   GYM_COLOR,
   HUT_COLOR,
@@ -36,6 +36,7 @@ import {
   type C2cRangeKey,
 } from "@/lib/c2c";
 import { gradeRank } from "@/lib/seeker/grades";
+import type { UsualLevel } from "@/lib/seeker/usual";
 import {
   DEFAULT_SOURCES,
   SEEKER_SOURCES,
@@ -44,7 +45,9 @@ import {
 } from "@/lib/seeker/types";
 import type { Dict, Locale } from "@/lib/i18n";
 
-const RADII = [10, 25, 50, 100, 200];
+const RADII = [5, 10, 15, 25, 40, 50, 75, 100, 150, 200];
+// The distances labelled under the slider; the others are steps between them.
+const RADIUS_TICKS = [10, 25, 50, 100, 200];
 
 // How the results may be reordered once they are in — no second request, since
 // everything these read has already arrived.
@@ -284,6 +287,66 @@ function GradeLadder({
   );
 }
 
+// The distance from the place, on the same track as the grades but with
+// one handle: the circle only grows from its centre.
+function DistanceSlider({
+  label,
+  value,
+  onChange,
+  disabled,
+}: {
+  label: string;
+  value: number;
+  onChange: (km: number) => void;
+  disabled: boolean;
+}) {
+  const last = RADII.length - 1;
+  const at = Math.max(0, RADII.indexOf(value));
+  const pct = (i: number) => (i / last) * 100;
+  return (
+    <fieldset className={`seeker-ladder${disabled ? " is-off" : ""}`} id="seeker2-distance" data-km={value}>
+      <legend className="seeker-field-label">
+        {label}
+        <strong className="seeker-ladder-chosen">{value} km</strong>
+      </legend>
+      <div
+        className="seeker-slider seeker-slider-one"
+        style={{ "--lo": "0%", "--hi": `${pct(at)}%` } as React.CSSProperties}
+      >
+        <div className="seeker-slider-track" aria-hidden />
+        <div className="seeker-slider-fill" aria-hidden />
+        <input
+          type="range"
+          min={0}
+          max={last}
+          step={1}
+          value={at}
+          disabled={disabled}
+          aria-label={label}
+          aria-valuetext={`${value} km`}
+          onChange={(e) => onChange(RADII[Number(e.target.value)])}
+        />
+        <div className="seeker-slider-ticks" aria-hidden>
+          {RADIUS_TICKS.map((km) => (
+            <span key={km} style={{ left: `${pct(RADII.indexOf(km))}%` }}>
+              {km}
+            </span>
+          ))}
+        </div>
+      </div>
+    </fieldset>
+  );
+}
+
+// Whether the screen is wide enough to show every filter at once. On a phone
+// the less-used ones fold away; on a computer there is room for all of them.
+const WIDE = "(min-width: 861px)";
+function subscribeWide(onChange: () => void) {
+  const mq = window.matchMedia(WIDE);
+  mq.addEventListener("change", onChange);
+  return () => mq.removeEventListener("change", onChange);
+}
+
 // A shared link carries the whole search, so state starts from the query
 // string. Anything unrecognised falls back to the default rather than failing.
 export type SeekerParams = Record<string, string | undefined>;
@@ -331,6 +394,7 @@ export default function Cragseeker({
   wishlists,
   climbed,
   params,
+  usual = {},
   variant = "classic",
 }: {
   t: Dict["seeker"];
@@ -340,11 +404,13 @@ export default function Cragseeker({
   wishlists: { id: string; name: string }[];
   /** Camptocamp route ids already logged in the journal. */
   climbed: number[];
+  /** The grade range around what this climber usually logs, per scale. */
+  usual?: Partial<Record<C2cRangeKey, UsualLevel>>;
   params: SeekerParams;
-  /** Which menu: the original panel, or the second one at /cragseekerv2. */
+  /** Which menu: the current one, or the original kept at /cragseeker/classic. */
   variant?: "classic" | "v2";
 }) {
-  const basePath = variant === "v2" ? "/cragseekerv2" : "/cragseeker";
+  const basePath = variant === "v2" ? "/cragseeker" : "/cragseeker/classic";
   const climbedIds = useMemo(() => new Set(climbed), [climbed]);
   const [activity, setActivity] = useState<C2cActivity>(
     (C2C_ACTIVITIES as readonly string[]).includes(params.act ?? "")
@@ -436,6 +502,11 @@ export default function Cragseeker({
   // Folded by default, but a shared link that set one of these opens it: the
   // person it was sent to should see what narrowed their results.
   const [moreOpen, setMoreOpen] = useState(() => moreCount > 0);
+  const wide = useSyncExternalStore(
+    subscribeWide,
+    () => window.matchMedia(WIDE).matches,
+    () => true
+  );
 
   const [results, setResults] = useState<SeekerResult[]>([]);
   // c2c counts its bounding box; the circle keeps only ~π/4 of it, so this is an
@@ -1638,11 +1709,6 @@ export default function Cragseeker({
     const v = t.v2;
     const primary = ranges[primaryRange];
     const gradeScale = C2C_RANGE_SCALES[primaryRange] as readonly string[];
-    const rangeText = (r: { min: string; max: string } | undefined, unit = "") => {
-      if (!r || (!r.min && !r.max)) return null;
-      if (r.min && r.max) return r.min === r.max ? r.min + unit : `${r.min}–${r.max}${unit}`;
-      return r.min ? `${r.min}${unit} +` : `≤ ${r.max}${unit}`;
-    };
     const otherSet = moreRanges.filter((key) => ranges[key]?.min || ranges[key]?.max).length;
     const sizeSet = (height.min || height.max ? 1 : 0) + (elevation.min || elevation.max ? 1 : 0);
     const filterCount =
@@ -1675,7 +1741,20 @@ export default function Cragseeker({
       setSort("near");
     };
     const sameSet = (a: string[], b: string[]) => a.length === b.length && a.every((x) => b.includes(x));
+    const mine = usual[primaryRange];
     const ideas = [
+      ...(mine
+        ? [
+            {
+              id: "usual",
+              label: v.ideaUsual,
+              hint: fill(fill(v.ideaUsualHint, "a", mine.min), "b", mine.max),
+              on: primary?.min === mine.min && primary?.max === mine.max,
+              disabled: false,
+              apply: () => setRanges({ [primaryRange]: { min: mine.min, max: mine.max } }),
+            },
+          ]
+        : []),
       {
         id: "warm",
         label: v.ideaWarm,
@@ -1772,39 +1851,73 @@ export default function Cragseeker({
         {text}
       </button>
     );
-    const placeWord = centre ? (centre.name ?? v.thePin) : null;
-    const gradeWord = rangeText(primary);
-    const heightWord = rangeText(height, " m");
-    const elevationWord = rangeText(elevation, " m");
     const extraWords = otherSet + (contains ? 1 : 0) + (minLogged ? 1 : 0);
-    // Each clause carries its own lead-in word, and the punctuation is added
-    // where they are laid out, so a clause can never wrap away from its comma.
+    // The search said the way a climber would say it — "Multi-pitch climbs
+    // from 5a to 6a, facing south, within 25 km of Chamonix." Each clause is
+    // a button to its control; the commas are added where they are laid out,
+    // so a clause never wraps away from its own.
+    const say = v.say;
+    const put = (template: string, values: Record<string, string | number>) =>
+      Object.entries(values).reduce((out, [k, val]) => out.replace(`{${k}}`, String(val)), template);
+    const list = (items: string[]) =>
+      items.length < 2 ? items.join("") : `${items.slice(0, -1).join(", ")}${say.or}${items[items.length - 1]}`;
+    const between = (r: { min: string; max: string }, range: string, from: string, upTo: string, one?: string) =>
+      r.min && r.max
+        ? r.min === r.max && one
+          ? put(one, { a: r.min })
+          : put(range, { a: r.min, b: r.max })
+        : r.min
+          ? put(from, { a: r.min })
+          : put(upTo, { b: r.max });
+    const kinds =
+      showOutdoorType && outdoorTypes.length
+        ? outdoorTypes.map((o) => say.article + say.nouns[o])
+        : [say.article + say.nouns[activity]];
+    const lead = list(kinds);
     const sentence: React.ReactNode[] = [];
-    if (q.trim()) {
-      sentence.push(<>{word(t.activities[activity], "seeker2-kind")} {v.named} {word(`“${q.trim()}”`, "seeker2-name")}</>);
-    } else if (placeWord) {
-      sentence.push(<>{word(t.activities[activity], "seeker2-kind")} {v.near} {word(placeWord, "seeker2-where")}</>);
-      sentence.push(<>{v.within} {word(`${radius} km`, "seeker2-where")}</>);
-    } else {
-      sentence.push(<>{word(t.activities[activity], "seeker2-kind")} {word(v.anywhere, "seeker2-where", true)}</>);
+    const head = [word(lead.charAt(0).toUpperCase() + lead.slice(1), "seeker2-kind")];
+    if (primary?.min || primary?.max) {
+      head.push(word(between(primary, say.gradeRange, say.gradeMin, say.gradeMax, say.gradeOne), "seeker2-grade"));
+    } else if (!q.trim()) {
+      head.push(word(say.gradeAny, "seeker2-grade", true));
     }
-    sentence.push(word(gradeWord ?? v.anyGrade, "seeker2-grade", !gradeWord));
-    if (showOutdoorType && outdoorTypes.length > 0) {
-      sentence.push(word(outdoorTypes.map((o) => t.outdoorTypes[o]).join(" / "), "seeker2-style"));
+    if (q.trim()) head.push(word(put(say.named, { q: q.trim() }), "seeker2-name"));
+    sentence.push(<>{head.map((h, i) => <Fragment key={i}>{i > 0 && " "}{h}</Fragment>)}</>);
+    if (facing.length) {
+      sentence.push(word(put(say.facing, { dirs: list(facingOrdered.map((o) => say.dirs[o])) }), "seeker2-facing"));
     }
-    if (facing.length > 0) sentence.push(<>{v.facingWord} {word(facingOrdered.join("·"), "seeker2-facing")}</>);
-    if (heightWord) sentence.push(word(`${heightWord} ${v.longWord}`, "seeker2-size"));
-    if (elevationWord) sentence.push(<>{v.atWord} {word(elevationWord, "seeker2-size")}</>);
-    if (extraWords > 0) sentence.push(word(fill(v.andMore, "n", extraWords), "seeker2-more"));
+    if (height.min || height.max) {
+      const gain = ACTIVITY_HEIGHT_PARAM[activity] === "hdif";
+      sentence.push(
+        word(
+          between(height, gain ? say.gainRange : say.lengthRange, gain ? say.gainMin : say.lengthMin, gain ? say.gainMax : say.lengthMax),
+          "seeker2-size"
+        )
+      );
+    }
+    if (elevation.min || elevation.max) {
+      sentence.push(word(between(elevation, say.altRange, say.altMin, say.altMax), "seeker2-size"));
+    }
+    if (!q.trim()) {
+      if (centre) {
+        const place = centre.name ?? say.pin;
+        // "de Chamonix" but "d'Annecy".
+        const of = locale === "fr" ? (/^[aeiouyhâêîôûéèà]/i.test(place) ? "d'" : "de ") : "of ";
+        sentence.push(word(put(say.place, { km: radius, place, of }), "seeker2-where"));
+      } else {
+        sentence.push(word(say.anywhere, "seeker2-where", true));
+      }
+    }
+    if (extraWords > 0) {
+      sentence.push(word(extraWords === 1 ? say.moreOne : fill(say.moreMany, "n", extraWords), "seeker2-more"));
+    }
 
     return (
       <div className="page-container seeker seeker2">
         <header className="seeker2-head">
-          <h1 className="page-title">
-            {v.title} <span className="seeker2-badge">{v.badge}</span>
-          </h1>
+          <h1 className="page-title">{v.title}</h1>
           <p className="seeker-tagline">{v.tagline}</p>
-          <a className="seeker2-classic" href={`/cragseeker${search ? `?${search}` : ""}`}>
+          <a className="seeker2-classic" href={`/cragseeker/classic${search ? `?${search}` : ""}`}>
             {v.classic} →
           </a>
         </header>
@@ -1865,6 +1978,35 @@ export default function Cragseeker({
                 </div>
               </section>
 
+              {showOutdoorType && (
+                <section className="seeker2-sec" id="seeker2-style">
+                  <h2 className="seeker2-h">{v.style}</h2>
+                  <div className="seeker2-seg" role="group" aria-label={v.style}>
+                    <button
+                      type="button"
+                      aria-pressed={outdoorTypes.length === 0}
+                      onClick={() => setOutdoorTypes([])}
+                    >
+                      {t.anyStyle}
+                    </button>
+                    {C2C_OUTDOOR_TYPES.map((type) => (
+                      <button
+                        key={type}
+                        type="button"
+                        aria-pressed={outdoorTypes.includes(type)}
+                        onClick={() =>
+                          setOutdoorTypes((prev) =>
+                            prev.includes(type) ? prev.filter((x) => x !== type) : [...prev, type]
+                          )
+                        }
+                      >
+                        {t.outdoorTypes[type]}
+                      </button>
+                    ))}
+                  </div>
+                </section>
+              )}
+
               <section className="seeker2-sec" id="seeker2-where">
                 <h2 className="seeker2-h">{v.where}</h2>
                 <div className="seeker2-where-row">
@@ -1873,19 +2015,12 @@ export default function Cragseeker({
                     {locating ? t.locating : `📍 ${t.myLocation}`}
                   </button>
                 </div>
-                <div className="seeker2-seg" role="group" aria-label={t.radius}>
-                  {RADII.map((r) => (
-                    <button
-                      key={r}
-                      type="button"
-                      aria-pressed={radius === r}
-                      disabled={!centre}
-                      onClick={() => setRadius(r)}
-                    >
-                      {r} km
-                    </button>
-                  ))}
-                </div>
+                <DistanceSlider
+                  label={v.distance}
+                  value={radius}
+                  onChange={setRadius}
+                  disabled={!centre}
+                />
                 {geoError && (
                   <p className="seeker-note">
                     {geoError === "denied" ? t.locationBlocked : t.locationDenied}
@@ -1898,9 +2033,7 @@ export default function Cragseeker({
               </section>
 
               <section className="seeker2-sec" id="seeker2-ideas">
-                <h2 className="seeker2-h">
-                  {v.ideas} <span className="seeker2-hint">{v.ideasHint}</span>
-                </h2>
+                <h2 className="seeker2-h">{v.ideas}</h2>
                 <div className="seeker2-ideas">
                   {ideas.map((idea) => (
                     <button
@@ -1933,35 +2066,6 @@ export default function Cragseeker({
                   t={t}
                 />
               </section>
-
-              {showOutdoorType && (
-                <section className="seeker2-sec" id="seeker2-style">
-                  <h2 className="seeker2-h">{v.style}</h2>
-                  <div className="seeker2-seg" role="group" aria-label={v.style}>
-                    <button
-                      type="button"
-                      aria-pressed={outdoorTypes.length === 0}
-                      onClick={() => setOutdoorTypes([])}
-                    >
-                      {t.anyStyle}
-                    </button>
-                    {C2C_OUTDOOR_TYPES.map((type) => (
-                      <button
-                        key={type}
-                        type="button"
-                        aria-pressed={outdoorTypes.includes(type)}
-                        onClick={() =>
-                          setOutdoorTypes((prev) =>
-                            prev.includes(type) ? prev.filter((x) => x !== type) : [...prev, type]
-                          )
-                        }
-                      >
-                        {t.outdoorTypes[type]}
-                      </button>
-                    ))}
-                  </div>
-                </section>
-              )}
 
               <section className="seeker2-sec" id="seeker2-facing">
                 <h2 className="seeker2-h">
@@ -2008,7 +2112,7 @@ export default function Cragseeker({
               <details
                 className="seeker2-more"
                 id="seeker2-more"
-                open={moreOpen}
+                open={wide || moreOpen}
                 onToggle={(e) => setMoreOpen(e.currentTarget.open)}
               >
                 <summary>

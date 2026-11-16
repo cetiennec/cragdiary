@@ -811,6 +811,16 @@ export async function getOnThisDay(userId: string): Promise<EntryWithAuthor[]> {
 
 // Camptocamp route ids the user has already logged, so Cragseeker can say so.
 // Entries store the full topo URL; the id is the last path segment.
+/** The top grade of every day this climber logged, as typed. */
+export async function getLoggedGrades(userId: string): Promise<string[]> {
+  const result = await pool.query<{ grade_max: string }>(
+    `select grade_max from entries
+     where user_id = $1 and grade_max is not null and grade_max <> ''`,
+    [userId]
+  );
+  return result.rows.map((r) => r.grade_max);
+}
+
 export async function getClimbedRouteIds(userId: string): Promise<number[]> {
   const result = await pool.query<{ id: string }>(
     `select distinct substring(c2c_url from 'routes/([0-9]+)') as id

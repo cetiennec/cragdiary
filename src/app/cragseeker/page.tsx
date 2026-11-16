@@ -1,13 +1,16 @@
 import type { Metadata } from "next";
 import { currentUser } from "@/lib/auth";
 import { getDict } from "@/lib/i18n";
-import { getClimbedRouteIds, getEditableWishlists } from "@/lib/queries";
+import { getClimbedRouteIds, getEditableWishlists, getLoggedGrades } from "@/lib/queries";
+import { usualLevels } from "@/lib/seeker/usual";
 import Cragseeker, { type SeekerParams } from "@/components/Cragseeker";
 
+// The route search. The first version of its menu stays at /cragseeker/classic;
+// both read the same query string, so a link opens the same search in either.
 export const metadata: Metadata = {
   title: "Cragseeker",
   description:
-    "Search the Camptocamp route database around a place or a pin on the map, by activity, grade and orientation.",
+    "Find a route around a place: pick the kind of day, then narrow it by grade, aspect, length and altitude.",
 };
 
 export default async function CragseekerPage({
@@ -20,24 +23,20 @@ export default async function CragseekerPage({
     getDict(),
     searchParams,
   ]);
-  // Logged-out visitors can search all they like; only saving needs a list.
   const wishlists = user ? await getEditableWishlists(user.id) : [];
-  // Routes already in the journal, so the search can say "you've done this one".
   const climbed = user ? await getClimbedRouteIds(user.id) : [];
+  const usual = user ? usualLevels(await getLoggedGrades(user.id)) : {};
 
-  // A shared link arrives as query params; the component takes it from there
-  // and keeps the URL in step from the client.
   return (
     <Cragseeker
       t={t.seeker}
       locale={locale}
-      // Distinct from "has no wishlist": a signed-in climber whose lists are
-      // all read-only gets the same empty array, and must not be sent to the
-      // signup page for it.
       signedIn={Boolean(user)}
       wishlists={wishlists}
       climbed={climbed}
+      usual={usual}
       params={params}
+      variant="v2"
     />
   );
 }

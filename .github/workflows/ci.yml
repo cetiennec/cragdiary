@@ -207,10 +207,10 @@ jobs:
       # months (the route name, not the place) and was never run here.
       - name: A shared search comes back the same
         run: node scripts/seeker-share-check.mjs http://localhost:3111 /tmp
-      # The second menu at /cragseekerv2: ideas, compass, tiles and clear all
-      # drive the same search, and the phone layout neither overflows nor
-      # loses its count bar.
-      - name: Cragseeker v2 drives the same search
+      # The menu at /cragseeker: ideas, compass, tiles and clear all drive the
+      # search, and the phone layout neither overflows nor loses its count bar.
+      # The checks above drive the classic menu at /cragseeker/classic.
+      - name: The Cragseeker menu drives the search
         run: node scripts/seeker-v2-check.mjs http://localhost:3111 /tmp
 
   # Is the live database ready for what is about to be deployed? Three times

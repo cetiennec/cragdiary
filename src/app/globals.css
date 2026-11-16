@@ -6976,19 +6976,6 @@ label:has(input:placeholder-shown) + .form-hint.form-warn {
   margin: 0;
 }
 
-.seeker2-badge {
-  font-family: var(--font-body), sans-serif;
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  vertical-align: middle;
-  padding: 0.15rem 0.5rem;
-  border-radius: 999px;
-  background: var(--accent);
-  color: var(--accent-contrast);
-}
-
 .seeker2-classic {
   font-size: 0.85rem;
   color: var(--text-muted);
@@ -7123,7 +7110,6 @@ label:has(input:placeholder-shown) + .form-hint.form-warn {
   margin-top: 0.6rem;
 }
 
-.seeker2-hint,
 .seeker2-sub {
   font-family: var(--font-body), sans-serif;
   font-size: 0.8rem;
@@ -7203,6 +7189,12 @@ label:has(input:placeholder-shown) + .form-hint.form-warn {
 }
 
 /* Where. */
+/* Fields that grow along a row would grow downward in these columns and
+   leave a gap under them. */
+.seeker2-menu .seeker-field-grow {
+  flex: none;
+}
+
 .seeker2-where-row {
   display: flex;
   gap: 0.5rem;
@@ -7443,6 +7435,28 @@ label:has(input:placeholder-shown) + .form-hint.form-warn {
 
 .seeker2-more .seeker-ladder {
   flex: none;
+}
+
+/* The section title already names the databases. */
+.seeker2-menu .seeker-sources legend {
+  display: none;
+}
+
+/* On a computer every filter shows: the fold is for phones. */
+@media (min-width: 861px) {
+  .seeker2-more summary {
+    display: none;
+  }
+}
+
+/* The distance: one handle, and a press anywhere on the track moves it. */
+.seeker-slider-one input[type="range"] {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.seeker-ladder.is-off {
+  opacity: 0.45;
 }
 
 /* The foot: clear, and the count as the button. */

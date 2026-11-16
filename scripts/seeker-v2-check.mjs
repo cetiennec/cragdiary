@@ -1,5 +1,5 @@
-// Cragseeker v2 (/cragseekerv2): the menu drives the same search as the
-// classic page. Checks, against a running app:
+// Cragseeker's menu (/cragseeker): it drives the same search as the classic
+// page at /cragseeker/classic. Checks, against a running app:
 //   1. the page loads with results and the grade histogram has bars;
 //   2. an idea sets its filters, in the URL and in the sentence;
 //   3. a compass slice adds an aspect, and "Clear" takes everything back;
@@ -10,7 +10,7 @@ import { chromium, devices } from "playwright";
 
 const base = process.argv[2] ?? "http://localhost:3111";
 const out = process.argv[3] ?? "/tmp";
-const start = `${base}/cragseekerv2?lat=45.92&lon=6.87&radius=25&place=Chamonix&act=rock_climbing`;
+const start = `${base}/cragseeker?lat=45.92&lon=6.87&radius=25&place=Chamonix&act=rock_climbing`;
 
 let failures = 0;
 const check = (ok, label, detail = "") => {
@@ -42,7 +42,7 @@ const browser = await chromium.launch();
   check(params(page).get("crtyp") === "multi" && params(page).get("frat") === "5a,6a", "idea sets its filters", page.url().split("?")[1]);
   check((await page.locator(".seeker2-idea").nth(2).getAttribute("aria-pressed")) === "true", "idea shows as on");
   const sentence = await page.locator(".seeker2-sentence-text").innerText();
-  check(/5a–6a/.test(sentence) && /multi-pitch/.test(sentence), "sentence reads the idea back", sentence);
+  check(/from 5a to 6a/.test(sentence) && /^Multi-pitch climbs/.test(sentence), "sentence reads the idea back", sentence);
 
   await page.locator('.seeker2-compass g[aria-label="S"]').click();
   await page.waitForTimeout(800);
@@ -59,7 +59,7 @@ const browser = await chromium.launch();
   check((await page.locator("#seeker2-style").count()) === 0, "style only shows for rock");
 
   const classic = await page.locator(".seeker2-classic").getAttribute("href");
-  check(classic.startsWith("/cragseeker?") && classic.includes("act=skitouring"), "classic link keeps the search");
+  check(classic.startsWith("/cragseeker/classic?") && classic.includes("act=skitouring"), "classic link keeps the search");
   await page.screenshot({ path: `${out}/seeker-v2-desktop.png` });
   await ctx.close();
 }

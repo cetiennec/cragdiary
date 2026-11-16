@@ -1,4 +1,4 @@
-// Drives /cragseeker in a real browser: pick a place, tighten the filters,
+// Drives the classic menu, /cragseeker/classic, in a real browser: pick a place, tighten the filters,
 // drop a pin on the map, and screenshot each step.
 //   node scripts/seeker-check.mjs [baseUrl] [outDir]
 import { chromium } from "playwright";
@@ -26,7 +26,7 @@ page.on("request", (r) => {
 });
 
 await page.addInitScript(() => localStorage.setItem("cragdiary-welcome-v1", "1"));
-await page.goto(`${base}/cragseeker`);
+await page.goto(`${base}/cragseeker/classic`);
 await page.waitForSelector(".seeker-map");
 
 const count = () => page.locator(".seeker-result").count();

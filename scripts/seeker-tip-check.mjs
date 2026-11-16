@@ -98,6 +98,9 @@ console.log(failures === 0 ? "OK — every card stayed inside the map" : `FAIL �
 
 // The card is drawn by Leaflet inside the map pane, so screenshot the page:
 // an element shot of the tooltip alone hides how it sits over the tiles.
+// The pointer leaves the map first: resting on a marker after the reload, it
+// would open that marker's card beside the one hovered below.
+await page.mouse.move(5, 5);
 await page.reload();
 await page.waitForSelector(".seeker-result", { timeout: 30000 });
 await page.waitForTimeout(1500);
@@ -107,7 +110,15 @@ await page.waitForTimeout(1500);
 // actionability check and fires the hover at the element's centre anyway,
 // same as `sweep`'s dispatchEvent, but through the real API so Leaflet's own
 // mouseover binding — not our stand-in — is what opens the card.
-await page.locator(".seeker-map path.leaflet-interactive").first().hover({ force: true });
+// The marker hovered is one nothing covers: on a narrower map the first in
+// the DOM can sit under another, and the pointer then opens both cards.
+const clear = await page.evaluate(() =>
+  [...document.querySelectorAll(".seeker-map path.leaflet-interactive")].findIndex((el) => {
+    const r = el.getBoundingClientRect();
+    return document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2) === el;
+  })
+);
+await page.locator(".seeker-map path.leaflet-interactive").nth(Math.max(0, clear)).hover({ force: true });
 await page.waitForSelector(".seeker-tip");
 // The card carries a link to camptocamp, which has to be reachable.
 const link = page.locator(".seeker-tip-c2c").first();
