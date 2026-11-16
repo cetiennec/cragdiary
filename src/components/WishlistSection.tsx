@@ -28,6 +28,7 @@ export default function WishlistSection({
   seeker,
   attribution,
   emptyLabel,
+  compact = false,
 }: {
   list: WishlistFull;
   wishes: Wish[];
@@ -42,6 +43,8 @@ export default function WishlistSection({
   attribution: string;
   /** Overrides "nothing here yet" when the list is empty only because of a filter. */
   emptyLabel?: string;
+  /** One line per route, the grade first and the links as icons (profile v2). */
+  compact?: boolean;
 }) {
   const canEdit = list.can_edit;
   const isMember = canEdit && !isOwner;
@@ -119,9 +122,12 @@ export default function WishlistSection({
 
       {wishes.length === 0 && <p className="form-hint">{emptyLabel ?? t.empty}</p>}
 
-      <ul className="wishlist">
+      <ul className={compact ? "wishlist wishlist-compact" : "wishlist"}>
         {wishes.map((wish) => (
-          <li key={wish.id} className="wish-row">
+          <li key={wish.id} className={compact ? "wish-row wish-line" : "wish-row"}>
+            {compact && (
+              <span className="wish-line-grade">{wish.grade_max ?? wish.rating ?? "·"}</span>
+            )}
             <div className="wish-main">
               <span className="wish-title">
                 {wish.c2c_url ? (
@@ -132,6 +138,14 @@ export default function WishlistSection({
                   wish.title
                 )}
               </span>
+              {compact ? (
+                <span className="wish-meta">
+                  {[wish.location, wish.height_m ? `${wish.height_m} m` : null]
+                    .filter(Boolean)
+                    .join(" · ")}
+                  {wish.note && <em className="wish-line-note"> « {wish.note} »</em>}
+                </span>
+              ) : (
               <span className="wish-meta">
                 {[
                   wish.location,
@@ -142,7 +156,8 @@ export default function WishlistSection({
                   .filter(Boolean)
                   .join(" · ")}
               </span>
-              {wish.parking_lat != null && wish.parking_lon != null && (
+              )}
+              {!compact && wish.parking_lat != null && wish.parking_lon != null && (
                 <ParkingLink
                   parking={{
                     lat: wish.parking_lat,
@@ -155,7 +170,7 @@ export default function WishlistSection({
               )}
               {/* The forecast where the route is — the question you ask of a
                   wishlist far more often than of a day already climbed. */}
-              {wish.lat != null && wish.lon != null && (
+              {!compact && wish.lat != null && wish.lon != null && (
                 <WeatherLink
                   point={{ lat: wish.lat, lon: wish.lon }}
                   label={seeker.weather}
@@ -164,6 +179,26 @@ export default function WishlistSection({
                 />
               )}
             </div>
+            {compact && (
+              <div className="wish-line-icons">
+                {wish.lat != null && wish.lon != null && (
+                  <WeatherLink
+                    point={{ lat: wish.lat, lon: wish.lon }}
+                    label={seeker.weather}
+                    openIn={seeker.openIn}
+                    compact
+                  />
+                )}
+                {wish.parking_lat != null && wish.parking_lon != null && (
+                  <ParkingLink
+                    parking={{ lat: wish.parking_lat, lon: wish.parking_lon, name: wish.parking_name }}
+                    label={wish.parking_name ?? seeker.parking}
+                    openIn={seeker.openIn}
+                    compact
+                  />
+                )}
+              </div>
+            )}
             {canEdit ? (
               <WishPartnersEditor
                 wishId={wish.id}
