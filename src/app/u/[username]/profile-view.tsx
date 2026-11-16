@@ -388,12 +388,13 @@ export async function ProfileView({
   }
   const busiest = Math.max(1, ...months.map((m) => m.n));
 
-  // Who this journal climbs with. Partners are written as "@name, Someone":
+  // Who this journal climbs with. Partners are written as "@name, Someone",
   // a mention counts by account, a plain name by its spelling.
   const partnerCounts = new Map<string, { text: string; n: number }>();
   for (const e of v2 ? pinEntries : []) {
     if (!e.partners || e.hidden_fields?.includes("partners")) continue;
-    const names = e.partners.split(",").flatMap((piece) => {
+    // "Agathe et Antoine" is two people, as is "@a @b".
+    const names = e.partners.split(/,|\s+(?:et|and|&)\s+/i).flatMap((piece) => {
       const p = piece.trim();
       return /^(@[\w-]+\s*)+$/.test(p) ? p.split(/\s+/) : [p];
     });
