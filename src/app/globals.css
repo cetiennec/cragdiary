@@ -8060,3 +8060,100 @@ label:has(input:placeholder-shown) + .form-hint.form-warn {
   white-space: nowrap;
   pointer-events: none;
 }
+
+/* ---- Cragseeker: the compact layout, one row per route -------------------- */
+
+.seeker2-view button {
+  padding: 0.2rem 0.7rem;
+  font-size: 0.78rem;
+}
+
+.seeker-results.seeker2-cards.compact {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.5rem;
+}
+
+.seeker2-cards.compact .seeker2-card {
+  flex-direction: row;
+  align-items: center;
+}
+
+.seeker2-cards.compact .seeker2-card-top {
+  flex: none;
+  align-self: stretch;
+  display: grid;
+  place-items: center;
+  width: 4.4rem;
+  height: auto;
+  min-height: 4.2rem;
+}
+
+.seeker2-cards.compact .seeker2-card-top .seeker2-glyph {
+  display: none;
+}
+
+.seeker2-cards.compact .seeker2-card-grade {
+  position: static;
+  min-width: 0;
+  padding: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.seeker2-cards.compact .seeker2-card-grade b {
+  font-size: 1.25rem;
+}
+
+.seeker2-cards.compact .seeker2-card-body {
+  min-width: 0;
+  padding: 0.55rem 0.8rem;
+}
+
+.seeker2-cards.compact .seeker2-card-body h3 {
+  font-size: 0.98rem;
+}
+
+.seeker2-cards.compact .seeker2-card-area {
+  margin: 0.1rem 0 0.2rem;
+}
+
+.seeker2-cards.compact .seeker2-card-facts {
+  margin: 0;
+  font-size: 0.82rem;
+}
+
+.seeker2-cards.compact .seeker2-card-note,
+.seeker2-cards.compact .seeker2-card-climbed {
+  position: static;
+  display: inline-block;
+  margin-right: 0.45rem;
+  padding: 0.05rem 0.45rem;
+  font-size: 0.7rem;
+  backdrop-filter: none;
+}
+
+.seeker2-cards.compact .seeker2-card-foot {
+  flex: none;
+  padding: 0.5rem 0.75rem;
+}
+
+.seeker2-cards.compact .seeker2-card-src {
+  display: none;
+}
+
+/* On a phone the buttons drop under the text, past the grade column. */
+@media (max-width: 640px) {
+  .seeker2-cards.compact .seeker2-card {
+    flex-wrap: wrap;
+  }
+
+  .seeker2-cards.compact .seeker2-card-body {
+    flex: 1 1 0;
+  }
+
+  .seeker2-cards.compact .seeker2-card-foot {
+    flex: 1 0 100%;
+    justify-content: flex-end;
+    padding-top: 0;
+  }
+}

@@ -101,6 +101,36 @@ function difficultyRank(r: SeekerResult, activity: C2cActivity): number | null {
 const KEEP_PROMPT_AFTER = 3;
 const KEEP_PROMPT_COUNT = "cragdiary-seeker-searches";
 const KEEP_PROMPT_DISMISSED = "cragdiary-seeker-keep-dismissed";
+
+// Cards with photos, or compact rows: a per-viewer preference, kept in this
+// browser only. Read through a store so the server render (always cards) and
+// the first client render agree, and a change in another tab follows.
+type CardView = "cards" | "compact";
+const CARD_VIEW_KEY = "cragdiary-seeker-view";
+const CARD_VIEW_EVENT = "cragdiary-seeker-view";
+function readCardView(): CardView {
+  try {
+    return localStorage.getItem(CARD_VIEW_KEY) === "compact" ? "compact" : "cards";
+  } catch {
+    return "cards";
+  }
+}
+function writeCardView(view: CardView) {
+  try {
+    localStorage.setItem(CARD_VIEW_KEY, view);
+  } catch {
+    // Private mode or blocked storage: the choice just won't outlive the page.
+  }
+  window.dispatchEvent(new Event(CARD_VIEW_EVENT));
+}
+function subscribeCardView(onChange: () => void) {
+  window.addEventListener(CARD_VIEW_EVENT, onChange);
+  window.addEventListener("storage", onChange);
+  return () => {
+    window.removeEventListener(CARD_VIEW_EVENT, onChange);
+    window.removeEventListener("storage", onChange);
+  };
+}
 const PAGE_SIZE = 30;
 const SUMMARY_CHARS = 180;
 
@@ -559,6 +589,8 @@ export default function Cragseeker({
   const [access, setAccess] = useState<Record<number, C2cAccessPoint>>({});
   const [outings, setOutings] = useState<Record<number, number>>({});
   const [photos, setPhotos] = useState<Record<number, { id: number; filename: string }>>({});
+  const cardView = useSyncExternalStore(subscribeCardView, readCardView, () => "cards" as CardView);
+  const compact = variant === "v2" && cardView === "compact";
   // Which routes have been asked about — `access` alone can't say, since a
   // route with no parking never lands there.
   const asked = useRef(new Set<number>());
@@ -1515,6 +1547,20 @@ export default function Cragseeker({
               <option value="trad">{t.sortTrad}</option>
             </select>
           </label>
+          {variant === "v2" && (
+            <div className="seeker2-seg seeker2-view" role="group" aria-label={t.v2.view}>
+              {(["cards", "compact"] as const).map((view) => (
+                <button
+                  key={view}
+                  type="button"
+                  aria-pressed={cardView === view}
+                  onClick={() => writeCardView(view)}
+                >
+                  {view === "cards" ? t.v2.viewCards : t.v2.viewCompact}
+                </button>
+              ))}
+            </div>
+          )}
           <label className="seeker-refine-field">
             <span>{t.loggedLabel}</span>
             <select value={minLogged} onChange={(e) => setMinLogged(Number(e.target.value))}>
@@ -1533,7 +1579,7 @@ export default function Cragseeker({
         <p className="empty-state">{t.empty}</p>
       )}
 
-      <ul className={`seeker-results${variant === "v2" ? " seeker2-cards" : ""}`}>
+      <ul className={`seeker-results${variant === "v2" ? " seeker2-cards" : ""}${compact ? " compact" : ""}`}>
         {shown.map((route) => {
           const state = saved[route.key] ?? "idle";
           const parking = route.source === "c2c" ? access[Number(route.id)] : undefined;
@@ -1586,7 +1632,8 @@ export default function Cragseeker({
               </div>
             );
           if (variant === "v2") {
-            const photo = route.source === "c2c" ? photos[Number(route.id)] : undefined;
+            // Compact rows leave the photo out, and don't download it either.
+            const photo = route.source === "c2c" && !compact ? photos[Number(route.id)] : undefined;
             const note =
               wx && wxVerdict && route.source === "c2c"
                 ? faceNote(wxVerdict, wx, route.orientation, route.elevation_max)
@@ -1626,17 +1673,17 @@ export default function Cragseeker({
                   ) : (
                     <ActivityGlyph id={activity} />
                   )}
-                  {route.distance_km != null && (
+                  {route.distance_km != null && !compact && (
                     <span className="seeker2-card-dist">
                       {fill(t.away, "km", Math.round(route.distance_km))}
                     </span>
                   )}
-                  {isClimbed(route) && (
+                  {isClimbed(route) && !compact && (
                     <span className="seeker2-card-climbed" title={t.climbedHint}>
                       ✓ {t.climbed}
                     </span>
                   )}
-                  {note && (
+                  {note && !compact && (
                     <span className={`seeker2-card-note ${NOTE_TONE[note]}`}>{t.v2.wx.notes[note]}</span>
                   )}
                   {badge && (
@@ -1652,15 +1699,33 @@ export default function Cragseeker({
                       {route.title.trim()}
                     </a>
                   </h3>
-                  {(route.area || route.elevation_max) && (
+                  {(route.area || route.elevation_max || compact) && (
                     <p className="seeker2-card-area">
-                      {[route.area, route.elevation_max ? `${route.elevation_max} m` : null]
+                      {[
+                        compact && route.distance_km != null
+                          ? fill(t.away, "km", Math.round(route.distance_km))
+                          : null,
+                        route.area,
+                        route.elevation_max ? `${route.elevation_max} m` : null,
+                      ]
                         .filter(Boolean)
                         .join(" · ")}
                     </p>
                   )}
-                  {facts.length > 0 && <p className="seeker2-card-facts">{facts.join(" · ")}</p>}
-                  {route.summary && <p className="seeker2-card-sum">{route.summary}</p>}
+                  {(facts.length > 0 || (compact && (note || isClimbed(route)))) && (
+                    <p className="seeker2-card-facts">
+                      {compact && isClimbed(route) && (
+                        <span className="seeker2-card-climbed" title={t.climbedHint}>
+                          ✓ {t.climbed}
+                        </span>
+                      )}
+                      {compact && note && (
+                        <span className={`seeker2-card-note ${NOTE_TONE[note]}`}>{t.v2.wx.notes[note]}</span>
+                      )}
+                      {facts.join(" · ")}
+                    </p>
+                  )}
+                  {route.summary && !compact && <p className="seeker2-card-sum">{route.summary}</p>}
                   {cragClimbs}
                 </div>
                 <div className="seeker2-card-foot">
