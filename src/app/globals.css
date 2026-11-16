@@ -8619,8 +8619,25 @@ label:has(input:placeholder-shown) + .form-hint.form-warn {
   stroke-linejoin: round;
 }
 
-/* The add button, over the card on a mouse: hidden until the pointer is on
-   the card (or a key brings focus there), then in front of the photo. */
+/* The add button. "+" and its word sit side by side in the footer on a
+   touch screen; on a mouse it becomes a round + on the seam between photo
+   and text, the grade's twin on the other side, and opens into "+ Add" while
+   the pointer is on the card. */
+.seeker2-card-add .seeker-add button,
+.seeker2-card-add .seeker-add-signup {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+/* The conditions label moves to the photo's top-left, clear of the +. */
+.seeker2-card-top > .seeker2-card-note {
+  right: auto;
+  bottom: auto;
+  left: 0.6rem;
+  top: 0.6rem;
+}
+
 @media (hover: hover) and (pointer: fine) {
   .seeker2-card {
     position: relative;
@@ -8628,49 +8645,76 @@ label:has(input:placeholder-shown) + .form-hint.form-warn {
 
   .seeker2-card-foot .seeker2-card-add {
     position: absolute;
-    left: 50%;
-    top: 64px;
-    transform: translate(-50%, -50%) scale(0.96);
+    right: 0.75rem;
+    top: 128px;
+    transform: translateY(-50%);
     z-index: 3;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.15s ease, transform 0.15s ease;
   }
 
   .seeker-results.compact .seeker2-card-foot .seeker2-card-add {
-    top: 50%;
+    top: 0.75rem;
+    transform: none;
   }
 
-  .seeker2-card:hover .seeker2-card-add,
-  .seeker2-card:focus-within .seeker2-card-add,
-  .seeker2-card-add.is-done {
-    opacity: 1;
-    pointer-events: auto;
-    transform: translate(-50%, -50%) scale(1);
+  .seeker2-card-add .seeker-add {
+    gap: 0.3rem;
   }
 
-  .seeker2-card-add .seeker-add,
+  .seeker2-card-add .seeker-add button,
   .seeker2-card-add .seeker-add-signup {
-    margin: 0;
-    padding: 0.3rem;
-    border-radius: 999px;
-    background: var(--bg-elevated);
-    box-shadow: 0 10px 26px -8px rgba(30, 20, 12, 0.55);
-  }
-
-  .seeker2-card-add .seeker-add-signup {
-    padding: 0.5rem 1rem;
-    font-weight: 600;
-    text-decoration: none;
-  }
-
-  .seeker2-card-add .seeker-add button {
-    font-weight: 700;
-    padding: 0.45rem 1rem;
+    justify-content: center;
+    height: 2.3rem;
+    min-width: 2.3rem;
+    gap: 0;
+    padding: 0 0.75rem;
+    border: 0;
     border-radius: 999px;
     background: var(--accent);
     color: var(--accent-contrast);
-    border: 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+    text-decoration: none;
+    box-shadow: 0 0 0 3px var(--bg-elevated), 0 8px 18px -8px rgba(30, 20, 12, 0.6);
+    transition: padding 0.18s ease, gap 0.18s ease;
+  }
+
+  .seeker2-add-word {
+    max-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    font-size: 0.85rem;
+    transition: max-width 0.18s ease;
+  }
+
+  .seeker2-card:hover .seeker2-add-word,
+  .seeker2-card:focus-within .seeker2-add-word {
+    max-width: 7rem;
+  }
+
+  .seeker2-card:hover .seeker2-card-add .seeker-add button,
+  .seeker2-card:focus-within .seeker2-card-add .seeker-add button,
+  .seeker2-card:hover .seeker2-card-add .seeker-add-signup,
+  .seeker2-card:focus-within .seeker2-card-add .seeker-add-signup,
+  .seeker2-card-add.is-busy .seeker-add button {
+    gap: 0.3rem;
+    padding: 0 0.95rem;
+  }
+
+  .seeker2-card-add.is-busy .seeker-add button {
+    font-size: 0.8rem;
+  }
+
+  /* Which list: only once you are on the card. */
+  .seeker2-card-add .seeker-add select {
+    display: none;
+  }
+
+  .seeker2-card:hover .seeker2-card-add .seeker-add select,
+  .seeker2-card:focus-within .seeker2-card-add .seeker-add select {
+    display: inline-block;
+    height: 2.3rem;
+    border-radius: 999px;
+    box-shadow: 0 8px 18px -8px rgba(30, 20, 12, 0.6);
   }
 }
 

@@ -1752,12 +1752,18 @@ export default function Cragseeker({
                   {parking && (
                     <ParkingLink parking={parking} label={t.v2.wx.directions} openIn={t.openIn} compact />
                   )}
-                  {/* Over the card on a mouse, shown when the pointer is on it;
+                  {/* On a mouse, a round + on the seam between photo and text,
+                      which opens into "+ Add" while the pointer is on the card;
                       in the footer on a touch screen. */}
-                  <div className={`seeker-actions seeker2-card-add${state === "done" ? " is-done" : ""}`}>
+                  <div className={`seeker-actions seeker2-card-add${state === "idle" ? "" : " is-busy"}`}>
                     {!signedIn && (
-                      <a className="seeker-add-signup" href={`/signup?next=${encodeURIComponent(here)}`}>
-                        + {t.add}
+                      <a
+                        className="seeker-add-signup"
+                        href={`/signup?next=${encodeURIComponent(here)}`}
+                        aria-label={t.add}
+                      >
+                        <span aria-hidden>+</span>
+                        <span className="seeker2-add-word">{t.add}</span>
                       </a>
                     )}
                     {wishlists.length > 0 && (
@@ -1780,13 +1786,18 @@ export default function Cragseeker({
                           onClick={() => save(route)}
                           disabled={state === "saving" || state === "done"}
                         >
-                          {state === "saving"
-                            ? t.adding
-                            : state === "done"
-                              ? t.added
-                              : state === "error"
-                                ? t.addFailed
-                                : `+ ${t.add}`}
+                          {state === "saving" ? (
+                            t.adding
+                          ) : state === "done" ? (
+                            t.added
+                          ) : state === "error" ? (
+                            t.addFailed
+                          ) : (
+                            <>
+                              <span aria-hidden>+</span>
+                              <span className="seeker2-add-word">{t.add}</span>
+                            </>
+                          )}
                         </button>
                       </span>
                     )}
