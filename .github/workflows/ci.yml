@@ -4,6 +4,9 @@ on:
   push:
     branches: [main]
   pull_request:
+  # By hand too: a run that never started (a billing block, say) cannot be
+  # retried, and a push just to wake CI is a commit nobody wanted.
+  workflow_dispatch: {}
 
 # A push that supersedes another cancels it: the older answer is worthless.
 concurrency:
