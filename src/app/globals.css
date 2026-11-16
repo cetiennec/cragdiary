@@ -7465,6 +7465,20 @@ label:has(input:placeholder-shown) + .form-hint.form-warn {
 
 /* On a computer every filter shows: the fold is for phones. */
 @media (min-width: 861px) {
+  /* A swiped strip suits a finger; a mouse cannot swipe, so the ideas wrap
+     into a grid instead. */
+  .seeker2-ideas {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    overflow: visible;
+    margin-inline: 0;
+    padding: 0;
+  }
+
+  .seeker2-idea {
+    max-width: none;
+  }
+
   .seeker2-more summary {
     display: none;
   }
