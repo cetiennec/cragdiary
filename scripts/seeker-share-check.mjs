@@ -7,6 +7,16 @@ import { chromium } from "playwright";
 const base = process.argv[2] ?? "http://localhost:3111";
 const out = process.argv[3] ?? "/tmp";
 
+
+// The grade range is a two-handle slider over the scale the ladder exposes.
+async function setGrade(page, min, max) {
+  const ladder = page.locator(".seeker-ladder").first();
+  const scale = (await ladder.getAttribute("data-scale")).split(",");
+  const inputs = ladder.locator('input[type="range"]');
+  await inputs.nth(1).fill(String(scale.indexOf(max)));
+  await inputs.nth(0).fill(String(scale.indexOf(min)));
+}
+
 const browser = await chromium.launch();
 const ctx = await browser.newContext({
   viewport: { width: 1280, height: 1000 },
@@ -46,8 +56,7 @@ console.log(
 await probe.close();
 
 // 1. Filters are written into the address bar.
-await page.getByRole("button", { name: "Free grade 6a", exact: true }).click();
-await page.getByRole("button", { name: "Free grade 6c", exact: true }).click();
+await setGrade(page, "6a", "6c");
 await page.waitForTimeout(2500);
 const shared = page.url();
 console.log("url after filtering:", shared.split("/cragseeker")[1]);

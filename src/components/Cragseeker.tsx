@@ -154,34 +154,29 @@ function RangeSelect({
   );
 }
 
-// The next range after tapping `pick` on a ladder. The first tap sets the low
-// end, the second the high end; a tap inside a range narrows it to that one
-// grade, a tap outside stretches the nearer end; tapping the only grade set
-// clears it. Positions, not strings, so "6a" < "6a+" compares the way the
-// scale is ordered.
-function ladderStep(
-  scale: readonly string[],
-  min: string,
-  max: string,
-  pick: string
-): { min: string; max: string } {
-  const lo = scale.indexOf(min);
-  const hi = scale.indexOf(max);
-  const at = scale.indexOf(pick);
-  if (lo < 0 && hi < 0) return { min: pick, max: "" };
-  if (lo < 0 || hi < 0) {
-    const only = lo < 0 ? hi : lo;
-    if (at === only) return { min: "", max: "" };
-    return at < only ? { min: pick, max: scale[only] } : { min: scale[only], max: pick };
-  }
-  if (lo === hi && at === lo) return { min: "", max: "" };
-  if (at < lo) return { min: pick, max };
-  if (at > hi) return { min, max: pick };
-  return { min: pick, max: pick };
+// Which steps get a label under the track: the first of each number (3a,
+// 4a, 5a… on the free scale), or every step on a short scale like T1–T5. Where
+// that would be a wall of text, the two ends alone.
+function tickIndexes(scale: readonly string[]): number[] {
+  const firsts: number[] = [];
+  let prev = "";
+  scale.forEach((v, i) => {
+    const head = v.match(/^[A-Za-z]*\d+/)?.[0] ?? v;
+    if (head !== prev) firsts.push(i);
+    prev = head;
+  });
+  // Two labels a step apart would print on top of each other ("2" and "3a"
+  // on the free scale): keep the later, rounder one.
+  const last = scale.length - 1;
+  const spaced = firsts.filter((i, k) => k === firsts.length - 1 || (firsts[k + 1] - i) / last >= 0.06);
+  if (spaced.length >= 2 && spaced.length <= 10) return spaced;
+  return scale.length > 1 ? [0, scale.length - 1] : [0];
 }
 
-// The scale laid out to tap on, for the one grade asked up front — two taps
-// and no list to scroll, where a pair of dropdowns took four and a scroll.
+// The grade asked up front, as one line: a track with two handles, the way a
+// price range is picked on a booking site. A handle pushed to either end
+// means no bound on that side, so both at the ends is "any". Native range
+// inputs underneath, so the keyboard and a screen reader get the real thing.
 function GradeLadder({
   label,
   hint,
@@ -199,95 +194,89 @@ function GradeLadder({
   onChange: (next: { min: string; max: string }) => void;
   t: Dict["seeker"];
 }) {
-  const lo = scale.indexOf(min);
-  const hi = scale.indexOf(max);
-  const chosen =
-    lo < 0 && hi < 0
-      ? t.anyGrade
-      : lo >= 0 && hi >= 0
-        ? lo === hi
-          ? min
-          : `${min} → ${max}`
-        : lo >= 0
-          ? `${min} →`
-          : `→ ${max}`;
-  const inRange = (i: number) =>
-    lo >= 0 && hi >= 0 ? i >= lo && i <= hi : i === lo || i === hi;
-
-  // One slide as well as two taps: press on a grade and drag, and the range
-  // follows the finger. The pointer is captured on the row, so the grade under
-  // it is read from the point rather than from which button fires; a press
-  // that never moved is a tap, and a keyboard "click" (detail 0) is handled
-  // by the button itself.
-  const drag = useRef<{ start: string; moved: boolean; last: string } | null>(null);
-  const gradeAt = (e: React.PointerEvent) =>
-    (document.elementFromPoint(e.clientX, e.clientY)?.closest("[data-grade]") as HTMLElement | null)
-      ?.dataset.grade ?? null;
-  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (e.button !== 0) return;
-    const start = (e.target as HTMLElement).closest<HTMLElement>("[data-grade]")?.dataset.grade;
-    if (!start) return;
-    drag.current = { start, moved: false, last: start };
-    e.currentTarget.setPointerCapture(e.pointerId);
+  const last = scale.length - 1;
+  const lo = Math.max(scale.indexOf(min), 0);
+  const hi = scale.indexOf(max) < 0 ? last : scale.indexOf(max);
+  const any = lo === 0 && hi === last;
+  const chosen = any
+    ? t.anyGrade
+    : lo === hi
+      ? scale[lo]
+      : lo === 0
+        ? `→ ${scale[hi]}`
+        : hi === last
+          ? `${scale[lo]} →`
+          : `${scale[lo]} → ${scale[hi]}`;
+  const commit = (a: number, b: number) =>
+    onChange({ min: a <= 0 ? "" : scale[a], max: b >= last ? "" : scale[b] });
+  const setLo = (v: number) => commit(Math.min(v, hi), hi);
+  const setHi = (v: number) => commit(lo, Math.max(v, lo));
+  // A press on the track itself, between the handles, brings the nearer one.
+  const onTrackPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if ((e.target as HTMLElement).tagName === "INPUT") return;
+    const box = e.currentTarget.getBoundingClientRect();
+    const at = Math.round(((e.clientX - box.left) / box.width) * last);
+    const v = Math.min(Math.max(at, 0), last);
+    if (Math.abs(v - lo) <= Math.abs(v - hi)) setLo(v);
+    else setHi(v);
   };
-  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    const d = drag.current;
-    if (!d) return;
-    const at = gradeAt(e);
-    if (!at || at === d.last) return;
-    d.moved = true;
-    d.last = at;
-    const [a, b] = [scale.indexOf(d.start), scale.indexOf(at)].sort((x, y) => x - y);
-    onChange({ min: scale[a], max: scale[b] });
-  };
-  const onPointerUp = () => {
-    const d = drag.current;
-    drag.current = null;
-    if (d && !d.moved) onChange(ladderStep(scale, min, max, d.start));
-  };
+  // Two thumbs on one spot: the one that can still move must be on top.
+  const loOnTop = lo === hi && lo > last / 2;
+  const pct = (i: number) => (last > 0 ? (i / last) * 100 : 0);
   return (
-    <fieldset className="seeker-ladder" data-min={min} data-max={max}>
+    <fieldset className="seeker-ladder" data-min={min} data-max={max} data-scale={scale.join(",")}>
       <legend className="seeker-field-label">
         {label}
         {hint && <em className="seeker-field-hint"> {hint}</em>}
         <strong className="seeker-ladder-chosen" aria-live="polite">
           {chosen}
         </strong>
+        {!any && (
+          <button
+            type="button"
+            className="seeker-ladder-clear"
+            aria-label={`${label}: ${t.anyGrade}`}
+            onClick={() => onChange({ min: "", max: "" })}
+          >
+            ×
+          </button>
+        )}
       </legend>
       <div
-        className="seeker-ladder-steps"
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={() => (drag.current = null)}
+        className="seeker-slider"
+        style={{ "--lo": `${pct(lo)}%`, "--hi": `${pct(hi)}%` } as React.CSSProperties}
+        onPointerDown={onTrackPointerDown}
       >
-        <button
-          type="button"
-          className="seeker-ladder-any"
-          aria-pressed={lo < 0 && hi < 0}
-          onClick={() => onChange({ min: "", max: "" })}
-        >
-          {t.anyGrade}
-        </button>
-        {scale.map((v, i) => (
-          <button
-            key={v}
-            type="button"
-            className={
-              "seeker-ladder-step" +
-              (inRange(i) ? " on" : "") +
-              (i === lo || i === hi ? " end" : "")
-            }
-            aria-pressed={inRange(i)}
-            aria-label={`${label} ${v}`}
-            data-grade={v}
-            onClick={(e) => {
-              if (e.detail === 0) onChange(ladderStep(scale, min, max, v));
-            }}
-          >
-            {v}
-          </button>
-        ))}
+        <div className="seeker-slider-track" aria-hidden />
+        <div className="seeker-slider-fill" aria-hidden />
+        <input
+          type="range"
+          min={0}
+          max={last}
+          step={1}
+          value={lo}
+          aria-label={`${label} ${t.min}`}
+          aria-valuetext={scale[lo]}
+          className={loOnTop ? "on-top" : undefined}
+          onChange={(e) => setLo(Number(e.target.value))}
+        />
+        <input
+          type="range"
+          min={0}
+          max={last}
+          step={1}
+          value={hi}
+          aria-label={`${label} ${t.max}`}
+          aria-valuetext={scale[hi]}
+          onChange={(e) => setHi(Number(e.target.value))}
+        />
+        <div className="seeker-slider-ticks" aria-hidden>
+          {tickIndexes(scale).map((i) => (
+            <span key={i} style={{ left: `${pct(i)}%` }}>
+              {scale[i]}
+            </span>
+          ))}
+        </div>
       </div>
     </fieldset>
   );

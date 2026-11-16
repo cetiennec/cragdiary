@@ -5205,13 +5205,14 @@ a {
   padding-top: 0.2rem;
 }
 
-/* The grade asked up front, as a ladder of taps: the first sets the low end,
-   the second the high end, the chosen stretch lights up between them. Its
-   steps are smaller than the chips above, since there are thirty-odd. */
+/* The grade asked up front, on one line: a track with two handles, the way
+   a price range is picked. Native range inputs sit over the track, drawn
+   invisible but for their thumbs, so the keyboard and the finger both get
+   the browser's own slider; the fill between the thumbs is ours. */
 .seeker-ladder {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.2rem;
   flex: 1 1 100%;
   border: none;
   padding: 0;
@@ -5221,7 +5222,7 @@ a {
 
 .seeker-ladder legend {
   padding: 0;
-  margin-bottom: 0.35rem;
+  margin-bottom: 0.2rem;
 }
 
 .seeker-ladder-chosen {
@@ -5230,63 +5231,153 @@ a {
   font-weight: 700;
 }
 
-.seeker-ladder-steps {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem;
-  /* The finger's whole gesture belongs to the ladder, as on any slider. On a
-     phone the scale wraps to several rows, so a slide from 5c to 6b+ is as
-     much down as across — with `pan-y` the browser read that as a scroll and
-     cancelled the drag, and the page only ever scrolled. */
+.seeker-ladder-clear {
+  font: inherit;
+  line-height: 1;
+  margin-left: 0.35rem;
+  padding: 0 0.35rem;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.seeker-ladder-clear:hover {
+  color: var(--accent);
+}
+
+.seeker-slider {
+  --thumb: 1.25rem;
+  position: relative;
+  height: 2rem;
+  margin-inline: calc(var(--thumb) / 2);
+  margin-bottom: 1.1rem;
+  /* The finger on the handle belongs to the slider, as on any slider. */
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
 }
 
-.seeker-ladder-step,
-.seeker-ladder-any {
-  font: inherit;
-  font-size: 0.74rem;
-  font-weight: 600;
-  line-height: 1;
-  min-width: 2.2rem;
-  padding: 0.38rem 0.3rem;
-  border: 1px solid var(--border);
+.seeker-slider-track {
+  position: absolute;
+  inset: 0 calc(var(--thumb) / -2);
+  top: 50%;
+  height: 6px;
+  transform: translateY(-50%);
   border-radius: 999px;
-  background: transparent;
-  color: var(--text);
-  cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  background: var(--border);
 }
 
-.seeker-ladder-any {
-  padding-inline: 0.6rem;
-}
-
-.seeker-ladder-step:hover,
-.seeker-ladder-any:hover {
-  border-color: var(--accent);
-}
-
-/* Inside the range, a soft wash; at its two ends, the full colour, so the
-   stretch reads as a bar with its handles. */
-.seeker-ladder-step.on,
-.seeker-ladder-any[aria-pressed="true"] {
-  background: color-mix(in srgb, var(--accent) 18%, transparent);
-  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
-  color: var(--text);
-}
-
-.seeker-ladder-step.end {
+.seeker-slider-fill {
+  /* The box runs from the first thumb centre to the last, so a step's
+     percentage is where its thumb sits. */
+  position: absolute;
+  top: 50%;
+  height: 6px;
+  transform: translateY(-50%);
+  left: var(--lo);
+  right: calc(100% - var(--hi));
+  border-radius: 999px;
   background: var(--accent);
-  border-color: var(--accent);
-  color: var(--accent-contrast);
 }
 
-.seeker-ladder-step:focus-visible,
-.seeker-ladder-any:focus-visible {
+.seeker-slider input[type="range"] {
+  position: absolute;
+  inset: 0 calc(var(--thumb) / -2);
+  width: calc(100% + var(--thumb));
+  height: 100%;
+  margin: 0;
+  /* The site's own input look (border, padding, fill) would draw a pill
+     round the track and push the thumbs off it. */
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  appearance: none;
+  -webkit-appearance: none;
+  pointer-events: none;
+}
+
+.seeker-slider input[type="range"].on-top {
+  z-index: 2;
+}
+
+.seeker-slider input[type="range"]::-webkit-slider-runnable-track {
+  background: transparent;
+  height: 100%;
+}
+
+.seeker-slider input[type="range"]::-moz-range-track {
+  background: transparent;
+  height: 100%;
+}
+
+.seeker-slider input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  pointer-events: auto;
+  width: var(--thumb);
+  height: var(--thumb);
+  margin-top: calc((2rem - var(--thumb)) / 2);
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+  background: var(--bg-elevated);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  cursor: grab;
+}
+
+.seeker-slider input[type="range"]::-moz-range-thumb {
+  pointer-events: auto;
+  width: var(--thumb);
+  height: var(--thumb);
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+  background: var(--bg-elevated);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  cursor: grab;
+}
+
+.seeker-slider input[type="range"]:active::-webkit-slider-thumb {
+  cursor: grabbing;
+  background: var(--accent);
+}
+
+.seeker-slider input[type="range"]:active::-moz-range-thumb {
+  cursor: grabbing;
+  background: var(--accent);
+}
+
+.seeker-slider input[type="range"]:focus-visible {
+  outline: none;
+}
+
+.seeker-slider input[type="range"]:focus-visible::-webkit-slider-thumb {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+.seeker-slider input[type="range"]:focus-visible::-moz-range-thumb {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* The landmarks under the track — the first of each number — so a handle
+   can be read without moving it. */
+.seeker-slider-ticks {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  height: 1rem;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.seeker-slider-ticks span {
+  position: absolute;
+  transform: translateX(-50%);
+  white-space: nowrap;
 }
 
 /* The folded-away filters, on a native <details>. The toggle reads as a

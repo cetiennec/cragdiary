@@ -6,6 +6,16 @@ import { chromium } from "playwright";
 const base = process.argv[2] ?? "http://localhost:3111";
 const out = process.argv[3] ?? "/tmp";
 
+
+// The grade range is a two-handle slider over the scale the ladder exposes.
+async function setGrade(page, min, max) {
+  const ladder = page.locator(".seeker-ladder").first();
+  const scale = (await ladder.getAttribute("data-scale")).split(",");
+  const inputs = ladder.locator('input[type="range"]');
+  await inputs.nth(1).fill(String(scale.indexOf(max)));
+  await inputs.nth(0).fill(String(scale.indexOf(min)));
+}
+
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1280, height: 1000 } });
 page.on("pageerror", (e) => console.error("PAGE ERROR:", e.message));
@@ -31,8 +41,9 @@ console.log("place search:", await status(), "-", await count(), "cards");
 await page.screenshot({ path: `${out}/seeker-1-place.png`, fullPage: true });
 
 // 2. Narrow by free grade and orientation.
-await page.getByRole("button", { name: /^(Free grade|Cotation libre) 6a$/ }).click();
-await page.getByRole("button", { name: /^(Free grade|Cotation libre) 6c$/ }).click();
+await setGrade(page, "6a", "6c");
+// Orientation lives in the folded-away filters.
+await page.locator(".seeker-extra-summary").click();
 await page.locator(".seeker-chip", { hasText: /^S$/ }).click();
 await page.waitForTimeout(2500);
 console.log("filtered:", await status(), "-", await count(), "cards");
