@@ -51,8 +51,9 @@ export default function EntryCard({
 
   // "@cetiennec, Mitch" reads as names on a card; the links live on the day.
   const partners = shown("partners", entry.partners)
-    ?.split(",")
-    .map((p) => p.trim().replace(/^@/, ""))
+    ?.replace(/@(?=[\w-])/g, "")
+    .split(",")
+    .map((p) => p.trim().replace(/\s+/g, " "))
     .filter(Boolean)
     .join(", ");
   const date = formatDate(entry.entry_date, locale, entry.month_only);
