@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import SeekerMap, {
   GYM_COLOR,
   HUT_COLOR,
@@ -12,11 +12,13 @@ import ParkingLink from "./ParkingLink";
 import WeatherLink from "./WeatherLink";
 import Toast from "./Toast";
 import GymThumb from "./GymThumb";
+import { ActivityGlyph, Compass } from "./SeekerV2Parts";
 import { saveWishFromSearch } from "@/app/actions";
 import type { SeekerResult } from "@/app/api/seeker/route";
 import type { OpenBetaClimb } from "@/app/api/seeker/climbs/route";
 import type { MountainHut } from "@/app/api/seeker/huts/route";
 import type { ClimbingGym } from "@/app/api/seeker/gyms/route";
+import type { GradeHistogram } from "@/app/api/seeker/histogram/route";
 import type { C2cAccessPoint, C2cRouteDetail } from "@/app/api/c2c/access/route";
 import type { C2cSuggestion } from "@/app/api/c2c/search/route";
 import type { GeoSuggestion } from "@/app/api/geo/search/route";
@@ -155,6 +157,9 @@ function GradeLadder({
   max,
   onChange,
   unit = "",
+  bars,
+  barsHint,
+  id,
   t,
 }: {
   label: string;
@@ -164,6 +169,10 @@ function GradeLadder({
   max: string;
   onChange: (next: { min: string; max: string }) => void;
   unit?: string;
+  /** Routes per band of the scale, drawn over the track (see /api/seeker/histogram). */
+  bars?: { from: number; to: number; count: number; label: string }[];
+  barsHint?: string;
+  id?: string;
   t: Dict["seeker"];
 }) {
   const last = scale.length - 1;
@@ -197,7 +206,7 @@ function GradeLadder({
   const loOnTop = lo === hi && lo > last / 2;
   const pct = (i: number) => (last > 0 ? (i / last) * 100 : 0);
   return (
-    <fieldset className="seeker-ladder" data-min={min} data-max={max} data-scale={scale.join(",")}>
+    <fieldset id={id} className="seeker-ladder" data-min={min} data-max={max} data-scale={scale.join(",")}>
       <legend className="seeker-field-label">
         {label}
         {hint && <em className="seeker-field-hint"> {hint}</em>}
@@ -215,6 +224,26 @@ function GradeLadder({
           </button>
         )}
       </legend>
+      {bars && bars.length > 0 && (
+        // Where the routes are before a handle moves, the way a booking site
+        // draws prices: one bar per band, as wide as the steps it covers, lit
+        // where it overlaps the chosen range.
+        <div className="seeker-hist" title={barsHint} aria-hidden>
+          {bars.map((b) => {
+            const top = Math.max(...bars.map((x) => x.count), 1);
+            return (
+              <span
+                key={b.from}
+                className={b.to >= lo && b.from <= hi ? "in" : undefined}
+                style={{
+                  flexGrow: b.to - b.from + 1,
+                  height: `${Math.max(4, Math.round((b.count / top) * 100))}%`,
+                }}
+              />
+            );
+          })}
+        </div>
+      )}
       <div
         className="seeker-slider"
         style={{ "--lo": `${pct(lo)}%`, "--hi": `${pct(hi)}%` } as React.CSSProperties}
@@ -302,6 +331,7 @@ export default function Cragseeker({
   wishlists,
   climbed,
   params,
+  variant = "classic",
 }: {
   t: Dict["seeker"];
   locale: Locale;
@@ -311,7 +341,10 @@ export default function Cragseeker({
   /** Camptocamp route ids already logged in the journal. */
   climbed: number[];
   params: SeekerParams;
+  /** Which menu: the original panel, or the second one at /cragseekerv2. */
+  variant?: "classic" | "v2";
 }) {
+  const basePath = variant === "v2" ? "/cragseekerv2" : "/cragseeker";
   const climbedIds = useMemo(() => new Set(climbed), [climbed]);
   const [activity, setActivity] = useState<C2cActivity>(
     (C2C_ACTIVITIES as readonly string[]).includes(params.act ?? "")
@@ -514,7 +547,7 @@ export default function Cragseeker({
   // Where "come back here afterwards" points: this search, as the address bar
   // has it. Built from `search` rather than read from `window`, so it is right
   // on the server render too.
-  const here = search ? `/cragseeker?${search}` : "/cragseeker";
+  const here = search ? `${basePath}?${search}` : basePath;
 
   // Shallow routing: update the address bar without re-running the server
   // component, so the URL always describes the current search.
@@ -677,6 +710,40 @@ export default function Cragseeker({
       cancelled = true;
     };
   }, [showGyms, gymCircle]);
+
+  // The bars over the grade slider: routes per band for this search with the
+  // grade itself left out, so they show what moving a handle would find. v2
+  // only, camptocamp only, and stamped with the query they answer.
+  const histSearch = useMemo(() => {
+    const sp = new URLSearchParams(search);
+    sp.delete(primaryRange);
+    sp.delete("huts");
+    sp.delete("gyms");
+    return sp.toString();
+  }, [search, primaryRange]);
+  const [histogram, setHistogram] = useState<{ at: string; data: GradeHistogram } | null>(null);
+  const wantsHistogram = variant === "v2" && activeSources.includes("c2c") && !q.trim();
+  useEffect(() => {
+    if (!wantsHistogram) return;
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/seeker/histogram?${histSearch}&key=${primaryRange}&lang=${locale}`);
+        const data = (await res.json()) as GradeHistogram;
+        if (!cancelled) setHistogram({ at: histSearch, data });
+      } catch {
+        // No bars is a fine outcome; the slider works the same without them.
+      }
+    }, 600);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [wantsHistogram, histSearch, primaryRange, locale]);
+  const gradeBars =
+    wantsHistogram && histogram?.at === histSearch && histogram.data.key === primaryRange
+      ? histogram.data.bands
+      : undefined;
 
   // Only gyms belonging to the circle on screen, and only while asked for.
   const visibleGyms = useMemo(
@@ -1086,23 +1153,11 @@ export default function Cragseeker({
     [shown, isClimbed, tagsFor, t]
   );
 
-  return (
-    <div className="page-container seeker">
-      <header className="seeker-head">
-        <h1 className="page-title">{t.title}</h1>
-        <p className="seeker-tagline">{t.tagline}</p>
-      </header>
 
-      <section className="seeker-controls" aria-label={t.filters}>
-        {/* Three questions in turn, rather than one wall of controls: what
-            kind of day you want, whether you already know what you are after,
-            and — failing that — where you are. */}
-        <h2 className="seeker-step">{t.step1}</h2>
-
-        {/* 1. Which databases to ask — the choice every filter below hangs off,
-            so it sits above them rather than in among them. */}
-        <div className="seeker-row seeker-row-sources">
-          <fieldset className="seeker-facing seeker-sources">
+  // Shared by both menus: the two search fields, the database switches, and
+  // everything below the menu — map, count, results, gyms.
+  const sourcesField = (
+    <fieldset className="seeker-facing seeker-sources">
             <legend className="seeker-field-label">{t.databases}</legend>
             {SEEKER_SOURCES.map((source) => {
               const handled = sourceHandles(source, activity);
@@ -1134,86 +1189,10 @@ export default function Cragseeker({
               );
             })}
           </fieldset>
-          {/* The same switch as the gyms row in the map's own key — this is
-              the one a first-time visitor is actually likely to see, since
-              the map's corner menu is easy to miss entirely. A toggle, not a
-              one-way "turn on": it has to answer to the same state either
-              could set. */}
-          <button
-            type="button"
-            className={`seeker-gyms-nudge${showGyms ? " is-on" : ""}`}
-            aria-pressed={showGyms}
-            onClick={() => setShowGyms((on) => !on)}
-            disabled={!centre}
-          >
-            ☁ {t.gymsHint}
-          </button>
-        </div>
+  );
 
-        {/* 2. What you're looking for. */}
-        <div className="seeker-row">
-          <label className="seeker-field">
-            <span className="seeker-field-label">{t.activity}</span>
-            <select value={activity} onChange={(e) => setActivity(e.target.value as C2cActivity)}>
-              {C2C_ACTIVITIES.map((a) => (
-                <option key={a} value={a}>
-                  {t.activities[a]}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <GradeLadder
-            label={t.ranges[primaryRange]}
-            hint={t.rangeHints[primaryRange]}
-            scale={C2C_RANGE_SCALES[primaryRange]}
-            min={ranges[primaryRange]?.min ?? ""}
-            max={ranges[primaryRange]?.max ?? ""}
-            onChange={(next) => setRanges((prev) => ({ ...prev, [primaryRange]: next }))}
-            t={t}
-          />
-
-          {showOutdoorType && (
-            <fieldset className="seeker-facing seeker-styles">
-              <legend className="seeker-field-label">{t.routeStyle}</legend>
-              {/* "Any" is the empty selection rather than a fourth style —
-                  ticking every box and ticking none ask the same question, and
-                  this way the control says which one you are in. */}
-              <label className="seeker-chip">
-                <input
-                  type="checkbox"
-                  name="crtyp"
-                  checked={outdoorTypes.length === 0}
-                  onChange={() => setOutdoorTypes([])}
-                />
-                <span>{t.anyStyle}</span>
-              </label>
-              {C2C_OUTDOOR_TYPES.map((type) => (
-                <label key={type} className="seeker-chip">
-                  <input
-                    type="checkbox"
-                    name="crtyp"
-                    checked={outdoorTypes.includes(type)}
-                    onChange={() =>
-                      setOutdoorTypes((prev) =>
-                        prev.includes(type) ? prev.filter((s) => s !== type) : [...prev, type]
-                      )
-                    }
-                  />
-                  <span>{t.outdoorTypes[type]}</span>
-                </label>
-              ))}
-            </fieldset>
-          )}
-        </div>
-
-        {/* 2b. The way in for anyone who already knows the name — it used to
-            sit last, among the filters, labelled "name contains", which is a
-            filter's name rather than a search's. */}
-        <h2 className="seeker-step">{t.step2}</h2>
-        <p className="seeker-step-hint">{t.step2Hint}</p>
-        <div className="seeker-row">
-          <div className="seeker-field seeker-field-grow seeker-direct">
+  const nameField = (
+    <div className="seeker-field seeker-field-grow seeker-direct">
             <span className="seeker-field-label">{t.nameLabel}</span>
             <div className="combobox">
               <input
@@ -1267,14 +1246,10 @@ export default function Cragseeker({
               )}
             </div>
           </div>
-        </div>
+  );
 
-        <h2 className="seeker-step">{t.step3}</h2>
-        <p className="seeker-step-hint">{t.step3Hint}</p>
-
-        {/* 3. Where to look. */}
-        <div className="seeker-row">
-          <div className="seeker-field seeker-field-grow seeker-where">
+  const placeField = (
+    <div className="seeker-field seeker-field-grow seeker-where">
             <span className="seeker-field-label">{t.where}</span>
             <div className="combobox">
               {/* A search field, not a text one, and announced as the combobox
@@ -1327,126 +1302,10 @@ export default function Cragseeker({
               )}
             </div>
           </div>
+  );
 
-          <button type="button" className="seeker-locate" onClick={locate} disabled={locating}>
-            {locating ? t.locating : `📍 ${t.myLocation}`}
-          </button>
-
-          <label className="seeker-field">
-            <span className="seeker-field-label">{t.radius}</span>
-            <select
-              value={radius}
-              onChange={(e) => setRadius(Number(e.target.value))}
-              disabled={!centre}
-            >
-              {RADII.map((r) => (
-                <option key={r} value={r}>
-                  {r} km
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-
-        {/* 4. Everything else, folded away: the activity's other grades, the
-            size of the route, and the narrowing of what came back. The toggle
-            counts what is set inside, so nothing filters from out of sight. */}
-        <details
-          className="seeker-extra"
-          open={moreOpen}
-          onToggle={(e) => setMoreOpen(e.currentTarget.open)}
-        >
-          <summary className="seeker-extra-summary">
-            {t.moreFilters}
-            {moreCount > 0 && <span className="seeker-extra-count">{moreCount}</span>}
-          </summary>
-
-          <div className="seeker-row seeker-row-settings">
-          {moreRanges.map((key) => (
-            <GradeLadder
-              key={key}
-              label={t.ranges[key]}
-              hint={t.rangeHints[key]}
-              scale={C2C_RANGE_SCALES[key]}
-              min={ranges[key]?.min ?? ""}
-              max={ranges[key]?.max ?? ""}
-              onChange={(next) => setRanges((prev) => ({ ...prev, [key]: next }))}
-              t={t}
-            />
-          ))}
-
-          <GradeLadder
-            label={heightLabel}
-            scale={heightSteps}
-            min={snapToStep(heightSteps, height.min)}
-            max={snapToStep(heightSteps, height.max)}
-            onChange={setHeight}
-            unit=" m"
-            t={t}
-          />
-
-          <GradeLadder
-            label={t.elevation}
-            scale={ELEVATION_STEPS}
-            min={snapToStep(ELEVATION_STEPS, elevation.min)}
-            max={snapToStep(ELEVATION_STEPS, elevation.max)}
-            onChange={setElevation}
-            unit=" m"
-            t={t}
-          />
-        </div>
-
-        {/* 5. Narrowing what came back, and the aspect. The field here reads
-            the answer rather than asking the databases for a new one — the
-            question is asked above, under "Nom". */}
-        <div className="seeker-row">
-          <label className="seeker-field seeker-field-grow">
-            <span className="seeker-field-label">{t.keyword}</span>
-            <input
-              type="search"
-              value={contains}
-              placeholder={t.keywordPlaceholder}
-              autoComplete="off"
-              onChange={(e) => setContains(e.target.value)}
-            />
-          </label>
-
-          <fieldset className="seeker-facing">
-            <legend className="seeker-field-label">{t.orientation}</legend>
-            {C2C_ORIENTATIONS.map((o) => (
-              <label key={o} className="seeker-chip">
-                <input
-                  type="checkbox"
-                  checked={facing.includes(o)}
-                  onChange={(e) =>
-                    setFacing((f) => (e.target.checked ? [...f, o] : f.filter((x) => x !== o)))
-                  }
-                />
-                <span>{o}</span>
-              </label>
-            ))}
-          </fieldset>
-        </div>
-        </details>
-
-        {/* 6. The search-wide actions, anchored bottom right. */}
-        <div className="seeker-row seeker-row-end">
-          <div className="seeker-row-actions">
-            <button type="button" className="seeker-locate" onClick={shareSearch}>
-              {copied ? `✓ ${t.copied}` : `🔗 ${t.share}`}
-            </button>
-            <button type="button" className="filter-clear seeker-clear" onClick={clearAll}>
-              {t.clear}
-            </button>
-          </div>
-        </div>
-        {geoError && (
-          <p className="seeker-note">
-            {geoError === "denied" ? t.locationBlocked : t.locationDenied}
-          </p>
-        )}
-      </section>
-
+  const resultsBlock = (
+    <>
       <SeekerMap
         centre={centre}
         radiusKm={radius}
@@ -1725,7 +1584,7 @@ export default function Cragseeker({
           mean two different things at once. Shown only when the layer is on,
           so the page stays the same as before for anyone not asking. */}
       {showGyms && centre && (
-        <section className="seeker-gyms">
+        <section className="seeker-gyms" id="seeker2-gyms">
           <h2 className="seeker-gyms-head">
             {t.gymsHeading}
             <span className="seeker-gyms-count">
@@ -1767,7 +1626,736 @@ export default function Cragseeker({
       )}
 
       <p className="seeker-attribution">{t.attribution}</p>
+    </>
+  );
 
+  // ---- The second menu, at /cragseekerv2 ------------------------------------
+  // The same search, asked differently: the search read back as a sentence
+  // whose words are doors to their control, tiles for the kind of day, ideas
+  // that set several filters at once, a compass for the aspect, and the count
+  // as the button. Everything above — state, URL, requests — is shared.
+  if (variant === "v2") {
+    const v = t.v2;
+    const primary = ranges[primaryRange];
+    const gradeScale = C2C_RANGE_SCALES[primaryRange] as readonly string[];
+    const rangeText = (r: { min: string; max: string } | undefined, unit = "") => {
+      if (!r || (!r.min && !r.max)) return null;
+      if (r.min && r.max) return r.min === r.max ? r.min + unit : `${r.min}–${r.max}${unit}`;
+      return r.min ? `${r.min}${unit} +` : `≤ ${r.max}${unit}`;
+    };
+    const otherSet = moreRanges.filter((key) => ranges[key]?.min || ranges[key]?.max).length;
+    const sizeSet = (height.min || height.max ? 1 : 0) + (elevation.min || elevation.max ? 1 : 0);
+    const filterCount =
+      (primary?.min || primary?.max ? 1 : 0) +
+      (showOutdoorType && outdoorTypes.length ? 1 : 0) +
+      (facing.length ? 1 : 0) +
+      otherSet +
+      sizeSet +
+      (contains ? 1 : 0) +
+      (minLogged ? 1 : 0);
+
+    const goTo = (id: string) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const fold = el.closest("details");
+      if (fold && !fold.open) fold.open = true;
+      // A control is brought to the middle of the screen; the results, taller
+      // than any screen, to the top.
+      const tall = el.getBoundingClientRect().height > window.innerHeight * 0.8;
+      el.scrollIntoView({ behavior: "smooth", block: tall ? "start" : "center" });
+      if (tall) return;
+      el.classList.remove("seeker2-flash");
+      void el.offsetWidth;
+      el.classList.add("seeker2-flash");
+    };
+
+    const resetAll = () => {
+      clearAll();
+      setMinLogged(0);
+      setSort("near");
+    };
+    const sameSet = (a: string[], b: string[]) => a.length === b.length && a.every((x) => b.includes(x));
+    const ideas = [
+      {
+        id: "warm",
+        label: v.ideaWarm,
+        hint: v.ideaWarmHint,
+        on: sameSet(facing, ["SE", "S", "SW"]) && elevation.max === "1500",
+        apply: () => {
+          setActivity("rock_climbing");
+          setFacing(["SE", "S", "SW"]);
+          setElevation({ min: "", max: "1500" });
+        },
+      },
+      {
+        id: "shade",
+        label: v.ideaShade,
+        hint: v.ideaShadeHint,
+        on: sameSet(facing, ["NW", "N", "NE"]) && elevation.min === "2000",
+        apply: () => {
+          setActivity("rock_climbing");
+          setFacing(["NW", "N", "NE"]);
+          setElevation({ min: "2000", max: "" });
+        },
+      },
+      {
+        id: "first",
+        label: v.ideaFirst,
+        hint: v.ideaFirstHint,
+        on: sameSet(outdoorTypes, ["multi"]) && ranges.frat?.min === "5a" && ranges.frat?.max === "6a",
+        apply: () => {
+          setActivity("rock_climbing");
+          setOutdoorTypes(["multi"]);
+          setRanges({ frat: { min: "5a", max: "6a" }, prat: { min: "", max: "P2+" } });
+        },
+      },
+      {
+        id: "project",
+        label: v.ideaProject,
+        hint: v.ideaProjectHint,
+        on: sameSet(outdoorTypes, ["single"]) && ranges.frat?.min === "7b" && !ranges.frat?.max,
+        apply: () => {
+          setActivity("rock_climbing");
+          setOutdoorTypes(["single"]);
+          setRanges({ frat: { min: "7b", max: "" } });
+        },
+      },
+      {
+        id: "classics",
+        label: v.ideaClassics,
+        hint: v.ideaClassicsHint,
+        on: minLogged === 20,
+        apply: () => {
+          setMinLogged(20);
+          setSort("logged");
+        },
+      },
+      {
+        id: "rain",
+        label: v.ideaRain,
+        hint: v.ideaRainHint,
+        on: showGyms,
+        disabled: !centre,
+        apply: () => {
+          setShowGyms(true);
+          setTimeout(() => goTo("seeker2-gyms"), 400);
+        },
+      },
+    ];
+    const pickIdea = (idea: (typeof ideas)[number]) => {
+      if (idea.on) {
+        if (idea.id === "rain") setShowGyms(false);
+        else resetAll();
+        return;
+      }
+      if (idea.id !== "rain") resetAll();
+      idea.apply();
+    };
+
+    const quickFacing = [
+      { label: v.sunMorning, faces: ["NE", "E", "SE"] },
+      { label: v.sunAllDay, faces: ["SE", "S", "SW"] },
+      { label: v.sunAfternoon, faces: ["SW", "W", "NW"] },
+      { label: v.shade, faces: ["NW", "N", "NE"] },
+    ];
+    const toggleFace = (o: string) =>
+      setFacing((f) => (f.includes(o) ? f.filter((x) => x !== o) : [...f, o]));
+    const facingOrdered = C2C_ORIENTATIONS.filter((o) => facing.includes(o));
+
+    // The search read back. Each word is a button to its control.
+    const word = (text: string, target: string, muted = false) => (
+      <button
+        type="button"
+        className={`seeker2-word${muted ? " muted" : ""}`}
+        onClick={() => goTo(target)}
+      >
+        {text}
+      </button>
+    );
+    const placeWord = centre ? (centre.name ?? v.thePin) : null;
+    const gradeWord = rangeText(primary);
+    const heightWord = rangeText(height, " m");
+    const elevationWord = rangeText(elevation, " m");
+    const extraWords = otherSet + (contains ? 1 : 0) + (minLogged ? 1 : 0);
+    // Each clause carries its own lead-in word, and the punctuation is added
+    // where they are laid out, so a clause can never wrap away from its comma.
+    const sentence: React.ReactNode[] = [];
+    if (q.trim()) {
+      sentence.push(<>{word(t.activities[activity], "seeker2-kind")} {v.named} {word(`“${q.trim()}”`, "seeker2-name")}</>);
+    } else if (placeWord) {
+      sentence.push(<>{word(t.activities[activity], "seeker2-kind")} {v.near} {word(placeWord, "seeker2-where")}</>);
+      sentence.push(<>{v.within} {word(`${radius} km`, "seeker2-where")}</>);
+    } else {
+      sentence.push(<>{word(t.activities[activity], "seeker2-kind")} {word(v.anywhere, "seeker2-where", true)}</>);
+    }
+    sentence.push(word(gradeWord ?? v.anyGrade, "seeker2-grade", !gradeWord));
+    if (showOutdoorType && outdoorTypes.length > 0) {
+      sentence.push(word(outdoorTypes.map((o) => t.outdoorTypes[o]).join(" / "), "seeker2-style"));
+    }
+    if (facing.length > 0) sentence.push(<>{v.facingWord} {word(facingOrdered.join("·"), "seeker2-facing")}</>);
+    if (heightWord) sentence.push(word(`${heightWord} ${v.longWord}`, "seeker2-size"));
+    if (elevationWord) sentence.push(<>{v.atWord} {word(elevationWord, "seeker2-size")}</>);
+    if (extraWords > 0) sentence.push(word(fill(v.andMore, "n", extraWords), "seeker2-more"));
+
+    return (
+      <div className="page-container seeker seeker2">
+        <header className="seeker2-head">
+          <h1 className="page-title">
+            {v.title} <span className="seeker2-badge">{v.badge}</span>
+          </h1>
+          <p className="seeker-tagline">{v.tagline}</p>
+          <a className="seeker2-classic" href={`/cragseeker${search ? `?${search}` : ""}`}>
+            {v.classic} →
+          </a>
+        </header>
+
+        <div className="seeker2-layout">
+          <aside className="seeker2-menu" aria-label={t.filters}>
+            <div className="seeker2-sentence">
+              <p className="seeker2-sentence-meta">
+                <span>{filterCount === 0 ? "" : filterCount === 1 ? v.filterOn : fill(v.filtersOn, "n", filterCount)}</span>
+                <button type="button" className="seeker2-share" onClick={shareSearch}>
+                  {copied ? `✓ ${t.copied}` : `🔗 ${t.share}`}
+                </button>
+              </p>
+              <p className="seeker2-sentence-text">
+                {sentence.map((part, i) => (
+                  <Fragment key={i}>
+                    {i > 0 && " "}
+                    <span className="seeker2-part">
+                      {part}
+                      {i < sentence.length - 1 ? "," : "."}
+                    </span>
+                  </Fragment>
+                ))}
+              </p>
+            </div>
+
+            <div className="seeker2-scroll">
+              <section className="seeker2-sec" id="seeker2-kind">
+                <h2 className="seeker2-h">{v.kindOfDay}</h2>
+                <div className="seeker2-tiles">
+                  {C2C_ACTIVITIES.map((a) => (
+                    <button
+                      key={a}
+                      type="button"
+                      className="seeker2-tile"
+                      aria-pressed={activity === a}
+                      onClick={() => setActivity(a)}
+                    >
+                      <ActivityGlyph id={a} />
+                      {t.activities[a]}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    className="seeker2-tile seeker2-tile-indoor"
+                    aria-pressed={showGyms}
+                    disabled={!centre}
+                    title={centre ? v.indoorHint : v.needsPin}
+                    onClick={() => {
+                      const next = !showGyms;
+                      setShowGyms(next);
+                      if (next) setTimeout(() => goTo("seeker2-gyms"), 400);
+                    }}
+                  >
+                    <ActivityGlyph id="indoor" />
+                    {v.indoor}
+                  </button>
+                </div>
+              </section>
+
+              <section className="seeker2-sec" id="seeker2-where">
+                <h2 className="seeker2-h">{v.where}</h2>
+                <div className="seeker2-where-row">
+                  {placeField}
+                  <button type="button" className="seeker-locate" onClick={locate} disabled={locating}>
+                    {locating ? t.locating : `📍 ${t.myLocation}`}
+                  </button>
+                </div>
+                <div className="seeker2-seg" role="group" aria-label={t.radius}>
+                  {RADII.map((r) => (
+                    <button
+                      key={r}
+                      type="button"
+                      aria-pressed={radius === r}
+                      disabled={!centre}
+                      onClick={() => setRadius(r)}
+                    >
+                      {r} km
+                    </button>
+                  ))}
+                </div>
+                {geoError && (
+                  <p className="seeker-note">
+                    {geoError === "denied" ? t.locationBlocked : t.locationDenied}
+                  </p>
+                )}
+                <div className="seeker2-name" id="seeker2-name">
+                  <span className="seeker2-sub">{v.byName}</span>
+                  {nameField}
+                </div>
+              </section>
+
+              <section className="seeker2-sec" id="seeker2-ideas">
+                <h2 className="seeker2-h">
+                  {v.ideas} <span className="seeker2-hint">{v.ideasHint}</span>
+                </h2>
+                <div className="seeker2-ideas">
+                  {ideas.map((idea) => (
+                    <button
+                      key={idea.id}
+                      type="button"
+                      className="seeker2-idea"
+                      aria-pressed={idea.on}
+                      disabled={idea.disabled}
+                      title={idea.disabled ? v.needsPin : undefined}
+                      onClick={() => pickIdea(idea)}
+                    >
+                      <b>{idea.label}</b>
+                      <span>{idea.hint}</span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+
+              <section className="seeker2-sec">
+                <GradeLadder
+                  id="seeker2-grade"
+                  label={t.ranges[primaryRange]}
+                  hint={t.rangeHints[primaryRange]}
+                  scale={gradeScale}
+                  min={primary?.min ?? ""}
+                  max={primary?.max ?? ""}
+                  onChange={(next) => setRanges((prev) => ({ ...prev, [primaryRange]: next }))}
+                  bars={gradeBars}
+                  barsHint={v.histogramHint}
+                  t={t}
+                />
+              </section>
+
+              {showOutdoorType && (
+                <section className="seeker2-sec" id="seeker2-style">
+                  <h2 className="seeker2-h">{v.style}</h2>
+                  <div className="seeker2-seg" role="group" aria-label={v.style}>
+                    <button
+                      type="button"
+                      aria-pressed={outdoorTypes.length === 0}
+                      onClick={() => setOutdoorTypes([])}
+                    >
+                      {t.anyStyle}
+                    </button>
+                    {C2C_OUTDOOR_TYPES.map((type) => (
+                      <button
+                        key={type}
+                        type="button"
+                        aria-pressed={outdoorTypes.includes(type)}
+                        onClick={() =>
+                          setOutdoorTypes((prev) =>
+                            prev.includes(type) ? prev.filter((x) => x !== type) : [...prev, type]
+                          )
+                        }
+                      >
+                        {t.outdoorTypes[type]}
+                      </button>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              <section className="seeker2-sec" id="seeker2-facing">
+                <h2 className="seeker2-h">
+                  {v.facing}
+                  {facing.length > 0 && (
+                    <>
+                      <strong className="seeker-ladder-chosen">{facingOrdered.join(" · ")}</strong>
+                      <button
+                        type="button"
+                        className="seeker-ladder-clear"
+                        aria-label={`${v.facing}: ${t.anyGrade}`}
+                        onClick={() => setFacing([])}
+                      >
+                        ×
+                      </button>
+                    </>
+                  )}
+                </h2>
+                <div className="seeker2-facing">
+                  <Compass facing={facing} onToggle={toggleFace} label={v.facing} />
+                  <div className="seeker2-facing-side">
+                    <p className="seeker2-sunline">
+                      {facing.length
+                        ? facingOrdered.map((o) => `${o}: ${v.faceSun[o]}`).join(" · ")
+                        : v.facingHint}
+                    </p>
+                    <div className="seeker2-quick">
+                      {quickFacing.map((qf) => (
+                        <button
+                          key={qf.label}
+                          type="button"
+                          className="seeker-locate"
+                          aria-pressed={sameSet(facing, qf.faces)}
+                          onClick={() => setFacing(sameSet(facing, qf.faces) ? [] : qf.faces)}
+                        >
+                          {qf.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <details
+                className="seeker2-more"
+                id="seeker2-more"
+                open={moreOpen}
+                onToggle={(e) => setMoreOpen(e.currentTarget.open)}
+              >
+                <summary>
+                  {t.moreFilters}
+                  {otherSet + sizeSet + (contains ? 1 : 0) > 0 && (
+                    <span className="seeker-extra-count">{otherSet + sizeSet + (contains ? 1 : 0)}</span>
+                  )}
+                </summary>
+
+                <section className="seeker2-sec" id="seeker2-size">
+                  <h2 className="seeker2-h">{v.size}</h2>
+                  <GradeLadder
+                    label={heightLabel}
+                    scale={heightSteps}
+                    min={snapToStep(heightSteps, height.min)}
+                    max={snapToStep(heightSteps, height.max)}
+                    onChange={setHeight}
+                    unit=" m"
+                    t={t}
+                  />
+                  <GradeLadder
+                    label={t.elevation}
+                    scale={ELEVATION_STEPS}
+                    min={snapToStep(ELEVATION_STEPS, elevation.min)}
+                    max={snapToStep(ELEVATION_STEPS, elevation.max)}
+                    onChange={setElevation}
+                    unit=" m"
+                    t={t}
+                  />
+                </section>
+
+                {moreRanges.length > 0 && (
+                  <section className="seeker2-sec">
+                    <h2 className="seeker2-h">{v.otherGrades}</h2>
+                    {moreRanges.map((key) => (
+                      <GradeLadder
+                        key={key}
+                        label={t.ranges[key]}
+                        hint={t.rangeHints[key]}
+                        scale={C2C_RANGE_SCALES[key]}
+                        min={ranges[key]?.min ?? ""}
+                        max={ranges[key]?.max ?? ""}
+                        onChange={(next) => setRanges((prev) => ({ ...prev, [key]: next }))}
+                        t={t}
+                      />
+                    ))}
+                  </section>
+                )}
+
+                <section className="seeker2-sec">
+                  <label className="seeker-field seeker-field-grow">
+                    <span className="seeker-field-label">{t.keyword}</span>
+                    <input
+                      type="search"
+                      value={contains}
+                      placeholder={t.keywordPlaceholder}
+                      autoComplete="off"
+                      onChange={(e) => setContains(e.target.value)}
+                    />
+                  </label>
+                </section>
+
+                <section className="seeker2-sec">
+                  <h2 className="seeker2-h">{v.databases}</h2>
+                  {sourcesField}
+                  <h2 className="seeker2-h seeker2-h-gap">{v.layers}</h2>
+                  <div className="seeker2-quick">
+                    <button
+                      type="button"
+                      className="seeker-locate"
+                      aria-pressed={showHuts}
+                      disabled={!centre}
+                      title={t.hutsHint}
+                      onClick={() => setShowHuts((on) => !on)}
+                    >
+                      {t.hutsLegend}
+                    </button>
+                    <button
+                      type="button"
+                      className="seeker-locate"
+                      aria-pressed={showGyms}
+                      disabled={!centre}
+                      title={t.gymsHint}
+                      onClick={() => setShowGyms((on) => !on)}
+                    >
+                      {t.gymsLegend}
+                    </button>
+                  </div>
+                </section>
+              </details>
+            </div>
+
+            <div className="seeker2-foot">
+              <button type="button" className="seeker2-clear" onClick={resetAll} disabled={filterCount === 0}>
+                {t.clear}
+              </button>
+              <button type="button" className="seeker2-go" onClick={() => goTo("seeker2-results")}>
+                {loading && results.length === 0
+                  ? t.searching
+                  : failed
+                    ? t.error
+                    : refined
+                      ? fill(fill(t.refineCount, "n", shown.length), "total", results.length)
+                      : countLabel}
+                <span aria-hidden> ↓</span>
+              </button>
+            </div>
+          </aside>
+
+          <div className="seeker2-stage" id="seeker2-results">
+            {resultsBlock}
+          </div>
+        </div>
+
+        {toast && (
+          <Toast message={toast.text} tone={toast.tone} onDone={() => setToast(null)} />
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="page-container seeker">
+      <header className="seeker-head">
+        <h1 className="page-title">{t.title}</h1>
+        <p className="seeker-tagline">{t.tagline}</p>
+      </header>
+
+      <section className="seeker-controls" aria-label={t.filters}>
+        {/* Three questions in turn, rather than one wall of controls: what
+            kind of day you want, whether you already know what you are after,
+            and — failing that — where you are. */}
+        <h2 className="seeker-step">{t.step1}</h2>
+
+        {/* 1. Which databases to ask — the choice every filter below hangs off,
+            so it sits above them rather than in among them. */}
+        <div className="seeker-row seeker-row-sources">
+          {sourcesField}
+          {/* The same switch as the gyms row in the map's own key — this is
+              the one a first-time visitor is actually likely to see, since
+              the map's corner menu is easy to miss entirely. A toggle, not a
+              one-way "turn on": it has to answer to the same state either
+              could set. */}
+          <button
+            type="button"
+            className={`seeker-gyms-nudge${showGyms ? " is-on" : ""}`}
+            aria-pressed={showGyms}
+            onClick={() => setShowGyms((on) => !on)}
+            disabled={!centre}
+          >
+            ☁ {t.gymsHint}
+          </button>
+        </div>
+
+        {/* 2. What you're looking for. */}
+        <div className="seeker-row">
+          <label className="seeker-field">
+            <span className="seeker-field-label">{t.activity}</span>
+            <select value={activity} onChange={(e) => setActivity(e.target.value as C2cActivity)}>
+              {C2C_ACTIVITIES.map((a) => (
+                <option key={a} value={a}>
+                  {t.activities[a]}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <GradeLadder
+            label={t.ranges[primaryRange]}
+            hint={t.rangeHints[primaryRange]}
+            scale={C2C_RANGE_SCALES[primaryRange]}
+            min={ranges[primaryRange]?.min ?? ""}
+            max={ranges[primaryRange]?.max ?? ""}
+            onChange={(next) => setRanges((prev) => ({ ...prev, [primaryRange]: next }))}
+            t={t}
+          />
+
+          {showOutdoorType && (
+            <fieldset className="seeker-facing seeker-styles">
+              <legend className="seeker-field-label">{t.routeStyle}</legend>
+              {/* "Any" is the empty selection rather than a fourth style —
+                  ticking every box and ticking none ask the same question, and
+                  this way the control says which one you are in. */}
+              <label className="seeker-chip">
+                <input
+                  type="checkbox"
+                  name="crtyp"
+                  checked={outdoorTypes.length === 0}
+                  onChange={() => setOutdoorTypes([])}
+                />
+                <span>{t.anyStyle}</span>
+              </label>
+              {C2C_OUTDOOR_TYPES.map((type) => (
+                <label key={type} className="seeker-chip">
+                  <input
+                    type="checkbox"
+                    name="crtyp"
+                    checked={outdoorTypes.includes(type)}
+                    onChange={() =>
+                      setOutdoorTypes((prev) =>
+                        prev.includes(type) ? prev.filter((s) => s !== type) : [...prev, type]
+                      )
+                    }
+                  />
+                  <span>{t.outdoorTypes[type]}</span>
+                </label>
+              ))}
+            </fieldset>
+          )}
+        </div>
+
+        {/* 2b. The way in for anyone who already knows the name — it used to
+            sit last, among the filters, labelled "name contains", which is a
+            filter's name rather than a search's. */}
+        <h2 className="seeker-step">{t.step2}</h2>
+        <p className="seeker-step-hint">{t.step2Hint}</p>
+        <div className="seeker-row">
+          {nameField}
+        </div>
+
+        <h2 className="seeker-step">{t.step3}</h2>
+        <p className="seeker-step-hint">{t.step3Hint}</p>
+
+        {/* 3. Where to look. */}
+        <div className="seeker-row">
+          {placeField}
+
+          <button type="button" className="seeker-locate" onClick={locate} disabled={locating}>
+            {locating ? t.locating : `📍 ${t.myLocation}`}
+          </button>
+
+          <label className="seeker-field">
+            <span className="seeker-field-label">{t.radius}</span>
+            <select
+              value={radius}
+              onChange={(e) => setRadius(Number(e.target.value))}
+              disabled={!centre}
+            >
+              {RADII.map((r) => (
+                <option key={r} value={r}>
+                  {r} km
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        {/* 4. Everything else, folded away: the activity's other grades, the
+            size of the route, and the narrowing of what came back. The toggle
+            counts what is set inside, so nothing filters from out of sight. */}
+        <details
+          className="seeker-extra"
+          open={moreOpen}
+          onToggle={(e) => setMoreOpen(e.currentTarget.open)}
+        >
+          <summary className="seeker-extra-summary">
+            {t.moreFilters}
+            {moreCount > 0 && <span className="seeker-extra-count">{moreCount}</span>}
+          </summary>
+
+          <div className="seeker-row seeker-row-settings">
+          {moreRanges.map((key) => (
+            <GradeLadder
+              key={key}
+              label={t.ranges[key]}
+              hint={t.rangeHints[key]}
+              scale={C2C_RANGE_SCALES[key]}
+              min={ranges[key]?.min ?? ""}
+              max={ranges[key]?.max ?? ""}
+              onChange={(next) => setRanges((prev) => ({ ...prev, [key]: next }))}
+              t={t}
+            />
+          ))}
+
+          <GradeLadder
+            label={heightLabel}
+            scale={heightSteps}
+            min={snapToStep(heightSteps, height.min)}
+            max={snapToStep(heightSteps, height.max)}
+            onChange={setHeight}
+            unit=" m"
+            t={t}
+          />
+
+          <GradeLadder
+            label={t.elevation}
+            scale={ELEVATION_STEPS}
+            min={snapToStep(ELEVATION_STEPS, elevation.min)}
+            max={snapToStep(ELEVATION_STEPS, elevation.max)}
+            onChange={setElevation}
+            unit=" m"
+            t={t}
+          />
+        </div>
+
+        {/* 5. Narrowing what came back, and the aspect. The field here reads
+            the answer rather than asking the databases for a new one — the
+            question is asked above, under "Nom". */}
+        <div className="seeker-row">
+          <label className="seeker-field seeker-field-grow">
+            <span className="seeker-field-label">{t.keyword}</span>
+            <input
+              type="search"
+              value={contains}
+              placeholder={t.keywordPlaceholder}
+              autoComplete="off"
+              onChange={(e) => setContains(e.target.value)}
+            />
+          </label>
+
+          <fieldset className="seeker-facing">
+            <legend className="seeker-field-label">{t.orientation}</legend>
+            {C2C_ORIENTATIONS.map((o) => (
+              <label key={o} className="seeker-chip">
+                <input
+                  type="checkbox"
+                  checked={facing.includes(o)}
+                  onChange={(e) =>
+                    setFacing((f) => (e.target.checked ? [...f, o] : f.filter((x) => x !== o)))
+                  }
+                />
+                <span>{o}</span>
+              </label>
+            ))}
+          </fieldset>
+        </div>
+        </details>
+
+        {/* 6. The search-wide actions, anchored bottom right. */}
+        <div className="seeker-row seeker-row-end">
+          <div className="seeker-row-actions">
+            <button type="button" className="seeker-locate" onClick={shareSearch}>
+              {copied ? `✓ ${t.copied}` : `🔗 ${t.share}`}
+            </button>
+            <button type="button" className="filter-clear seeker-clear" onClick={clearAll}>
+              {t.clear}
+            </button>
+          </div>
+        </div>
+        {geoError && (
+          <p className="seeker-note">
+            {geoError === "denied" ? t.locationBlocked : t.locationDenied}
+          </p>
+        )}
+      </section>
+
+      {resultsBlock}
       {toast && (
         <Toast message={toast.text} tone={toast.tone} onDone={() => setToast(null)} />
       )}

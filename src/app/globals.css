@@ -4080,6 +4080,7 @@ a {
 
 .seeker-controls input,
 .seeker-controls select,
+.seeker2-menu input:not([type="range"]),
 .seeker-result select {
   font: inherit;
   font-size: 0.88rem;
@@ -4104,7 +4105,8 @@ a {
 }
 
 .seeker-controls input:focus-visible,
-.seeker-controls select:focus-visible {
+.seeker-controls select:focus-visible,
+.seeker2-menu input:not([type="range"]):focus-visible {
   outline: none;
   border-color: var(--accent);
 }
@@ -6952,4 +6954,597 @@ label:has(input:placeholder-shown) + .form-hint.form-warn {
   color: var(--text-muted);
   font-size: 1rem;
   line-height: 1.5;
+}
+
+/* ---- Cragseeker v2 (/cragseekerv2) ----------------------------------------
+   The menu as a tall card beside the map and results; on a phone, the menu
+   first and the count, which is the button, pinned to the bottom edge. */
+.seeker2.page-container {
+  max-width: 1440px;
+}
+
+.seeker2-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 1rem;
+  margin-bottom: 1.2rem;
+}
+
+.seeker2-head .seeker-tagline {
+  flex: 1 1 22rem;
+  margin: 0;
+}
+
+.seeker2-badge {
+  font-family: var(--font-body), sans-serif;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  vertical-align: middle;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+
+.seeker2-classic {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.seeker2-layout {
+  display: grid;
+  grid-template-columns: minmax(340px, 420px) minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.seeker2-menu {
+  position: sticky;
+  top: 1rem;
+  max-height: calc(100vh - 2rem);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card, 16px);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+
+.seeker2-stage {
+  min-width: 0;
+}
+
+/* The search, read back. */
+.seeker2-sentence {
+  padding: 1rem 1.2rem 0.9rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.seeker2-sentence-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 0 0 0.3rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  min-height: 1.6rem;
+}
+
+.seeker2-share {
+  font: inherit;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 600;
+  font-size: 0.8rem;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.seeker2-share:hover {
+  color: var(--accent);
+}
+
+.seeker2-sentence-text {
+  margin: 0;
+  font-family: var(--heading-font), serif;
+  font-size: 1.3rem;
+  line-height: 1.4;
+  text-wrap: balance;
+}
+
+.seeker2-word {
+  font: inherit;
+  color: var(--accent);
+  background: none;
+  border: none;
+  padding: 0 2px;
+  margin: 0 -2px;
+  border-radius: 6px;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 4px;
+  text-decoration-color: color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.seeker2-word:hover {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+/* A word keeps its comma: the break goes after the punctuation, never
+   between a word and it. */
+.seeker2-part {
+  white-space: nowrap;
+}
+
+.seeker2-word.muted {
+  color: var(--text-muted);
+}
+
+/* The sections. */
+.seeker2-scroll {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 1.2rem 1rem;
+}
+
+.seeker2-sec {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  scroll-margin-top: 6rem;
+}
+
+.seeker2-more .seeker2-sec:last-child {
+  border-bottom: none;
+}
+
+.seeker2-h {
+  font-size: 1rem;
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0 0.5rem;
+}
+
+.seeker2-h-gap {
+  margin-top: 0.6rem;
+}
+
+.seeker2-hint,
+.seeker2-sub {
+  font-family: var(--font-body), sans-serif;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.seeker2-flash {
+  animation: seeker2-flash 1.1s ease;
+}
+
+@keyframes seeker2-flash {
+  0%,
+  45% {
+    background: color-mix(in srgb, var(--accent) 14%, transparent);
+  }
+  100% {
+    background: transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .seeker2-flash {
+    animation: none;
+  }
+}
+
+/* Activity tiles. */
+.seeker2-tiles {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.45rem;
+}
+
+.seeker2-tile {
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 600;
+  line-height: 1.15;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 0.6rem 0.25rem 0.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  text-align: center;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.seeker2-tile:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.seeker2-tile[aria-pressed="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-contrast);
+}
+
+.seeker2-tile:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.seeker2-glyph {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Where. */
+.seeker2-where-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-end;
+}
+
+.seeker2-where-row .seeker-where {
+  flex: 1;
+  min-width: 0;
+}
+
+.seeker2-where-row .seeker-where .seeker-field-label {
+  display: none;
+}
+
+.seeker2-name {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding-top: 0.3rem;
+}
+
+.seeker2-name .seeker-direct .seeker-field-label {
+  display: none;
+}
+
+/* Segmented choices: radius, style. */
+.seeker2-seg {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.seeker2-seg button {
+  flex: 1;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  border-radius: 999px;
+  padding: 0.42rem 0.3rem;
+  cursor: pointer;
+}
+
+.seeker2-seg button[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+
+.seeker2-seg button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Ideas: a row that scrolls sideways. */
+.seeker2-ideas {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin-inline: -1.2rem;
+  padding: 2px 1.2rem 4px;
+}
+
+.seeker2-idea {
+  font: inherit;
+  flex: 0 0 auto;
+  max-width: 11rem;
+  text-align: left;
+  color: var(--text);
+  background: transparent;
+  border: 1px dashed color-mix(in srgb, var(--accent) 50%, var(--border));
+  border-radius: 14px;
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+}
+
+.seeker2-idea b {
+  display: block;
+  font-size: 0.85rem;
+}
+
+.seeker2-idea span {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.seeker2-idea:hover:not(:disabled),
+.seeker2-idea[aria-pressed="true"] {
+  border-style: solid;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.seeker2-idea:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* The histogram over a grade slider. Its box runs the slider's full width;
+   each band is as wide as the steps it covers. */
+.seeker-hist {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 46px;
+  margin-bottom: 0.15rem;
+}
+
+.seeker-hist span {
+  flex-basis: 0;
+  min-height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: color-mix(in srgb, var(--text-muted) 28%, transparent);
+  transition: height 0.25s ease, background 0.15s ease;
+}
+
+.seeker-hist span.in {
+  background: color-mix(in srgb, var(--accent) 70%, transparent);
+}
+
+/* Facing. */
+.seeker2-facing {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 1rem;
+  align-items: center;
+}
+
+.seeker2-compass {
+  width: 140px;
+  height: 140px;
+}
+
+.seeker2-compass g {
+  cursor: pointer;
+  outline: none;
+}
+
+.seeker2-compass path {
+  fill: transparent;
+  stroke: var(--border);
+  stroke-width: 1.2;
+  transition: fill 0.15s ease;
+}
+
+.seeker2-compass g:hover path {
+  fill: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.seeker2-compass g:focus-visible path {
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+
+.seeker2-compass g.on path {
+  fill: var(--accent);
+  stroke: var(--accent);
+}
+
+.seeker2-compass text {
+  font-size: 10.5px;
+  font-weight: 700;
+  fill: var(--text-muted);
+  text-anchor: middle;
+  dominant-baseline: central;
+  pointer-events: none;
+}
+
+.seeker2-compass g.on text {
+  fill: var(--accent-contrast);
+}
+
+.seeker2-sun {
+  fill: #e0a43a;
+}
+
+.seeker2-facing-side {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.seeker2-sunline {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.seeker2-quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.seeker2-quick .seeker-locate {
+  font-size: 0.78rem;
+  padding: 0.3rem 0.7rem;
+}
+
+.seeker2-quick .seeker-locate[aria-pressed="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-contrast);
+}
+
+/* More. */
+.seeker2-more summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.9rem 0 0.3rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.seeker2-more summary::-webkit-details-marker {
+  display: none;
+}
+
+.seeker2-more summary::after {
+  content: "+";
+  margin-left: auto;
+  font-size: 1.1rem;
+}
+
+.seeker2-more[open] summary::after {
+  content: "−";
+}
+
+.seeker2-more .seeker-ladder {
+  flex: none;
+}
+
+/* The foot: clear, and the count as the button. */
+.seeker2-foot {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1.2rem;
+  border-top: 1px solid var(--border);
+  background: var(--bg-elevated);
+}
+
+.seeker2-clear {
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  background: none;
+  border: none;
+  color: var(--text);
+  cursor: pointer;
+  padding: 0.5rem 0.2rem;
+}
+
+.seeker2-clear:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.seeker2-go {
+  margin-left: auto;
+  font: inherit;
+  font-weight: 700;
+  border: none;
+  border-radius: 999px;
+  padding: 0.7rem 1.3rem;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 860px) {
+  .seeker2.page-container {
+    padding-bottom: 6rem;
+  }
+
+  .seeker2-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+  }
+
+  .seeker2-menu {
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .seeker2-scroll {
+    overflow: visible;
+  }
+
+  .seeker2-sentence-text {
+    font-size: 1.12rem;
+  }
+
+  .seeker2-tiles {
+    display: flex;
+    overflow-x: auto;
+    scrollbar-width: none;
+    margin-inline: -1.2rem;
+    padding-inline: 1.2rem;
+  }
+
+  .seeker2-tile {
+    flex: 0 0 5.2rem;
+  }
+
+  .seeker2-foot {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1100;
+    padding: 0.6rem max(1rem, env(safe-area-inset-right, 0px))
+      calc(0.6rem + env(safe-area-inset-bottom, 0px)) max(1rem, env(safe-area-inset-left, 0px));
+    box-shadow: 0 -8px 24px -14px rgba(0, 0, 0, 0.3);
+  }
+
+  /* The feedback button would sit on the count bar or on the menu above it;
+     on this page the bar is the one thing that must stay clear. */
+  body:has(.seeker2) .feedback-fab {
+    display: none;
+  }
+}
+
+@media (max-width: 420px) {
+  .seeker2-facing {
+    grid-template-columns: 112px 1fr;
+  }
+
+  .seeker2-compass {
+    width: 112px;
+    height: 112px;
+  }
 }
