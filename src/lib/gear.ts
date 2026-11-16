@@ -183,3 +183,45 @@ export function gearStatus(
 export function byUrgency(a: GearState, b: GearState): number {
   return STATE_ORDER.indexOf(a) - STATE_ORDER.indexOf(b);
 }
+
+/**
+ * What to look at, kind by kind, when inspecting — the usual EN 365 points,
+ * as defects to tick. Ticked ones are written into the inspection's note; the
+ * verdict stays the inspector's.
+ */
+export const GEAR_CHECKLIST: Record<GearKind, string[]> = {
+  rope: ["sheath", "core", "ends", "dirt"],
+  harness: ["webbing", "stitching", "buckles", "belayLoop"],
+  helmet: ["shell", "straps", "foam"],
+  sling: ["webbing", "stitching", "dirt"],
+  lanyard: ["webbing", "stitching", "absorber", "connectors"],
+  quickdraw: ["webbing", "stitching", "gate", "wear"],
+  carabiner: ["gate", "wear", "cracks", "locking"],
+  belay: ["wear", "cracks", "moving"],
+  crampons: ["points", "frame", "straps"],
+  axe: ["pick", "shaft", "spike"],
+  other: ["damage"],
+};
+
+/** What can happen to a piece of gear between two inspections. */
+export const GEAR_INCIDENTS = ["fall", "chemical", "impact", "heat", "other"] as const;
+export type GearIncident = (typeof GEAR_INCIDENTS)[number];
+
+/**
+ * How much of its usual life an item has used, 0–100, from the day its
+ * shorter clock started to the day it ends. Null for gear with no calendar
+ * limit.
+ */
+export function lifeUsed(item: GearItem, status: GearStatus, today: string): number | null {
+  if (!status.endsOn || !status.endsBy) return null;
+  const start = status.endsBy === "use" ? item.first_used_on : item.made_on;
+  if (!start) return null;
+  const total = daysBetween(start, status.endsOn);
+  if (total <= 0) return 100;
+  return Math.max(0, Math.min(100, Math.round((daysBetween(start, today) / total) * 100)));
+}
+
+/** "Petzl Djinn", or the kind's name when the item has neither. */
+export function gearName(item: GearItem, kinds: Record<GearKind, string>): string {
+  return [item.brand, item.model].filter(Boolean).join(" ") || kinds[item.kind];
+}

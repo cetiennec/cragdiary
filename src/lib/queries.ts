@@ -1292,6 +1292,18 @@ export async function getExistingUsernames(usernames: string[]): Promise<Map<str
  * is tens of rows, not thousands — and the page needs all of it to sort by
  * what needs attention.
  */
+/**
+ * The dates of your own days, for the gear register's rough measure of use:
+ * how many days out since a piece went into service.
+ */
+export async function getEntryDates(userId: string): Promise<string[]> {
+  const result = await pool.query<{ d: string }>(
+    "select to_char(entry_date, 'YYYY-MM-DD') as d from entries where user_id = $1",
+    [userId]
+  );
+  return result.rows.map((r) => r.d);
+}
+
 export async function getGear(
   userId: string
 ): Promise<{ items: GearItem[]; checks: Map<string, GearCheck[]> }> {

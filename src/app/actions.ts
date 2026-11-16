@@ -6,8 +6,8 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import sharp from "sharp";
 import { pool, type EntryVisibility, type ProfileVisibility } from "@/lib/db";
-import { GEAR_KINDS } from "@/lib/gear";
-import { LOCALE_COOKIE, getLocale } from "@/lib/i18n";
+import { GEAR_CHECKLIST, GEAR_INCIDENTS, GEAR_KINDS, type GearKind } from "@/lib/gear";
+import { LOCALE_COOKIE, getDict, getLocale } from "@/lib/i18n";
 import { sendEmail } from "@/lib/email";
 import {
   emailBetaInvite,
@@ -2690,12 +2690,45 @@ export async function addGear(formData: FormData): Promise<void> {
   const kind = String(formData.get("kind") ?? "");
   if (!(GEAR_KINDS as readonly string[]).includes(kind)) return;
 
+  // A rack of twelve quickdraws is twelve lines, each inspected and retired
+  // on its own. A serial typed once is numbered for each copy.
+  const quantity = Math.min(30, Math.max(1, Math.floor(Number(formData.get("quantity")) || 1)));
+  const serial = optionalText(formData.get("serial"));
+  for (let k = 1; k <= quantity; k++) {
+    await pool.query(
+      `insert into gear (user_id, kind, brand, model, serial, made_on, bought_on,
+                         first_used_on, notes)
+       values ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+      [
+        user.id,
+        kind,
+        optionalText(formData.get("brand")),
+        optionalText(formData.get("model")),
+        serial && quantity > 1 ? `${serial}-${k}` : serial,
+        optionalDate(formData.get("made_on")),
+        optionalDate(formData.get("bought_on")),
+        optionalDate(formData.get("first_used_on")),
+        optionalText(formData.get("notes")),
+      ]
+    );
+  }
+
+  revalidatePath(`/u/${user.username}/gear`);
+}
+
+/** Correcting an item: a wrong date or a typo in the model. */
+export async function updateGear(formData: FormData): Promise<void> {
+  const user = await currentUser();
+  if (!user) throw new Error("Unauthorized");
+
+  const id = String(formData.get("id") ?? "");
+  const kind = String(formData.get("kind") ?? "");
+  if (!id || !(GEAR_KINDS as readonly string[]).includes(kind)) return;
   await pool.query(
-    `insert into gear (user_id, kind, brand, model, serial, made_on, bought_on,
-                       first_used_on, notes)
-     values ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+    `update gear set kind = $1, brand = $2, model = $3, serial = $4, made_on = $5,
+                     bought_on = $6, first_used_on = $7, notes = $8
+     where id = $9 and user_id = $10`,
     [
-      user.id,
       kind,
       optionalText(formData.get("brand")),
       optionalText(formData.get("model")),
@@ -2704,9 +2737,80 @@ export async function addGear(formData: FormData): Promise<void> {
       optionalDate(formData.get("bought_on")),
       optionalDate(formData.get("first_used_on")),
       optionalText(formData.get("notes")),
+      id,
+      user.id,
     ]
   );
+  revalidatePath(`/u/${user.username}/gear`);
+}
 
+/**
+ * Deleting is for an item added by mistake; its inspections go with it.
+ * Retiring is what keeps the record of a piece that served.
+ */
+export async function deleteGear(formData: FormData): Promise<void> {
+  const user = await currentUser();
+  if (!user) throw new Error("Unauthorized");
+  const id = String(formData.get("id") ?? "");
+  if (!id) return;
+  await pool.query("delete from gear where id = $1 and user_id = $2", [id, user.id]);
+  revalidatePath(`/u/${user.username}/gear`);
+}
+
+/** Another one of the same, bought the same day: everything but the serial. */
+export async function duplicateGear(formData: FormData): Promise<void> {
+  const user = await currentUser();
+  if (!user) throw new Error("Unauthorized");
+  const id = String(formData.get("id") ?? "");
+  if (!id) return;
+  await pool.query(
+    `insert into gear (user_id, kind, brand, model, made_on, bought_on, first_used_on, notes)
+     select user_id, kind, brand, model, made_on, bought_on, first_used_on, notes
+     from gear where id = $1 and user_id = $2`,
+    [id, user.id]
+  );
+  revalidatePath(`/u/${user.username}/gear`);
+}
+
+/** Retired by mistake: back in service, the reason cleared. */
+export async function unretireGear(formData: FormData): Promise<void> {
+  const user = await currentUser();
+  if (!user) throw new Error("Unauthorized");
+  const id = String(formData.get("id") ?? "");
+  if (!id) return;
+  await pool.query(
+    "update gear set retired_on = null, retired_reason = null where id = $1 and user_id = $2",
+    [id, user.id]
+  );
+  revalidatePath(`/u/${user.username}/gear`);
+}
+
+/**
+ * Something happened to it — a big fall, a chemical, a rock. Recorded as an
+ * inspection marked "monitor", so the register shows it until someone
+ * competent has looked.
+ */
+export async function logGearIncident(formData: FormData): Promise<void> {
+  const user = await currentUser();
+  if (!user) throw new Error("Unauthorized");
+  const id = String(formData.get("id") ?? "");
+  const what = String(formData.get("what") ?? "");
+  if (!id || !(GEAR_INCIDENTS as readonly string[]).includes(what)) return;
+  const owned = await pool.query("select 1 from gear where id = $1 and user_id = $2", [id, user.id]);
+  if (owned.rows.length === 0) return;
+  const { t } = await getDict();
+  const label = t.gear.incidents[what as (typeof GEAR_INCIDENTS)[number]];
+  const extra = optionalText(formData.get("notes"));
+  await pool.query(
+    `insert into gear_checks (gear_id, checked_on, verdict, inspector, notes)
+     values ($1, $2, 'watch', $3, $4)`,
+    [
+      id,
+      optionalDate(formData.get("on")) ?? new Date().toISOString().slice(0, 10),
+      user.displayName,
+      [t.gear.incidentNote.replace("{what}", label), extra].filter(Boolean).join(" — "),
+    ]
+  );
   revalidatePath(`/u/${user.username}/gear`);
 }
 
@@ -2731,22 +2835,27 @@ export async function checkGear(formData: FormData): Promise<void> {
   );
   if (owned.rows.length === 0) return;
 
+  // Defects ticked on the checklist are written into the note, in words.
+  const kindRow = await pool.query<{ kind: GearKind }>("select kind from gear where id = $1", [id]);
+  const allowed = GEAR_CHECKLIST[kindRow.rows[0]?.kind ?? "other"] ?? [];
+  const issues = formData.getAll("issue").map(String).filter((k) => allowed.includes(k));
+  let note = optionalText(formData.get("notes"));
+  if (issues.length > 0) {
+    const { t } = await getDict();
+    const items = t.gear.checklistItems as Record<string, string>;
+    const listed = t.gear.issuesNote.replace("{list}", issues.map((k) => items[k] ?? k).join(", "));
+    note = [listed, note].filter(Boolean).join(" — ");
+  }
   await pool.query(
     `insert into gear_checks (gear_id, checked_on, verdict, inspector, notes)
      values ($1,$2,$3,$4,$5)`,
-    [
-      id,
-      checkedOn,
-      verdict,
-      optionalText(formData.get("inspector")),
-      optionalText(formData.get("notes")),
-    ]
+    [id, checkedOn, verdict, optionalText(formData.get("inspector")), note]
   );
   if (verdict === "retire") {
     await pool.query(
       `update gear set retired_on = $1, retired_reason = coalesce(retired_reason, $2)
        where id = $3 and user_id = $4 and retired_on is null`,
-      [checkedOn, optionalText(formData.get("notes")), id, user.id]
+      [checkedOn, note, id, user.id]
     );
   }
   revalidatePath(`/u/${user.username}/gear`);

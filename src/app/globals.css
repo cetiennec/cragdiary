@@ -9105,3 +9105,297 @@ label:has(input:placeholder-shown) + .form-hint.form-warn {
 .profile2-manage .profile-settings:last-of-type {
   margin-bottom: 0.6rem;
 }
+
+/* ---- Gear register: filters, life bar, tools, checklist, print ---- */
+.gear-head {
+  align-items: center;
+}
+
+.gear-export {
+  position: relative;
+}
+
+.gear-export > summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+.gear-export > summary::-webkit-details-marker {
+  display: none;
+}
+
+.gear-export .action-menu-list {
+  left: 0;
+  right: auto;
+}
+
+.gear-print {
+  font: inherit;
+  font-size: 0.88rem;
+  background: none;
+  border: 0;
+  text-align: left;
+  cursor: pointer;
+  width: 100%;
+}
+
+.gear-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 0 0 1rem;
+}
+
+.gear-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.gear-chips a {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-decoration: none;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  border-radius: 999px;
+  padding: 0.2rem 0.7rem;
+}
+
+.gear-chips a span {
+  font-weight: 500;
+  opacity: 0.75;
+  margin-left: 0.15rem;
+}
+
+.gear-chips a.is-expired,
+.gear-chips a.is-check-overdue {
+  color: #b3402f;
+  border-color: color-mix(in srgb, #b3402f 45%, var(--border));
+}
+
+.gear-chips a.is-expiring,
+.gear-chips a.is-check-due,
+.gear-chips a.is-watch {
+  color: #a8761f;
+  border-color: color-mix(in srgb, #c98a2b 45%, var(--border));
+}
+
+.gear-chips a.is-on {
+  background: var(--text);
+  border-color: var(--text);
+  color: var(--bg-elevated);
+}
+
+.gear-kind-chips a {
+  font-weight: 500;
+  font-size: 0.76rem;
+}
+
+.gear-life {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0.45rem 0 0.1rem;
+}
+
+.gear-life-bar {
+  flex: 0 1 14rem;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.gear-life-bar span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: #4d7c3a;
+}
+
+.gear-item.is-expiring .gear-life-bar span,
+.gear-item.is-check-due .gear-life-bar span,
+.gear-item.is-watch .gear-life-bar span {
+  background: #c98a2b;
+}
+
+.gear-item.is-expired .gear-life-bar span,
+.gear-item.is-check-overdue .gear-life-bar span {
+  background: #b3402f;
+}
+
+.gear-life-text,
+.gear-used,
+.gear-notes {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.gear-used,
+.gear-notes {
+  margin: 0.25rem 0 0;
+}
+
+.gear-notes {
+  font-style: italic;
+}
+
+.gear-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.6rem;
+}
+
+.gear-tools > form {
+  margin: 0;
+}
+
+.gear-tools .gear-form {
+  flex-basis: 100%;
+}
+
+.gear-tools .filter-clear,
+.gear-edit {
+  font-size: 0.78rem;
+}
+
+.gear-delete {
+  margin-left: auto;
+  color: #b3402f;
+}
+
+.gear-quantity {
+  flex: 0 0 6rem !important;
+}
+
+.gear-checklist {
+  flex: 1 1 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 1rem;
+  margin: 0;
+  padding: 0.5rem 0.7rem 0.6rem;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+}
+
+.gear-checklist legend {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding: 0 0.3rem;
+}
+
+.gear-check-form .gear-checklist label {
+  flex: 0 0 auto;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.3rem;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.gear-incident-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.6rem;
+  margin-top: 0.7rem;
+  padding-top: 0.7rem;
+  border-top: 1px dashed var(--border);
+}
+
+.gear-incident-form strong {
+  flex-basis: 100%;
+  font-size: 0.82rem;
+}
+
+.gear-incident-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  flex: 1 1 14rem;
+}
+
+.gear-incident-form input[type="text"] {
+  flex: 1 1 10rem;
+  min-width: 0;
+}
+
+.gear-retired-section {
+  margin-top: 1.4rem;
+}
+
+.gear-retired-section > summary {
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 0.7rem;
+}
+
+.gear-retired p {
+  margin: 0;
+}
+
+.gear-print-head {
+  display: none;
+}
+
+/* Printed, the register is an inspection sheet: every item, no forms, no
+   menus, black on white. */
+@media print {
+  .site-header,
+  .site-footer,
+  footer,
+  .feedback-fab,
+  .gear-wip,
+  .gear-intro,
+  .gear-head,
+  .gear-filters,
+  .gear-tools,
+  .gear-actions,
+  .gear-back {
+    display: none !important;
+  }
+
+  .gear-print-head {
+    display: block;
+    margin: -0.5rem 0 1rem;
+    font-size: 0.85rem;
+  }
+
+  body,
+  .gear-item {
+    background: #fff !important;
+    color: #000;
+  }
+
+  .gear-item {
+    break-inside: avoid;
+    box-shadow: none;
+  }
+
+  .gear-retired-section > summary {
+    display: none;
+  }
+
+  .gear-item.is-retired {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 600px) {
+  .gear-export .action-menu-list {
+    left: auto;
+    right: 0;
+    min-width: min(230px, 80vw);
+  }
+}
