@@ -1555,8 +1555,19 @@ export default function Cragseeker({
                   type="button"
                   aria-pressed={cardView === view}
                   onClick={() => writeCardView(view)}
+                  aria-label={view === "cards" ? t.v2.viewCards : t.v2.viewCompact}
+                  title={view === "cards" ? t.v2.viewCards : t.v2.viewCompact}
                 >
-                  {view === "cards" ? t.v2.viewCards : t.v2.viewCompact}
+                  {/* A grid of tiles for cards, lines for the compact rows. */}
+                  <svg viewBox="0 0 24 24" aria-hidden className="seeker2-view-icon">
+                    <path
+                      d={
+                        view === "cards"
+                          ? "M4 4h7v7H4Z M13 4h7v7h-7Z M4 13h7v7H4Z M13 13h7v7h-7Z"
+                          : "M4 6h16 M4 12h16 M4 18h16"
+                      }
+                    />
+                  </svg>
                 </button>
               ))}
             </div>
@@ -1741,7 +1752,9 @@ export default function Cragseeker({
                   {parking && (
                     <ParkingLink parking={parking} label={t.v2.wx.directions} openIn={t.openIn} compact />
                   )}
-                  <div className="seeker-actions">
+                  {/* Over the card on a mouse, shown when the pointer is on it;
+                      in the footer on a touch screen. */}
+                  <div className={`seeker-actions seeker2-card-add${state === "done" ? " is-done" : ""}`}>
                     {!signedIn && (
                       <a className="seeker-add-signup" href={`/signup?next=${encodeURIComponent(here)}`}>
                         + {t.add}

@@ -718,6 +718,11 @@ export async function ProfileView({
               {t.profileV2.tabPartners} <span>{partnerCounts.size}</span>
             </a>
           )}
+          {isSelf && trayDays.length > 0 && (
+            <a href="#shared-days">
+              {t.sharedDays.tab} <span>{trayDays.length}</span>
+            </a>
+          )}
           <Link href={`/u/${profile.username}/classic`} className="profile2-classic">
             {t.profileV2.classic}
           </Link>
@@ -881,6 +886,7 @@ export async function ProfileView({
           locale={locale}
           // Accept and decline read the same here as on a follow request.
           t={{ ...t.sharedDays, accept: t.follow.accept, decline: t.follow.decline }}
+          grouped={v2}
         />
       )}
 

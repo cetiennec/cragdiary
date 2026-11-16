@@ -23,6 +23,14 @@ export type SharedDaysLabels = {
   invited: string;
   accept: string;
   decline: string;
+  groupInvited: string;
+  groupInvitedHint: string;
+  groupCoauthor: string;
+  groupCoauthorHint: string;
+  groupTagged: string;
+  groupTaggedHint: string;
+  inJournal: string;
+  more: string;
 };
 
 /**
@@ -40,12 +48,112 @@ export default function SharedDaysTray({
   days,
   locale,
   t,
+  grouped = false,
 }: {
   days: TrayDay[];
   locale: Locale;
   t: SharedDaysLabels;
+  /**
+   * Sorted by what there is to do (profile v2): invitations to answer, days
+   * written together, days you are only named on. Each group says in one line
+   * what that relation means, the thing a single mixed list left unclear.
+   */
+  grouped?: boolean;
 }) {
   if (days.length === 0) return null;
+
+  if (grouped) {
+    const invited = days.filter((d) => d.co_status === "pending");
+    const together = days.filter((d) => d.co_status !== "pending" && d.is_coauthor);
+    const named = days.filter((d) => d.co_status !== "pending" && !d.is_coauthor);
+    const groups = [
+      { key: "invited", title: t.groupInvited, hint: t.groupInvitedHint, days: invited },
+      { key: "together", title: t.groupCoauthor, hint: t.groupCoauthorHint, days: together },
+      { key: "named", title: t.groupTagged, hint: t.groupTaggedHint, days: named },
+    ].filter((g) => g.days.length > 0);
+    return (
+      <section className="shared-days shared-days-grouped" id="shared-days">
+        <h2 className="pitch-notes-title">{t.title}</h2>
+        {groups.map((g) => (
+          <div key={g.key} className={`shared-days-group is-${g.key}`}>
+            <h3 className="shared-days-group-head">
+              {g.title} <span>{g.days.length}</span>
+            </h3>
+            <p className="form-hint">{g.hint}</p>
+            <ul className="shared-days-list">
+              {g.days.map((day) => (
+                <li key={day.id} className="shared-day-row">
+                  <DayLink day={day} locale={locale} t={t} showStatus={false} />
+                  <span className="follower-actions">
+                    {day.co_status === "pending" ? (
+                      <>
+                        <form action={acceptCoAuthor}>
+                          <input type="hidden" name="entry_id" value={day.id} />
+                          <button type="submit" className="follower-accept">
+                            {t.accept}
+                          </button>
+                        </form>
+                        <form action={removeCoAuthor}>
+                          <input type="hidden" name="entry_id" value={day.id} />
+                          <button type="submit" className="follower-remove">
+                            {t.decline}
+                          </button>
+                        </form>
+                      </>
+                    ) : day.is_coauthor ? (
+                      <>
+                        {/* One switch: is this day also among mine? */}
+                        <form action={setCoAuthorInJournal}>
+                          <input type="hidden" name="entry_id" value={day.id} />
+                          <input type="hidden" name="in_journal" value={day.in_journal ? "0" : "1"} />
+                          <button
+                            type="submit"
+                            role="switch"
+                            aria-checked={day.in_journal}
+                            className="shared-day-switch"
+                          >
+                            <span className="shared-day-switch-track" aria-hidden />
+                            {t.inJournal}
+                          </button>
+                        </form>
+                        {/* Leaving is rare and not undone by a click, so it
+                            sits behind a small menu rather than beside the
+                            switch. */}
+                        <details className="action-menu shared-day-more">
+                          <summary className="round-btn" title={t.more} aria-label={t.more}>
+                            <span aria-hidden>…</span>
+                          </summary>
+                          <div className="action-menu-list">
+                            <form action={removeCoAuthor}>
+                              <input type="hidden" name="entry_id" value={day.id} />
+                              <button type="submit" className="action-menu-item">
+                                {t.leave}
+                              </button>
+                            </form>
+                          </div>
+                        </details>
+                      </>
+                    ) : day.has_own_version ? (
+                      <span className="link-day-meta">{t.alreadyMine}</span>
+                    ) : (
+                      day.visibility !== "private" && (
+                        <form action={copyEntryToJournal}>
+                          <input type="hidden" name="entry_id" value={day.id} />
+                          <button type="submit" className="follower-accept">
+                            {t.writeMine}
+                          </button>
+                        </form>
+                      )
+                    )}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </section>
+    );
+  }
 
   return (
     <section className="shared-days" id="shared-days">
@@ -54,34 +162,9 @@ export default function SharedDaysTray({
 
       <ul className="shared-days-list">
         {days.map((day) => {
-          const cover = day.photos.find((p) => !p.align);
           return (
             <li key={day.id} className="shared-day-row">
-              <Link href={`/entries/${day.id}`} className="shared-day-link">
-                {cover ? (
-                  // eslint-disable-next-line @next/next/no-img-element -- our own DB-backed route, already resized
-                  <img
-                    src={`/api/photos/${cover.id}?t=1`}
-                    alt=""
-                    className="link-day-thumb"
-                    loading="lazy"
-                  />
-                ) : (
-                  <span className="link-day-thumb link-day-thumb-empty" aria-hidden />
-                )}
-                <span className="link-day-text">
-                  <strong>{day.crag}</strong>
-                  <span className="link-day-meta">
-                    {formatDate(day.entry_date, locale, day.month_only)}
-                    {day.location ? ` · ${day.location}` : ""}
-                  </span>
-                  <span className="link-day-meta">
-                    {t.by.replace("{name}", day.display_name)}
-                    {day.co_status === "accepted" ? ` · ${t.coAuthorTag}` : ""}
-                    {day.co_status === "pending" ? ` · ${t.invited}` : ""}
-                  </span>
-                </span>
-              </Link>
+              <DayLink day={day} locale={locale} t={t} showStatus />
 
               <span className="follower-actions">
                 {/* An invitation is answerable where the day is, not only in
@@ -138,5 +221,48 @@ export default function SharedDaysTray({
         })}
       </ul>
     </section>
+  );
+}
+
+// The day itself: its cover, name, date and place, and who wrote it.
+function DayLink({
+  day,
+  locale,
+  t,
+  showStatus,
+}: {
+  day: TrayDay;
+  locale: Locale;
+  t: SharedDaysLabels;
+  /** Say the pen status on the row; the grouped layout says it in its heading. */
+  showStatus: boolean;
+}) {
+  const cover = day.photos.find((p) => !p.align);
+  return (
+    <Link href={`/entries/${day.id}`} className="shared-day-link">
+      {cover ? (
+        // eslint-disable-next-line @next/next/no-img-element -- our own DB-backed route, already resized
+        <img
+          src={`/api/photos/${cover.id}?t=1`}
+          alt=""
+          className="link-day-thumb"
+          loading="lazy"
+        />
+      ) : (
+        <span className="link-day-thumb link-day-thumb-empty" aria-hidden />
+      )}
+      <span className="link-day-text">
+        <strong>{day.crag}</strong>
+        <span className="link-day-meta">
+          {formatDate(day.entry_date, locale, day.month_only)}
+          {day.location ? ` · ${day.location}` : ""}
+        </span>
+        <span className="link-day-meta">
+          {t.by.replace("{name}", day.display_name)}
+          {showStatus && day.co_status === "accepted" ? ` · ${t.coAuthorTag}` : ""}
+          {showStatus && day.co_status === "pending" ? ` · ${t.invited}` : ""}
+        </span>
+      </span>
+    </Link>
   );
 }

@@ -8618,3 +8618,230 @@ label:has(input:placeholder-shown) + .form-hint.form-warn {
   color: #e3a92b;
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
 }
+
+/* Cragseeker's card/compact switch as two icons. */
+.seeker2-view {
+  flex: 0 0 auto;
+}
+
+.seeker2-view button {
+  display: grid;
+  place-items: center;
+  width: 2.2rem;
+  padding: 0.35rem 0;
+}
+
+.seeker2-view-icon {
+  width: 1.05rem;
+  height: 1.05rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* The add button, over the card on a mouse: hidden until the pointer is on
+   the card (or a key brings focus there), then in front of the photo. */
+@media (hover: hover) and (pointer: fine) {
+  .seeker2-card {
+    position: relative;
+  }
+
+  .seeker2-card-foot .seeker2-card-add {
+    position: absolute;
+    left: 50%;
+    top: 64px;
+    transform: translate(-50%, -50%) scale(0.96);
+    z-index: 3;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+  }
+
+  .seeker-results.compact .seeker2-card-foot .seeker2-card-add {
+    top: 50%;
+  }
+
+  .seeker2-card:hover .seeker2-card-add,
+  .seeker2-card:focus-within .seeker2-card-add,
+  .seeker2-card-add.is-done {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  .seeker2-card-add .seeker-add,
+  .seeker2-card-add .seeker-add-signup {
+    margin: 0;
+    padding: 0.3rem;
+    border-radius: 999px;
+    background: var(--bg-elevated);
+    box-shadow: 0 10px 26px -8px rgba(30, 20, 12, 0.55);
+  }
+
+  .seeker2-card-add .seeker-add-signup {
+    padding: 0.5rem 1rem;
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .seeker2-card-add .seeker-add button {
+    font-weight: 700;
+    padding: 0.45rem 1rem;
+    border-radius: 999px;
+    background: var(--accent);
+    color: var(--accent-contrast);
+    border: 0;
+  }
+}
+
+/* ---- Days you're on, grouped by what there is to do (profile v2) ---- */
+.shared-days-grouped {
+  scroll-margin-top: 4rem;
+}
+
+.shared-days-group {
+  margin-top: 1rem;
+}
+
+.shared-days-group-head {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0 0 0.15rem;
+  font-size: 0.95rem;
+}
+
+.shared-days-group-head span {
+  font-size: 0.72rem;
+  font-weight: 600;
+  min-width: 1.3rem;
+  text-align: center;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background: var(--border);
+  color: var(--text-muted);
+}
+
+.shared-days-group.is-invited .shared-days-group-head span {
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+
+.shared-days-group > .form-hint {
+  margin: 0 0 0.5rem;
+}
+
+.shared-day-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text);
+  background: none;
+  border: 0;
+  padding: 0.2rem 0;
+  cursor: pointer;
+}
+
+.shared-day-switch-track {
+  position: relative;
+  width: 2rem;
+  height: 1.15rem;
+  border-radius: 999px;
+  background: var(--border);
+  transition: background 0.15s ease;
+}
+
+.shared-day-switch-track::after {
+  content: "";
+  position: absolute;
+  top: 0.15rem;
+  left: 0.15rem;
+  width: 0.85rem;
+  height: 0.85rem;
+  border-radius: 50%;
+  background: var(--bg-elevated);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  transition: transform 0.15s ease;
+}
+
+.shared-day-switch[aria-checked="true"] .shared-day-switch-track {
+  background: var(--accent);
+}
+
+.shared-day-switch[aria-checked="true"] .shared-day-switch-track::after {
+  transform: translateX(0.85rem);
+}
+
+.shared-day-more .action-menu-list {
+  right: 0;
+  left: auto;
+}
+
+.shared-day-more .action-menu-item {
+  font: inherit;
+  font-size: 0.85rem;
+  background: none;
+  border: 0;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* ---- Wishlist rows: one line on a wide screen ---- */
+.wishlist-compact {
+  gap: 0.3rem;
+}
+
+.wish-line-grade {
+  flex-basis: 2.9rem;
+  font-size: 0.92rem;
+}
+
+.wish-line .wish-main {
+  flex-direction: row;
+  align-items: baseline;
+  gap: 0.6rem;
+  padding: 0.4rem 0;
+}
+
+.wish-line .wish-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.92rem;
+}
+
+.wish-line .wish-meta {
+  flex: 0 1 auto;
+  font-size: 0.78rem;
+}
+
+.wish-line .wish-line-list {
+  align-self: center;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.wish-line .seeker-icon-menu summary {
+  width: 1.8rem;
+  height: 1.8rem;
+}
+
+.wish-line .wish-done {
+  font-size: 0.75rem;
+  padding: 0.12rem 0.6rem;
+}
+
+@media (max-width: 760px) {
+  .wish-line .wish-main {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+  }
+}
