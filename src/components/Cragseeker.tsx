@@ -105,53 +105,21 @@ function fill(template: string, key: string, value: string | number): string {
   return template.replace(`{${key}}`, String(value));
 }
 
-// A pair of "any → any" dropdowns over one of camptocamp's ordered scales.
-function RangeSelect({
-  label,
-  hint,
-  scale,
-  min,
-  max,
-  onMin,
-  onMax,
-  t,
-}: {
-  label: string;
-  hint?: string;
-  scale: readonly string[];
-  min: string;
-  max: string;
-  onMin: (v: string) => void;
-  onMax: (v: string) => void;
-  t: Dict["seeker"];
-}) {
-  return (
-    <label className="seeker-field">
-      <span className="seeker-field-label">
-        {label}
-        {hint && <em className="seeker-field-hint"> {hint}</em>}
-      </span>
-      <span className="seeker-range">
-        <select value={min} onChange={(e) => onMin(e.target.value)} aria-label={`${label} ${t.min}`}>
-          <option value="">{t.min}</option>
-          {scale.map((v) => (
-            <option key={v} value={v}>
-              {v}
-            </option>
-          ))}
-        </select>
-        <span aria-hidden>→</span>
-        <select value={max} onChange={(e) => onMax(e.target.value)} aria-label={`${label} ${t.max}`}>
-          <option value="">{t.max}</option>
-          {scale.map((v) => (
-            <option key={v} value={v}>
-              {v}
-            </option>
-          ))}
-        </select>
-      </span>
-    </label>
-  );
+// The metre filters on the same slider as the grades, over steps a climber
+// would actually pick: finer where routes are short, coarser where nobody
+// cares about fifty metres more or less.
+const HEIGHT_STEPS = ["0", "25", "50", "100", "150", "200", "300", "400", "500", "750", "1000"] as const;
+const GAIN_STEPS = ["0", "250", "500", "750", "1000", "1250", "1500", "2000", "2500", "3000"] as const;
+const ELEVATION_STEPS = ["0", "500", "1000", "1500", "2000", "2500", "3000", "3500", "4000", "4500"] as const;
+
+// A value typed before the sliders existed (an old shared link's hmin=120)
+// shows on the nearest step rather than as "any" while it still filters.
+function snapToStep(steps: readonly string[], value: string): string {
+  const n = Number(value);
+  if (!value || !Number.isFinite(n)) return "";
+  let best = steps[0];
+  for (const v of steps) if (Math.abs(Number(v) - n) < Math.abs(Number(best) - n)) best = v;
+  return best;
 }
 
 // Which steps get a label under the track: the first of each number (3a,
@@ -169,7 +137,9 @@ function tickIndexes(scale: readonly string[]): number[] {
   // on the free scale): keep the later, rounder one.
   const last = scale.length - 1;
   const spaced = firsts.filter((i, k) => k === firsts.length - 1 || (firsts[k + 1] - i) / last >= 0.06);
-  if (spaced.length >= 2 && spaced.length <= 10) return spaced;
+  // More than eight would touch on a phone: every other one, from the first.
+  if (spaced.length > 8) return spaced.filter((_, k) => k % 2 === 0);
+  if (spaced.length >= 2) return spaced;
   return scale.length > 1 ? [0, scale.length - 1] : [0];
 }
 
@@ -184,6 +154,7 @@ function GradeLadder({
   min,
   max,
   onChange,
+  unit = "",
   t,
 }: {
   label: string;
@@ -192,21 +163,23 @@ function GradeLadder({
   min: string;
   max: string;
   onChange: (next: { min: string; max: string }) => void;
+  unit?: string;
   t: Dict["seeker"];
 }) {
   const last = scale.length - 1;
   const lo = Math.max(scale.indexOf(min), 0);
   const hi = scale.indexOf(max) < 0 ? last : scale.indexOf(max);
   const any = lo === 0 && hi === last;
+  const at = (i: number) => scale[i] + unit;
   const chosen = any
     ? t.anyGrade
     : lo === hi
-      ? scale[lo]
+      ? at(lo)
       : lo === 0
-        ? `→ ${scale[hi]}`
+        ? `→ ${at(hi)}`
         : hi === last
-          ? `${scale[lo]} →`
-          : `${scale[lo]} → ${scale[hi]}`;
+          ? `${at(lo)} →`
+          : `${at(lo)} → ${at(hi)}`;
   const commit = (a: number, b: number) =>
     onChange({ min: a <= 0 ? "" : scale[a], max: b >= last ? "" : scale[b] });
   const setLo = (v: number) => commit(Math.min(v, hi), hi);
@@ -256,7 +229,7 @@ function GradeLadder({
           step={1}
           value={lo}
           aria-label={`${label} ${t.min}`}
-          aria-valuetext={scale[lo]}
+          aria-valuetext={at(lo)}
           className={loOnTop ? "on-top" : undefined}
           onChange={(e) => setLo(Number(e.target.value))}
         />
@@ -267,7 +240,7 @@ function GradeLadder({
           step={1}
           value={hi}
           aria-label={`${label} ${t.max}`}
-          aria-valuetext={scale[hi]}
+          aria-valuetext={at(hi)}
           onChange={(e) => setHi(Number(e.target.value))}
         />
         <div className="seeker-slider-ticks" aria-hidden>
@@ -403,6 +376,7 @@ export default function Cragseeker({
   const primaryRange = ACTIVITY_PRIMARY_RANGE[activity];
   const moreRanges = ACTIVITY_MORE_RANGES[activity];
   const heightLabel = ACTIVITY_HEIGHT_PARAM[activity] === "hdif" ? t.heightGain : t.height;
+  const heightSteps = ACTIVITY_HEIGHT_PARAM[activity] === "hdif" ? GAIN_STEPS : HEIGHT_STEPS;
 
   // Multi-pitch vs single-pitch is a rock-climbing distinction; c2c doesn't
   // record it for mountaineering or ski touring.
@@ -829,13 +803,6 @@ export default function Cragseeker({
     } catch {
       // No clipboard permission: leave the button alone rather than lie.
     }
-  }
-
-  function setRange(key: C2cRangeKey, end: "min" | "max", value: string) {
-    setRanges((prev) => ({
-      ...prev,
-      [key]: { min: "", max: "", ...prev[key], [end]: value },
-    }));
   }
 
   function clearAll() {
@@ -1396,68 +1363,37 @@ export default function Cragseeker({
 
           <div className="seeker-row seeker-row-settings">
           {moreRanges.map((key) => (
-            <RangeSelect
+            <GradeLadder
               key={key}
               label={t.ranges[key]}
               hint={t.rangeHints[key]}
               scale={C2C_RANGE_SCALES[key]}
               min={ranges[key]?.min ?? ""}
               max={ranges[key]?.max ?? ""}
-              onMin={(v) => setRange(key, "min", v)}
-              onMax={(v) => setRange(key, "max", v)}
+              onChange={(next) => setRanges((prev) => ({ ...prev, [key]: next }))}
               t={t}
             />
           ))}
 
-          <label className="seeker-field">
-            <span className="seeker-field-label">{heightLabel}</span>
-            <span className="seeker-range">
-              <input
-                type="number"
-                min={0}
-                step={10}
-                value={height.min}
-                placeholder={t.min}
-                aria-label={`${heightLabel} ${t.min}`}
-                onChange={(e) => setHeight((h) => ({ ...h, min: e.target.value }))}
-              />
-              <span aria-hidden>→</span>
-              <input
-                type="number"
-                min={0}
-                step={10}
-                value={height.max}
-                placeholder={t.max}
-                aria-label={`${heightLabel} ${t.max}`}
-                onChange={(e) => setHeight((h) => ({ ...h, max: e.target.value }))}
-              />
-            </span>
-          </label>
+          <GradeLadder
+            label={heightLabel}
+            scale={heightSteps}
+            min={snapToStep(heightSteps, height.min)}
+            max={snapToStep(heightSteps, height.max)}
+            onChange={setHeight}
+            unit=" m"
+            t={t}
+          />
 
-          <label className="seeker-field">
-            <span className="seeker-field-label">{t.elevation}</span>
-            <span className="seeker-range">
-              <input
-                type="number"
-                min={0}
-                step={100}
-                value={elevation.min}
-                placeholder={t.min}
-                aria-label={`${t.elevation} ${t.min}`}
-                onChange={(e) => setElevation((v) => ({ ...v, min: e.target.value }))}
-              />
-              <span aria-hidden>→</span>
-              <input
-                type="number"
-                min={0}
-                step={100}
-                value={elevation.max}
-                placeholder={t.max}
-                aria-label={`${t.elevation} ${t.max}`}
-                onChange={(e) => setElevation((v) => ({ ...v, max: e.target.value }))}
-              />
-            </span>
-          </label>
+          <GradeLadder
+            label={t.elevation}
+            scale={ELEVATION_STEPS}
+            min={snapToStep(ELEVATION_STEPS, elevation.min)}
+            max={snapToStep(ELEVATION_STEPS, elevation.max)}
+            onChange={setElevation}
+            unit=" m"
+            t={t}
+          />
         </div>
 
         {/* 5. Narrowing what came back, and the aspect. The field here reads

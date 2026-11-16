@@ -79,7 +79,7 @@ await fresh.goto(shared);
 await fresh.waitForSelector(".seeker-result");
 await fresh.waitForTimeout(1500);
 console.log("restored place:", await fresh.locator(".seeker-where input").first().inputValue());
-console.log("restored grade:", await fresh.locator(".seeker-ladder").getAttribute("data-min"), "→", await fresh.locator(".seeker-ladder").getAttribute("data-max"));
+console.log("restored grade:", await fresh.locator(".seeker-ladder").first().getAttribute("data-min"), "→", await fresh.locator(".seeker-ladder").first().getAttribute("data-max"));
 console.log("restored status:", (await fresh.locator(".seeker-status").first().innerText()).split("\n")[0]);
 await fresh.close();
 

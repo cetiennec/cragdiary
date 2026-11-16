@@ -4109,21 +4109,6 @@ a {
   border-color: var(--accent);
 }
 
-.seeker-range {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  color: var(--text-muted);
-}
-
-.seeker-range select {
-  min-width: 5.4rem;
-}
-
-.seeker-range input[type="number"] {
-  width: 5.4rem;
-}
-
 .seeker-locate {
   font: inherit;
   font-size: 0.85rem;
@@ -5203,6 +5188,13 @@ a {
 /* The activity's own settings get a little air above them. */
 .seeker-row-settings {
   padding-top: 0.2rem;
+  padding-bottom: 0.5rem;
+}
+
+/* The folded-away sliders sit two or three to a row where there is room, and
+   one to a line on a phone. */
+.seeker-row-settings .seeker-ladder {
+  flex: 1 1 15rem;
 }
 
 /* The grade asked up front, on one line: a track with two handles, the way
@@ -5448,6 +5440,12 @@ a {
 
   .seeker-row-settings .seeker-field-hint {
     font-size: 0.72rem;
+  }
+
+  /* The sliders' legends stay one line of text that wraps, not the stacked
+     label of the old dropdown pairs. */
+  .seeker-row-settings .seeker-ladder .seeker-field-label {
+    display: block;
   }
 }
 
