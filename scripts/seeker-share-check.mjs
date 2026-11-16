@@ -23,7 +23,7 @@ await page.goto(`${base}/cragseeker`);
 await page.waitForSelector(".seeker-map");
 
 // 1. Filters are written into the address bar.
-await page.locator("input[name=\"place\"], .combobox input").first().fill("Chamonix");
+await page.locator(".seeker-where input").first().fill("Chamonix");
 await page.waitForSelector(".combobox-list button");
 await page.locator(".combobox-list button").first().click();
 await page.getByRole("button", { name: "Free grade 6a", exact: true }).click();
@@ -49,7 +49,7 @@ const fresh = await ctx.newPage();
 await fresh.goto(shared);
 await fresh.waitForSelector(".seeker-result");
 await fresh.waitForTimeout(1500);
-console.log("restored place:", await fresh.locator("input[name=\"place\"], .combobox input").first().inputValue());
+console.log("restored place:", await fresh.locator(".seeker-where input").first().inputValue());
 console.log("restored grade:", await fresh.locator(".seeker-ladder").getAttribute("data-min"), "→", await fresh.locator(".seeker-ladder").getAttribute("data-max"));
 console.log("restored status:", (await fresh.locator(".seeker-status").first().innerText()).split("\n")[0]);
 await fresh.close();

@@ -112,6 +112,14 @@ jobs:
         run: psql "$DATABASE_URL" -f src/lib/schema.sql
       - run: npm run build
       - name: Start the app
+        # The admin name is what the publish and email checks gate on, and
+        # the mailbox is the one email-check stands up — both read per
+        # request, so they belong here and not on the build. Outside that
+        # check the mailbox is simply absent, and the app logs and carries on.
+        env:
+          ADMIN_USERNAME: bossman
+          RESEND_API_URL: http://127.0.0.1:3210/emails
+          RESEND_API_KEY: ci-mailbox
         run: |
           npx next start -p 3111 &
           npx wait-on http://localhost:3111/login --timeout 60000
@@ -120,6 +128,34 @@ jobs:
       # The one test about something being impossible rather than working.
       - name: Nothing private leaks
         run: node scripts/privacy-check.mjs http://localhost:3111 "$DATABASE_URL"
+      # The checks below were written with their features and then never
+      # wired in here; the account was locked when they were added, so none
+      # has been seen green in CI yet. On trial — reported, not blocking —
+      # until each has passed once, then drop its `continue-on-error`.
+      - name: Co-authored days
+        continue-on-error: true
+        run: node scripts/coauthor-check.mjs http://localhost:3111 "$DATABASE_URL"
+      - name: Three or more on the rope
+        continue-on-error: true
+        run: node scripts/coauthor-three-check.mjs http://localhost:3111 "$DATABASE_URL"
+      - name: Hidden fields stay hidden
+        continue-on-error: true
+        run: node scripts/hidden-fields-check.mjs http://localhost:3111 "$DATABASE_URL"
+      - name: Linking a day offers only what it should
+        continue-on-error: true
+        run: node scripts/linkday-check.mjs http://localhost:3111 "$DATABASE_URL"
+      - name: Unlinking, and linking again
+        continue-on-error: true
+        run: node scripts/unlink-check.mjs http://localhost:3111 "$DATABASE_URL"
+      - name: Notifications fire when they should, and only then
+        continue-on-error: true
+        run: node scripts/notification-check.mjs http://localhost:3111 "$DATABASE_URL"
+      - name: What leaves for an inbox
+        continue-on-error: true
+        run: node scripts/email-check.mjs http://localhost:3111 "$DATABASE_URL" 3210
+      - name: The camptocamp publish gate (talks to no one)
+        continue-on-error: true
+        run: node scripts/c2c-publish-check.mjs "$DATABASE_URL"
 
   # Everything that leans on an API we don't control — camptocamp, and
   # Overpass for the gyms layer. Same checks, but their outage is their
@@ -175,6 +211,11 @@ jobs:
       # move it by accident.
       - name: The search pin only moves when asked
         run: node scripts/seeker-pin-check.mjs http://localhost:3111 /tmp
+      # A shared link restores the search, results stay inside the circle,
+      # and the filter set follows the activity. It drove the wrong box for
+      # months (the route name, not the place) and was never run here.
+      - name: A shared search comes back the same
+        run: node scripts/seeker-share-check.mjs http://localhost:3111 /tmp
 
   # Is the live database ready for what is about to be deployed? Three times
   # this week a deploy went out ahead of its migration and the only warning was

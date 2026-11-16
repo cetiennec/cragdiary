@@ -23,7 +23,7 @@ const count = () => page.locator(".seeker-result").count();
 const status = () => page.locator(".seeker-status").first().innerText();
 
 // 1. Search around a place from the geocoder.
-await page.locator("input[name=\"place\"], .combobox input").first().fill("Chamonix");
+await page.locator(".seeker-where input").first().fill("Chamonix");
 await page.waitForSelector(".combobox-list button");
 await page.locator(".combobox-list button").first().click();
 await page.waitForTimeout(3000);
