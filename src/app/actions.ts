@@ -29,7 +29,13 @@ import {
   verifyPassword,
 } from "@/lib/auth";
 import { clientIp, isRateLimited, recordAttempt, clearAttempts } from "@/lib/rate-limit";
-import { c2cImageUrl, importOuting, parseProfileId } from "@/lib/c2c";
+import {
+  c2cImageUrl,
+  c2cPhotoCredit,
+  importOuting,
+  parseProfileId,
+  type C2cOutingImage,
+} from "@/lib/c2c";
 import { notify, extractMentions, userIdsByUsernames, markAllRead } from "@/lib/notifications";
 import { runPool } from "@/lib/pool";
 import { noteMissingC2cOutings } from "@/lib/c2c-check";
@@ -287,6 +293,34 @@ async function processPhoto(
   opts?: { cover?: boolean }
 ): Promise<ProcessedPhoto> {
   return processPhotoBuffer(Buffer.from(await file.arrayBuffer()), opts);
+}
+
+// A photo kept byte for byte: someone else's `personal` camptocamp image,
+// whose ND licence allows the copy and nothing more. No re-encode, no
+// thumbnail (a derivative too — the photo route serves the full image in its
+// place); only the size is read, with EXIF's rotation honoured so the layout
+// reserves the right shape.
+async function keepPhotoBuffer(
+  buffer: Buffer,
+  contentType: string | null
+): Promise<ProcessedPhoto & { contentType: string }> {
+  let width: number | null = null;
+  let height: number | null = null;
+  try {
+    const meta = await sharp(buffer).metadata();
+    const sideways = (meta.orientation ?? 1) >= 5;
+    width = (sideways ? meta.height : meta.width) ?? null;
+    height = (sideways ? meta.width : meta.height) ?? null;
+  } catch (e) {
+    console.error("photo size unreadable", e);
+  }
+  return {
+    data: buffer,
+    thumb: null,
+    width,
+    height,
+    contentType: contentType?.startsWith("image/") ? contentType : "image/jpeg",
+  };
 }
 
 function parsePhotoLayout(
@@ -805,6 +839,8 @@ type C2cPhotoTarget = {
   startPosition: number;
   /** Whoever ran the import: the photographs are filed under their name. */
   userId: string;
+  /** Their linked camptocamp profile, which says which photos are their own. */
+  ownProfileId: number | null;
 };
 
 // Download, re-encode and store an outing's photos, skipping the ones the entry
@@ -812,9 +848,9 @@ type C2cPhotoTarget = {
 async function addC2cPhotos(
   client: import("pg").PoolClient,
   target: C2cPhotoTarget,
-  filenames: string[]
+  images: C2cOutingImage[]
 ): Promise<number> {
-  const wanted = filenames.filter((fn) => !target.known.has(fn)).slice(0, C2C_MAX_PHOTOS);
+  const wanted = images.filter((im) => !target.known.has(im.filename)).slice(0, C2C_MAX_PHOTOS);
   if (wanted.length === 0) return 0;
 
   // Downloading and re-encoding a photo is mostly waiting on camptocamp, so
@@ -822,19 +858,36 @@ async function addC2cPhotos(
   // each one holds a full-size bitmap plus its AVIF encode in memory, and
   // fifteen at once is how a function runs out of it. Order comes from the
   // original list, not from what finishes first.
-  const fetched: ({ filename: string; processed: ProcessedPhoto } | undefined)[] = [];
-  await runPool(wanted, PHOTO_CONCURRENCY, async (filename, index) => {
+  type Fetched = {
+    image: C2cOutingImage;
+    credit: string | null;
+    processed: ProcessedPhoto & { contentType: string };
+  };
+  const fetched: (Fetched | undefined)[] = [];
+  await runPool(wanted, PHOTO_CONCURRENCY, async (image, index) => {
+    // Whose photo this is decides what may be done with it — see c2cPhotoCredit.
+    const rule = c2cPhotoCredit(image, target.ownProfileId);
+    if (rule.skip) {
+      console.log("c2c photo not re-hosted (all rights reserved)", image.filename);
+      return;
+    }
     try {
-      const r = await fetch(c2cImageUrl(filename, "BI"), {
+      const r = await fetch(c2cImageUrl(image.filename, "BI"), {
         signal: AbortSignal.timeout(15000),
       });
       if (!r.ok) return;
-      const processed = await processPhotoBuffer(Buffer.from(await r.arrayBuffer()), {
-        // Only the first photo of a brand-new entry is the cover; an entry
-        // being completed already has one.
-        cover: target.startPosition === 0 && index === 0,
-      });
-      fetched[index] = { filename, processed };
+      const buffer = Buffer.from(await r.arrayBuffer());
+      const processed = rule.keepOriginal
+        ? await keepPhotoBuffer(buffer, r.headers.get("content-type"))
+        : {
+            ...(await processPhotoBuffer(buffer, {
+              // Only the first photo of a brand-new entry is the cover; an
+              // entry being completed already has one.
+              cover: target.startPosition === 0 && index === 0,
+            })),
+            contentType: PHOTO_MIME,
+          };
+      fetched[index] = { image, credit: rule.credit, processed };
     } catch (e) {
       // One bad image shouldn't abort the whole entry — but it should say so.
       console.error("c2c photo failed", target.entryId, e);
@@ -848,18 +901,21 @@ async function addC2cPhotos(
     await client.query(
       `insert into photos
          (entry_id, content_type, data, thumb, position, size, width, height, c2c_filename,
-          uploaded_by)
-       values ($1, $2, $3, $4, $5, 'm', $6, $7, $8, $9)`,
+          uploaded_by, c2c_image_id, c2c_credit, c2c_image_type)
+       values ($1, $2, $3, $4, $5, 'm', $6, $7, $8, $9, $10, $11, $12)`,
       [
         target.entryId,
-        PHOTO_MIME,
+        item.processed.contentType,
         item.processed.data,
         item.processed.thumb,
         position,
         item.processed.width,
         item.processed.height,
-        item.filename,
+        item.image.filename,
         target.userId,
+        item.credit ? item.image.id : null,
+        item.credit,
+        item.credit ? item.image.image_type : null,
       ]
     );
     position += 1;
@@ -960,7 +1016,7 @@ export async function importOneC2cOuting(
       // before we stored it — can't be matched against camptocamp's list. When
       // there are any, leave the gallery alone rather than risk duplicating it.
       const unknown = photos.rows.some((r) => !r.c2c_filename);
-      if (unknown) known = new Set(o.images);
+      if (unknown) known = new Set(o.images.map((im) => im.filename));
       else known = new Set(photos.rows.map((r) => r.c2c_filename!));
       startPosition = photos.rows.reduce((max, r) => Math.max(max, r.position + 1), 0);
     } else {
@@ -995,9 +1051,24 @@ export async function importOneC2cOuting(
       entryId = res.rows[0].id;
     }
 
-    const addedPhotos = withPhotos
-      ? await addC2cPhotos(client, { entryId, known, startPosition, userId: user.id }, o.images)
-      : 0;
+    let addedPhotos = 0;
+    if (withPhotos) {
+      const profile = await client.query<{ c2c_profile_id: number | null }>(
+        "select c2c_profile_id from users where id = $1",
+        [user.id]
+      );
+      addedPhotos = await addC2cPhotos(
+        client,
+        {
+          entryId,
+          known,
+          startPosition,
+          userId: user.id,
+          ownProfileId: profile.rows[0]?.c2c_profile_id ?? null,
+        },
+        o.images
+      );
+    }
 
     if (revalidate) {
       revalidatePath("/");
@@ -1196,15 +1267,47 @@ export async function addEntryPhoto(formData: FormData): Promise<void> {
         )
       ).rows[0].max ?? -1) + 1;
 
+  // A photo the editor pulled in from a camptocamp outing says where it came
+  // from, so the same credit rule applies as on the server-side import, and
+  // the filename is kept for the sync to match against.
+  const c2cFilename = optionalText(formData.get("new_photo_c2c_filename_0"));
+  let origin: C2cOutingImage | null = null;
+  if (c2cFilename) {
+    const num = (key: string) => {
+      const v = String(formData.get(key) ?? "");
+      return /^\d+$/.test(v) ? parseInt(v, 10) : null;
+    };
+    origin = {
+      filename: c2cFilename,
+      id: num("new_photo_c2c_id_0"),
+      creator_id: num("new_photo_c2c_creator_id_0"),
+      creator_name: optionalText(formData.get("new_photo_c2c_creator_name_0")),
+      author: optionalText(formData.get("new_photo_c2c_author_0")),
+      image_type: optionalText(formData.get("new_photo_c2c_type_0")),
+    };
+  }
+  let rule = { credit: null as string | null, keepOriginal: false, skip: false };
+  if (origin) {
+    const profile = await pool.query<{ c2c_profile_id: number | null }>(
+      "select c2c_profile_id from users where id = $1",
+      [user.id]
+    );
+    rule = c2cPhotoCredit(origin, profile.rows[0]?.c2c_profile_id ?? null);
+    if (rule.skip) return;
+  }
+
   // Position decides the treatment, so it has to be known before encoding.
-  const processed = await processPhoto(file, { cover: position === 0 });
+  const processed = rule.keepOriginal
+    ? await keepPhotoBuffer(Buffer.from(await file.arrayBuffer()), file.type)
+    : { ...(await processPhoto(file, { cover: position === 0 })), contentType: PHOTO_MIME };
 
   await pool.query(
-    `insert into photos (entry_id, content_type, data, thumb, position, size, align, para, width, height, caption, uploaded_by)
-     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+    `insert into photos (entry_id, content_type, data, thumb, position, size, align, para, width, height, caption, uploaded_by,
+                         c2c_filename, c2c_image_id, c2c_credit, c2c_image_type)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
     [
       id,
-      PHOTO_MIME,
+      processed.contentType,
       processed.data,
       processed.thumb,
       position,
@@ -1215,6 +1318,10 @@ export async function addEntryPhoto(formData: FormData): Promise<void> {
       processed.height,
       optionalText(formData.get("new_photo_caption_0")),
       user.id,
+      origin?.filename ?? null,
+      rule.credit ? origin?.id ?? null : null,
+      rule.credit,
+      rule.credit ? origin?.image_type ?? null : null,
     ]
   );
 

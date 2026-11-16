@@ -7,7 +7,16 @@ est décrit par le code et l'historique git, pas ici — sauf exception signalé
 explicitement (§6, §6bis) quand une fonctionnalité est en prod mais qu'un
 sujet à côté reste ouvert.
 
-## 1. Crédit des photos importées de camptocamp — décidé, non implémenté
+## 1. Crédit des photos importées de camptocamp — fait (16 novembre 2026)
+
+**En place.** La décision ci-dessous est codée dans `c2cPhotoCredit`
+(`src/lib/c2c.ts`) et appliquée sur les deux chemins d'import — la synchro
+côté serveur et l'éditeur. Trois colonnes sur `photos` (migration 044) :
+`c2c_image_id`, `c2c_credit`, `c2c_image_type`. Le bloc de crédit s'affiche sous
+la galerie de la sortie, chaque nom lié à sa page image. Une image `personal`
+créditée est conservée telle quelle (ni recompression navigateur, ni AVIF, ni
+vignette) ; une image `copyright` qui n'est pas à soi n'est pas ré-hébergée.
+Le texte qui suit est la décision d'origine, gardée pour mémoire.
 
 **Le problème.** L'import télécharge les photos et les ré-héberge
 (`EntryForm.tsx`, appel à `/api/c2c/image`), en ne retenant que le nom de

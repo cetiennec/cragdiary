@@ -150,6 +150,14 @@ export type Photo = {
    * have. Only its uploader may take it back out again.
    */
   uploaded_by: string | null;
+  /**
+   * Set on a photo imported from camptocamp that is not the importer's own
+   * (migration 044): who to name, which image to link, and the type that
+   * decides the licence. Null means no credit is owed.
+   */
+  c2c_image_id: number | null;
+  c2c_credit: string | null;
+  c2c_image_type: string | null;
 };
 
 export type Wish = {

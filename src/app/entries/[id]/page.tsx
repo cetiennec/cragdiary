@@ -1,5 +1,6 @@
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
+import { c2cImagePageUrl, c2cLicenceLabel } from "@/lib/c2c";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { entryReadState, getCoAuthors, getEntry, getSharedDay, mayRead } from "@/lib/queries";
@@ -205,6 +206,17 @@ export default async function EntryPage({
   // you couldn't open full size, and a day with a single photo showed no
   // gallery at all.
   const gallery = galleryPhotos;
+  // Who to credit: one name per contributor, linked to their first photo.
+  const credits: { name: string; id: number | null }[] = [];
+  const licences: string[] = [];
+  for (const p of entry.photos) {
+    if (!p.c2c_credit) continue;
+    if (!credits.some((c) => c.name === p.c2c_credit)) {
+      credits.push({ name: p.c2c_credit, id: p.c2c_image_id });
+    }
+    const licence = c2cLicenceLabel(p.c2c_image_type);
+    if (!licences.includes(licence)) licences.push(licence);
+  }
   const isDemo = isDemoAccount(entry.username);
   // Someone who climbed this day with you and wrote their own version of it.
   const sharedDay = await getSharedDay(entry.id, user?.id ?? null);
@@ -522,6 +534,30 @@ export default async function EntryPage({
             banner={isDemo ? t.demo.banner : undefined}
           />
           </>
+        )}
+
+        {/* What camptocamp's licence asks for, for the photos here that are
+            someone else's: their name, a link to the image, and the licence.
+            One line for the lot, each name linked once, under the gallery
+            and the story alike since a credited photo can sit in either. */}
+        {credits.length > 0 && (
+          <p className="photo-credits">
+            {t.entry.photoCredits}{" "}
+            {credits.map((c, i) => (
+              <Fragment key={c.name}>
+                {i > 0 && ", "}
+                {c.id !== null ? (
+                  <a href={c2cImagePageUrl(c.id)} target="_blank" rel="noopener noreferrer">
+                    {c.name}
+                  </a>
+                ) : (
+                  c.name
+                )}
+              </Fragment>
+            ))}
+            {" — camptocamp.org, "}
+            {licences.join(" / ")}
+          </p>
         )}
 
         {canEdit && (

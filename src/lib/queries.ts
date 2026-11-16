@@ -25,7 +25,7 @@ async function attachPhotos<T extends Entry>(
 
   const photosResult = await pool.query<Photo>(
     `select id, entry_id, content_type, position, size, align, para, width, height, caption,
-            uploaded_by
+            uploaded_by, c2c_image_id, c2c_credit, c2c_image_type
      from photos
      where entry_id = any($1)
      order by position asc`,
@@ -1112,7 +1112,7 @@ export async function getSharedDay(
   // Only the gallery ones: a photo placed inside their story belongs to it.
   const photos = await pool.query<Photo>(
     `select id, entry_id, content_type, position, size, align, para, width, height, caption,
-            uploaded_by
+            uploaded_by, c2c_image_id, c2c_credit, c2c_image_type
      from photos
      where entry_id = any($1) and align is null
      order by position asc`,

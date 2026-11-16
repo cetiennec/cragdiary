@@ -279,6 +279,13 @@ alter table users add column if not exists digest_sent_at timestamptz;
 -- gallery. Null on photos uploaded by hand, and on anything imported before.
 alter table photos add column if not exists c2c_filename text;
 
+-- A photo imported from camptocamp that is someone else's (migration 044):
+-- who to credit, which image page to link, and the image type the licence
+-- follows from. Null on the importer's own photos and on every upload.
+alter table photos add column if not exists c2c_image_id integer;
+alter table photos add column if not exists c2c_credit text;
+alter table photos add column if not exists c2c_image_type text;
+
 -- The topo the outing was climbed on (migration 030). `c2c_url` holds the
 -- outing — the story — and the route's own page was lost on import.
 alter table entries add column if not exists c2c_route_url text;

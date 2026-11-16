@@ -239,6 +239,9 @@ const en = {
   },
   entry: {
     date: "📅 Date",
+    // The licence line under a gallery with someone else's camptocamp photos:
+    // "Photos: Damelko, Pierre — camptocamp.org, CC BY-NC-ND".
+    photoCredits: "Photos:",
     monthOnly: "Month only",
     location: "📍 Location",
     style: "🪢 Style",
@@ -1304,6 +1307,7 @@ const fr: Dict = {
   },
   entry: {
     date: "📅 Date",
+    photoCredits: "Photos :",
     monthOnly: "Mois seulement",
     location: "📍 Lieu",
     style: "🪢 Style",

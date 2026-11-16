@@ -10,7 +10,12 @@ import type { LinkableDay } from "@/app/api/entries/linkable/route";
 import CoAuthorControls from "@/components/CoAuthorControls";
 import type { Dict, Locale } from "@/lib/i18n";
 import type { C2cSuggestion } from "@/app/api/c2c/search/route";
-import type { C2cOutingImport } from "@/lib/c2c";
+import type { C2cOutingImport, C2cOutingImage } from "@/lib/c2c";
+
+// Which camptocamp image a File in the editor came from, so the upload can
+// say so and the server can credit it. Keyed by the File object itself:
+// it follows the file through reordering and removal, and vanishes with it.
+const c2cOrigin = new WeakMap<File, C2cOutingImage>();
 import type { GeoSuggestion } from "@/app/api/geo/search/route";
 import type { UserSuggestion } from "@/app/api/users/search/route";
 import type { EntryWithAuthor } from "@/lib/queries";
@@ -494,19 +499,21 @@ export default function EntryForm({
 
       // Pull the outing's photos in via the proxy, then run them through the
       // normal client compression + append pipeline.
-      const filenames = outing.images.slice(0, 20);
-      if (filenames.length > 0) {
+      const images = outing.images.slice(0, 20);
+      if (images.length > 0) {
         const fetched = await Promise.all(
-          filenames.map(async (fn, i) => {
+          images.map(async (im, i) => {
             try {
               const r = await fetch(
-                `/api/c2c/image?f=${encodeURIComponent(fn)}&size=BI`
+                `/api/c2c/image?f=${encodeURIComponent(im.filename)}&size=BI`
               );
               if (!r.ok) return null;
               const blob = await r.blob();
-              return new File([blob], `c2c-${i + 1}.jpg`, {
+              const file = new File([blob], `c2c-${i + 1}.jpg`, {
                 type: blob.type || "image/jpeg",
               });
+              c2cOrigin.set(file, im);
+              return file;
             } catch {
               return null;
             }
@@ -610,6 +617,16 @@ export default function EntryForm({
         pfd.append("new_photo_size_0", layout.size);
         pfd.append("new_photo_para_0", layout.para);
         pfd.append("new_photo_caption_0", layout.caption);
+        const origin = c2cOrigin.get(newFiles[index]);
+        if (origin) {
+          pfd.append("new_photo_c2c_filename_0", origin.filename);
+          if (origin.id !== null) pfd.append("new_photo_c2c_id_0", String(origin.id));
+          if (origin.creator_id !== null)
+            pfd.append("new_photo_c2c_creator_id_0", String(origin.creator_id));
+          if (origin.creator_name) pfd.append("new_photo_c2c_creator_name_0", origin.creator_name);
+          if (origin.author) pfd.append("new_photo_c2c_author_0", origin.author);
+          if (origin.image_type) pfd.append("new_photo_c2c_type_0", origin.image_type);
+        }
         await addEntryPhoto(pfd);
         return;
       } catch (err) {
@@ -669,6 +686,10 @@ export default function EntryForm({
     }
     const compressed = await Promise.all(
       files.map(async (f) => {
+        // A camptocamp photo goes up as it came: it is already a modest size,
+        // and someone else's `personal` one must not be re-encoded at all —
+        // which only the server, knowing whose it is, can decide.
+        if (c2cOrigin.has(f)) return f;
         let out = f;
         for (const [dim, quality] of COMPRESSION_STEPS) {
           out = await compressImage(f, dim, quality);

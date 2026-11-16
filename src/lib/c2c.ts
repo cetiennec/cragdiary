@@ -151,11 +151,68 @@ export type C2cOutingImport = {
   notes: string | null;
   partners: string | null;
   outing_url: string;
-  images: string[]; // image filenames, oldest c2c order
+  images: C2cOutingImage[]; // oldest c2c order
 };
 
+// What an outing's photo carries about whose it is. The association itself
+// says the type and a free-text `author`; who uploaded it (`creator`) is only
+// on the image document, hence one more request per photo at import.
+export type C2cOutingImage = {
+  filename: string;
+  id: number | null;
+  creator_id: number | null;
+  creator_name: string | null;
+  author: string | null;
+  /** camptocamp's `image_type`: collaborative (CC BY-SA), personal (CC BY-NC-ND), copyright. */
+  image_type: string | null;
+};
+
+// Whether a re-hosted photo owes a credit, and whether it may be touched.
+// The author is not bound by their own licence, so a photo the importing
+// account uploaded is simply theirs — unless `author` names someone else, the
+// case of a photo dropped on camptocamp by one person and taken by another.
+// Anyone else's photo is credited; a `personal` one is also kept byte for
+// byte, since ND forbids the re-encode every other photo gets. With no linked
+// camptocamp profile nothing can be told apart, so everything is credited: a
+// credit on your own photo is noise, the other way round is a breach. A
+// `copyright` image not your own is not re-hosted at all.
+export function c2cPhotoCredit(
+  img: C2cOutingImage,
+  ownProfileId: number | null
+): { credit: string | null; keepOriginal: boolean; skip: boolean } {
+  const own =
+    !img.author?.trim() &&
+    img.creator_id !== null &&
+    ownProfileId !== null &&
+    img.creator_id === ownProfileId;
+  if (own) return { credit: null, keepOriginal: false, skip: false };
+  if (img.image_type === "copyright") return { credit: null, keepOriginal: true, skip: true };
+  const credit = img.author?.trim() || img.creator_name?.trim() || "camptocamp.org";
+  return { credit, keepOriginal: img.image_type === "personal", skip: false };
+}
+
+// The licence a credit line names, from camptocamp's own article on content
+// licences; the collaborative one is the site's default.
+export function c2cLicenceLabel(imageType: string | null): string {
+  return imageType === "personal" ? "CC BY-NC-ND" : "CC BY-SA";
+}
+
+export function c2cImagePageUrl(id: number): string {
+  return `${C2C_SITE}/images/${id}`;
+}
+
 type C2cUserAssoc = { document_id?: number; name?: string; username?: string };
-type C2cImageAssoc = { filename?: string };
+type C2cImageAssoc = {
+  document_id?: number;
+  filename?: string;
+  image_type?: string | null;
+  author?: string | null;
+};
+type C2cImageDoc = {
+  creator?: { user_id?: number; name?: string } | null;
+  author?: string | null;
+  image_type?: string | null;
+};
 type C2cOutingDoc = {
   document_id: number;
   date_start?: string | null;
@@ -215,9 +272,28 @@ export async function importOuting(id: number, lang: string): Promise<C2cOutingI
 
   const outingCoords = mercatorToWgs84(outing.geometry?.geom);
 
-  const images = (outing.associations?.images ?? [])
-    .map((im) => im.filename)
-    .filter((f): f is string => Boolean(f) && isC2cFilename(f!));
+  // One document read per photo, for who uploaded it — the association does
+  // not say. Capped at what an import will take anyway, and a read that
+  // fails leaves the creator unknown, which the credit rule treats as "not
+  // yours".
+  const assocs = (outing.associations?.images ?? [])
+    .filter((im): im is C2cImageAssoc & { filename: string } =>
+      Boolean(im.filename) && isC2cFilename(im.filename!)
+    )
+    .slice(0, 20);
+  const images: C2cOutingImage[] = await Promise.all(
+    assocs.map(async (im) => {
+      const doc = im.document_id ? await fetchJson<C2cImageDoc>(`${C2C_API}/images/${im.document_id}`) : null;
+      return {
+        filename: im.filename,
+        id: im.document_id ?? null,
+        creator_id: doc?.creator?.user_id ?? null,
+        creator_name: doc?.creator?.name ?? null,
+        author: im.author ?? doc?.author ?? null,
+        image_type: im.image_type ?? doc?.image_type ?? null,
+      };
+    })
+  );
 
   return {
     images,
