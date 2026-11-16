@@ -3944,6 +3944,25 @@ a {
   }
 }
 
+/* The licence line under a gallery holding someone else's camptocamp photos:
+   quiet, one line, each name a link to its image page. */
+.photo-credits {
+  margin: 0.5rem 0 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.photo-credits a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.photo-credits a:hover {
+  color: var(--accent);
+}
+
 /* ---- Missing page, broken page ------------------------------------------ */
 
 .not-found-text {
@@ -5215,9 +5234,11 @@ a {
   display: flex;
   flex-wrap: wrap;
   gap: 0.25rem;
-  /* A sideways drag along the row picks a range; an up-and-down one still
-     scrolls the page, which matters on a phone where the ladder is tall. */
-  touch-action: pan-y;
+  /* The finger's whole gesture belongs to the ladder, as on any slider. On a
+     phone the scale wraps to several rows, so a slide from 5c to 6b+ is as
+     much down as across — with `pan-y` the browser read that as a scroll and
+     cancelled the drag, and the page only ever scrolled. */
+  touch-action: none;
   user-select: none;
   -webkit-user-select: none;
 }
