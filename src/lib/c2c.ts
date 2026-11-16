@@ -639,6 +639,13 @@ export type C2cRouteDetail = {
   access: C2cAccessPoint | null;
   /** How many outings have been logged on the route — how travelled it is. */
   outings: number | null;
+  /**
+   * A photo of the route for its card. Only a collaborative one: those are
+   * CC BY-SA under camptocamp's name, so a link to the image page credits it.
+   * A personal photo needs its author's name, which the route document leaves
+   * out.
+   */
+  photo: { id: number; filename: string } | null;
 };
 
 // One upstream document answers both questions, so they're fetched together.
@@ -647,8 +654,12 @@ export async function routeDetail(routeId: number, lang: string): Promise<C2cRou
     associations?: {
       waypoints?: C2cWaypointAssoc[];
       recent_outings?: { total?: number };
+      images?: { document_id?: number; filename?: string; image_type?: string }[];
     };
   }>(`${C2C_API}/routes/${routeId}`);
+  const image = (doc?.associations?.images ?? []).find(
+    (im) => im.image_type === "collaborative" && im.document_id && im.filename && isC2cFilename(im.filename)
+  );
 
   const point = (doc?.associations?.waypoints ?? []).find((w) => w.waypoint_type === "access");
   const coords = point ? mercatorToWgs84(point.geometry?.geom) : null;
@@ -667,6 +678,7 @@ export async function routeDetail(routeId: number, lang: string): Promise<C2cRou
     // `recent_outings` carries only the last ten documents, but its `total` is
     // the real count — the same number `/outings?r=<id>` reports.
     outings: doc?.associations?.recent_outings?.total ?? null,
+    photo: image ? { id: image.document_id!, filename: image.filename! } : null,
   };
 }
 

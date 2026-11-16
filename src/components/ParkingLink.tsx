@@ -27,12 +27,35 @@ export default function ParkingLink({
   label,
   openIn,
   hint,
+  compact,
 }: {
   parking: ParkingPoint;
   label: string;
   openIn: string;
   hint?: string;
+  /** An icon button with the label as its name, for a card's footer. */
+  compact?: boolean;
 }) {
+  if (compact) {
+    return (
+      <details className="seeker-open-in seeker-icon-menu">
+        <summary title={label} aria-label={label}>
+          <svg viewBox="0 0 24 24" aria-hidden>
+            <path d="M4 16v-4l2-5h12l2 5v4M4 16h16M4 16v2M20 16v2M7.5 13h.01M16.5 13h.01" />
+          </svg>
+        </summary>
+        <ul>
+          {mapLinks(parking).map((link) => (
+            <li key={link.name}>
+              <a href={link.url} target="_blank" rel="noopener noreferrer">
+                {link.name}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </details>
+    );
+  }
   return (
     <div className="seeker-parking">
       <span className="seeker-parking-mark" aria-hidden>

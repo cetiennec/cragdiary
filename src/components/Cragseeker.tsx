@@ -13,6 +13,7 @@ import WeatherLink from "./WeatherLink";
 import Toast from "./Toast";
 import GymThumb from "./GymThumb";
 import { ActivityGlyph, Compass } from "./SeekerV2Parts";
+import SeekerWeather from "./SeekerWeather";
 import { saveWishFromSearch } from "@/app/actions";
 import type { SeekerResult } from "@/app/api/seeker/route";
 import type { OpenBetaClimb } from "@/app/api/seeker/climbs/route";
@@ -32,9 +33,11 @@ import {
   C2C_ORIENTATIONS,
   C2C_OUTDOOR_TYPES,
   C2C_RANGE_SCALES,
+  c2cImageUrl,
   type C2cActivity,
   type C2cRangeKey,
 } from "@/lib/c2c";
+import { faceNote, NOTE_TONE, verdict as readVerdict, type Forecast } from "@/lib/seeker/weather";
 import { gradeRank } from "@/lib/seeker/grades";
 import type { UsualLevel } from "@/lib/seeker/usual";
 import {
@@ -555,6 +558,7 @@ export default function Cragseeker({
   // when they do.
   const [access, setAccess] = useState<Record<number, C2cAccessPoint>>({});
   const [outings, setOutings] = useState<Record<number, number>>({});
+  const [photos, setPhotos] = useState<Record<number, { id: number; filename: string }>>({});
   // Which routes have been asked about — `access` alone can't say, since a
   // route with no parking never lands there.
   const asked = useRef(new Set<number>());
@@ -669,6 +673,35 @@ export default function Cragseeker({
     [query, countSearch]
   );
 
+  // The weather at the search point, for the conditions panel and the note on
+  // each card. Only where wet rock is the question: rock climbing and via
+  // ferrata, on the current menu.
+  const wantsWeather =
+    variant === "v2" && Boolean(centre) && (activity === "rock_climbing" || activity === "via_ferrata");
+  const wxKey = centre ? `${centre.lat.toFixed(2)},${centre.lon.toFixed(2)}` : "";
+  const [forecast, setForecast] = useState<{ key: string; data: Forecast } | null>(null);
+  useEffect(() => {
+    if (!wantsWeather || !wxKey) return;
+    let cancelled = false;
+    const [lat, lon] = wxKey.split(",");
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/seeker/weather?lat=${lat}&lon=${lon}`);
+        if (!res.ok) return;
+        const data = (await res.json()) as Forecast;
+        if (!cancelled) setForecast({ key: wxKey, data });
+      } catch {
+        // No panel is a fine outcome: the search works without it.
+      }
+    }, 400);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [wantsWeather, wxKey]);
+  const wx = wantsWeather && forecast?.key === wxKey ? forecast.data : null;
+  const wxVerdict = useMemo(() => (wx ? readVerdict(wx) : null), [wx]);
+
   // The route's own document — parking, and how many outings it has seen — is
   // one upstream request per route, so ask only for results actually on screen,
   // and only for ones not asked about already.
@@ -695,6 +728,11 @@ export default function Cragseeker({
         setOutings((prev) => {
           const next = { ...prev };
           for (const d of data.details) if (d.outings != null) next[d.route_id] = d.outings;
+          return next;
+        });
+        setPhotos((prev) => {
+          const next = { ...prev };
+          for (const d of data.details) if (d.photo) next[d.route_id] = d.photo;
           return next;
         });
       } catch {
@@ -1406,6 +1444,16 @@ export default function Cragseeker({
         frameResults={q.trim().length > 0}
       />
 
+      {wx && wxVerdict && (
+        <SeekerWeather
+          forecast={wx}
+          verdict={wxVerdict}
+          words={t.v2.wx}
+          locale={locale}
+          point={{ lat: Number(wxKey.split(",")[0]), lon: Number(wxKey.split(",")[1]) }}
+        />
+      )}
+
       <div className="seeker-status">
         {loading && results.length === 0 ? (
           <span>{t.searching}</span>
@@ -1485,10 +1533,190 @@ export default function Cragseeker({
         <p className="empty-state">{t.empty}</p>
       )}
 
-      <ul className="seeker-results">
+      <ul className={`seeker-results${variant === "v2" ? " seeker2-cards" : ""}`}>
         {shown.map((route) => {
           const state = saved[route.key] ?? "idle";
           const parking = route.source === "c2c" ? access[Number(route.id)] : undefined;
+          const cragClimbs =
+            route.source === "openbeta" && (route.climb_count ?? 0) > 0 && (
+              <div className="seeker-climbs">
+                <button
+                  type="button"
+                  className="seeker-climbs-toggle"
+                  aria-expanded={openCrags.has(route.key)}
+                  onClick={() => toggleCrag(route)}
+                >
+                  {openCrags.has(route.key)
+                    ? `▾ ${t.hideClimbs}`
+                    : `▸ ${
+                        route.climb_count === 1
+                          ? t.showClimbOne
+                          : fill(t.showClimbs, "n", route.climb_count ?? 0)
+                      }`}
+                </button>
+
+                {openCrags.has(route.key) &&
+                  (climbs[route.key] === "loading" ? (
+                    <p className="seeker-note">{t.searching}</p>
+                  ) : climbs[route.key] === "error" ? (
+                    <p className="seeker-note">{t.climbsFailed}</p>
+                  ) : (climbs[route.key] as OpenBetaClimb[])?.length ? (
+                    <ul className="seeker-climb-list">
+                      {(climbs[route.key] as OpenBetaClimb[]).map((climb) => (
+                        <li key={climb.uuid}>
+                          <a href={climb.url} target="_blank" rel="noopener noreferrer">
+                            {climb.name}
+                          </a>
+                          <span className="seeker-climb-meta">
+                            {[
+                              climb.grade,
+                              ...climb.disciplines.map((d) => t.disciplines[d] ?? d),
+                              climb.length_m ? `${climb.length_m} m` : null,
+                            ]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    // A crag can count climbs it has no documents for.
+                    <p className="seeker-note">{t.climbsEmpty}</p>
+                  ))}
+              </div>
+            );
+          if (variant === "v2") {
+            const photo = route.source === "c2c" ? photos[Number(route.id)] : undefined;
+            const note =
+              wx && wxVerdict && route.source === "c2c"
+                ? faceNote(wxVerdict, wx, route.orientation, route.elevation_max)
+                : null;
+            const badge = route.grade ?? route.rating;
+            const facts =
+              route.source === "c2c"
+                ? [
+                    route.outdoor_type ? t.outdoorTypes[route.outdoor_type] : null,
+                    route.height_m ? `${route.height_m} m` : null,
+                    route.orientation ? route.orientation.replace(/,\s*/g, "/") : null,
+                    route.equipment,
+                    route.required_grade && route.required_grade !== route.grade
+                      ? `${t.mandatoryTag} ${route.required_grade}`
+                      : null,
+                    outings[Number(route.id)] ? outingTag(route.id) : null,
+                  ].filter((x): x is string => Boolean(x))
+                : tagsFor(route).filter((tag) => tag !== t.sources[route.source]);
+            return (
+              <li
+                key={route.key}
+                className={`seeker-result seeker2-card${activeId === route.key ? " active" : ""}`}
+                onMouseEnter={() => setActiveId(route.key)}
+              >
+                <div className={`seeker2-card-top${photo ? "" : " no-photo"}`}>
+                  {photo ? (
+                    <a
+                      href={`https://www.camptocamp.org/images/${photo.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title={t.v2.wx.photoCredit}
+                      tabIndex={-1}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element -- camptocamp's own thumbnail, already sized */}
+                      <img src={c2cImageUrl(photo.filename, "MI")} alt="" loading="lazy" decoding="async" />
+                    </a>
+                  ) : (
+                    <ActivityGlyph id={activity} />
+                  )}
+                  {route.distance_km != null && (
+                    <span className="seeker2-card-dist">
+                      {fill(t.away, "km", Math.round(route.distance_km))}
+                    </span>
+                  )}
+                  {isClimbed(route) && (
+                    <span className="seeker2-card-climbed" title={t.climbedHint}>
+                      ✓ {t.climbed}
+                    </span>
+                  )}
+                  {note && (
+                    <span className={`seeker2-card-note ${NOTE_TONE[note]}`}>{t.v2.wx.notes[note]}</span>
+                  )}
+                  {badge && (
+                    <span className="seeker2-card-grade">
+                      <b>{badge}</b>
+                      {route.grade && route.rating && <small>{route.rating}</small>}
+                    </span>
+                  )}
+                </div>
+                <div className="seeker2-card-body">
+                  <h3>
+                    <a href={route.url} target="_blank" rel="noopener noreferrer" title={t.openOn[route.source]}>
+                      {route.title.trim()}
+                    </a>
+                  </h3>
+                  {(route.area || route.elevation_max) && (
+                    <p className="seeker2-card-area">
+                      {[route.area, route.elevation_max ? `${route.elevation_max} m` : null]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </p>
+                  )}
+                  {facts.length > 0 && <p className="seeker2-card-facts">{facts.join(" · ")}</p>}
+                  {route.summary && <p className="seeker2-card-sum">{route.summary}</p>}
+                  {cragClimbs}
+                </div>
+                <div className="seeker2-card-foot">
+                  <span className={`seeker2-card-src ${route.source}`}>{t.sources[route.source]}</span>
+                  {route.lat != null && route.lon != null && (
+                    <WeatherLink
+                      point={{ lat: route.lat, lon: route.lon }}
+                      label={t.v2.wx.forecast}
+                      openIn={t.openIn}
+                      compact
+                    />
+                  )}
+                  {parking && (
+                    <ParkingLink parking={parking} label={t.v2.wx.directions} openIn={t.openIn} compact />
+                  )}
+                  <div className="seeker-actions">
+                    {!signedIn && (
+                      <a className="seeker-add-signup" href={`/signup?next=${encodeURIComponent(here)}`}>
+                        + {t.add}
+                      </a>
+                    )}
+                    {wishlists.length > 0 && (
+                      <span className="seeker-add">
+                        {wishlists.length > 1 && (
+                          <select
+                            value={listId}
+                            onChange={(e) => setListId(e.target.value)}
+                            aria-label={t.addToList}
+                          >
+                            {wishlists.map((w) => (
+                              <option key={w.id} value={w.id}>
+                                {w.name}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => save(route)}
+                          disabled={state === "saving" || state === "done"}
+                        >
+                          {state === "saving"
+                            ? t.adding
+                            : state === "done"
+                              ? t.added
+                              : state === "error"
+                                ? t.addFailed
+                                : `+ ${t.add}`}
+                        </button>
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </li>
+            );
+          }
           return (
             <li
               key={route.key}
@@ -1534,53 +1762,7 @@ export default function Cragseeker({
                     : route.summary}
                 </p>
               )}
-              {route.source === "openbeta" && (route.climb_count ?? 0) > 0 && (
-                <div className="seeker-climbs">
-                  <button
-                    type="button"
-                    className="seeker-climbs-toggle"
-                    aria-expanded={openCrags.has(route.key)}
-                    onClick={() => toggleCrag(route)}
-                  >
-                    {openCrags.has(route.key)
-                      ? `▾ ${t.hideClimbs}`
-                      : `▸ ${
-                          route.climb_count === 1
-                            ? t.showClimbOne
-                            : fill(t.showClimbs, "n", route.climb_count ?? 0)
-                        }`}
-                  </button>
-
-                  {openCrags.has(route.key) &&
-                    (climbs[route.key] === "loading" ? (
-                      <p className="seeker-note">{t.searching}</p>
-                    ) : climbs[route.key] === "error" ? (
-                      <p className="seeker-note">{t.climbsFailed}</p>
-                    ) : (climbs[route.key] as OpenBetaClimb[])?.length ? (
-                      <ul className="seeker-climb-list">
-                        {(climbs[route.key] as OpenBetaClimb[]).map((climb) => (
-                          <li key={climb.uuid}>
-                            <a href={climb.url} target="_blank" rel="noopener noreferrer">
-                              {climb.name}
-                            </a>
-                            <span className="seeker-climb-meta">
-                              {[
-                                climb.grade,
-                                ...climb.disciplines.map((d) => t.disciplines[d] ?? d),
-                                climb.length_m ? `${climb.length_m} m` : null,
-                              ]
-                                .filter(Boolean)
-                                .join(" · ")}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      // A crag can count climbs it has no documents for.
-                      <p className="seeker-note">{t.climbsEmpty}</p>
-                    ))}
-                </div>
-              )}
+              {cragClimbs}
               {parking && (
                 <ParkingLink
                   parking={parking}
@@ -1839,6 +2021,11 @@ export default function Cragseeker({
         },
       },
     ];
+    // What a tile or idea that needs a place does when there is none yet.
+    const askForPlace = () => {
+      goTo("seeker2-where");
+      document.querySelector<HTMLInputElement>("#seeker2-where input")?.focus({ preventScroll: true });
+    };
     const pickIdea = (idea: (typeof ideas)[number]) => {
       if (idea.on) {
         if (idea.id === "rain") setShowGyms(false);
@@ -1983,9 +2170,14 @@ export default function Cragseeker({
                     type="button"
                     className="seeker2-tile seeker2-tile-indoor"
                     aria-pressed={showGyms}
-                    disabled={!centre}
-                    title={centre ? v.indoorHint : v.needsPin}
+                    // Marked unavailable rather than disabled: a disabled
+                    // button can't show why on hover, and a click is better
+                    // spent taking you to the place field.
+                    aria-disabled={!centre}
+                    data-tip={centre ? undefined : v.needsPin}
+                    title={centre ? v.indoorHint : undefined}
                     onClick={() => {
+                      if (!centre) return askForPlace();
                       const next = !showGyms;
                       setShowGyms(next);
                       if (next) setTimeout(() => goTo("seeker2-gyms"), 400);
@@ -2060,9 +2252,9 @@ export default function Cragseeker({
                       type="button"
                       className="seeker2-idea"
                       aria-pressed={idea.on}
-                      disabled={idea.disabled}
-                      title={idea.disabled ? v.needsPin : undefined}
-                      onClick={() => pickIdea(idea)}
+                      aria-disabled={idea.disabled}
+                      data-tip={idea.disabled ? v.needsPin : undefined}
+                      onClick={() => (idea.disabled ? askForPlace() : pickIdea(idea))}
                     >
                       <b>{idea.label}</b>
                       <span>{idea.hint}</span>

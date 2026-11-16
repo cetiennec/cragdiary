@@ -3,11 +3,12 @@ import type { NextConfig } from "next";
 const isDev = process.env.NODE_ENV !== "production";
 
 // Content-Security-Policy tuned to what the client actually loads: our own
-// origin, OpenStreetMap tiles (Leaflet <img>) and the OSM embed <iframe>.
+// origin, OpenStreetMap tiles (Leaflet <img>), camptocamp's route photos on
+// Cragseeker's cards, and the OSM embed <iframe>.
 // Dev needs 'unsafe-eval' + ws: for Turbopack HMR; production stays tighter.
 const csp = [
   "default-src 'self'",
-  "img-src 'self' data: blob: https://tile.openstreetmap.org https://*.tile.openstreetmap.org",
+  "img-src 'self' data: blob: https://tile.openstreetmap.org https://*.tile.openstreetmap.org https://media.camptocamp.org",
   "style-src 'self' 'unsafe-inline'",
   `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
   `connect-src 'self'${isDev ? " ws:" : ""}`,

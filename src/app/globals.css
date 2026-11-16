@@ -7597,3 +7597,466 @@ label:has(input:placeholder-shown) + .form-hint.form-warn {
     height: 112px;
   }
 }
+
+/* ---- Cragseeker: the conditions panel over the results -------------------- */
+
+.seeker-wx {
+  --wx-dry: #4d7c3a;
+  --wx-damp: #b7832a;
+  --wx-wet: #4a6e9c;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 280px);
+  gap: 1.2rem;
+  margin: 0.9rem 0 0.4rem;
+  padding: 1rem 1.15rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+
+.seeker-wx.is-good,
+.seeker-wx.is-hot {
+  --wx-tone: var(--wx-dry);
+}
+
+.seeker-wx.is-damp {
+  --wx-tone: var(--wx-damp);
+}
+
+.seeker-wx.is-rain {
+  --wx-tone: var(--wx-wet);
+}
+
+.seeker-wx h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0;
+  font-family: var(--heading-font);
+  font-size: 1.15rem;
+}
+
+.seeker-wx-dot {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+  background: var(--wx-tone);
+  flex: none;
+}
+
+.seeker-wx p {
+  margin: 0.35rem 0 0;
+  font-size: 0.9rem;
+}
+
+.seeker-wx-tip {
+  padding-top: 0.5rem;
+  margin-top: 0.6rem !important;
+  border-top: 1px dashed var(--border);
+}
+
+.seeker-wx p.seeker-wx-credit {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.seeker-wx-credit a {
+  color: inherit;
+}
+
+.seeker-wx-chart {
+  align-self: center;
+  min-width: 0;
+}
+
+.seeker-wx-bars {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  gap: 1px;
+  height: 56px;
+  border-bottom: 1px solid var(--border);
+}
+
+.seeker-wx-bars span {
+  flex: 1;
+  background: var(--wx-wet);
+  border-radius: 2px 2px 0 0;
+  opacity: 0.85;
+}
+
+.seeker-wx-bars span.past {
+  opacity: 0.4;
+}
+
+.seeker-wx-bars i {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 2px;
+  background: var(--accent);
+}
+
+.seeker-wx-axis {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.2rem;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+}
+
+.seeker-wx-axis .now {
+  position: absolute;
+  transform: translateX(-50%);
+  color: var(--accent);
+}
+
+.seeker-wx-days {
+  display: flex;
+  gap: 4px;
+  margin: 0.6rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.seeker-wx-days li {
+  flex: 1;
+  padding: 0.25rem 0;
+  border-radius: 8px;
+  text-align: center;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.seeker-wx-days li b {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.seeker-wx-days li.dry {
+  background: color-mix(in srgb, var(--wx-dry) 18%, transparent);
+}
+
+@media (max-width: 640px) {
+  .seeker-wx {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ---- Cragseeker: the result card on the current menu ---------------------- */
+
+.seeker-results.seeker2-cards .seeker2-card {
+  --wx-dry: #4d7c3a;
+  --wx-damp: #b7832a;
+  --wx-wet: #4a6e9c;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.seeker2-card-top {
+  position: relative;
+  height: 128px;
+  background: color-mix(in srgb, var(--accent) 12%, var(--bg));
+}
+
+.seeker2-card-top a,
+.seeker2-card-top img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.seeker2-card-top img {
+  object-fit: cover;
+}
+
+/* The same height with or without a photo, so a row of cards lines up. */
+.seeker2-card-top.no-photo {
+  display: grid;
+  place-items: center;
+}
+
+.seeker2-card-top.no-photo .seeker2-glyph {
+  width: 44px;
+  height: 44px;
+  opacity: 0.3;
+}
+
+.seeker2-card-dist,
+.seeker2-card-climbed {
+  position: absolute;
+  top: 0.55rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  color: #fff;
+  background: rgba(20, 14, 10, 0.6);
+  backdrop-filter: blur(4px);
+}
+
+.seeker2-card-dist {
+  right: 0.6rem;
+}
+
+.seeker2-card-climbed {
+  left: 0.6rem;
+  background: rgba(40, 90, 40, 0.8);
+}
+
+.seeker2-card-note {
+  position: absolute;
+  right: 0.6rem;
+  bottom: 0.6rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.seeker2-card-note.dry {
+  background: var(--wx-dry);
+}
+
+.seeker2-card-note.damp {
+  background: var(--wx-damp);
+}
+
+.seeker2-card-note.wet {
+  background: var(--wx-wet);
+}
+
+.seeker2-card-grade {
+  position: absolute;
+  left: 0.75rem;
+  bottom: -1.1rem;
+  min-width: 2.8rem;
+  padding: 0.3rem 0.65rem 0.25rem;
+  border-radius: 14px;
+  text-align: center;
+  line-height: 1;
+  background: var(--bg-elevated);
+  box-shadow: 0 4px 14px -6px rgba(0, 0, 0, 0.35);
+}
+
+.seeker2-card-grade b {
+  display: block;
+  font-family: var(--heading-font);
+  font-size: 1.45rem;
+}
+
+.seeker2-card-grade small {
+  font-size: 0.66rem;
+  color: var(--text-muted);
+}
+
+.seeker2-card-body {
+  flex: 1;
+  padding: 1.5rem 1rem 0.3rem;
+}
+
+.seeker2-card-top.no-photo + .seeker2-card-body {
+  padding-top: 1.5rem;
+}
+
+.seeker2-card-body h3 {
+  margin: 0;
+  font-family: var(--heading-font);
+  font-size: 1.05rem;
+  line-height: 1.25;
+}
+
+.seeker2-card-body h3 a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.seeker2-card-body h3 a:hover {
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+}
+
+.seeker2-card-area {
+  margin: 0.15rem 0 0.45rem;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.seeker2-card-facts {
+  margin: 0 0 0.45rem;
+  font-size: 0.85rem;
+}
+
+.seeker2-card-sum {
+  margin: 0;
+  font-size: 0.83rem;
+  color: var(--text-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.seeker2-card-foot {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.6rem 0.75rem 0.75rem 1rem;
+}
+
+.seeker2-card-src {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-right: auto;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.seeker2-card-src::before {
+  content: "";
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: #3f7fbf;
+}
+
+.seeker2-card-src.openbeta::before {
+  background: #2f8f62;
+}
+
+.seeker2-card-foot .seeker-actions {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.seeker-icon-menu summary {
+  display: grid;
+  place-items: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  padding: 0;
+  border-radius: 50%;
+}
+
+.seeker-icon-menu svg {
+  width: 1.05rem;
+  height: 1.05rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.seeker2-card .seeker-open-in {
+  margin-left: 0;
+}
+
+.seeker2-card-foot .seeker-open-in ul {
+  bottom: 100%;
+  margin: 0 0 0.3rem;
+}
+
+/* ---- The page explaining Cragseeker's conditions labels ------------------- */
+
+.conditions-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.6rem 0 1.4rem;
+  font-size: 0.88rem;
+}
+
+.conditions-table th,
+.conditions-table td {
+  padding: 0.45rem 0.6rem;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.conditions-table th {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.conditions-table td:nth-child(3) {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.conditions-scroll {
+  overflow-x: auto;
+}
+
+.conditions-page h2 {
+  font-family: var(--heading-font);
+  font-size: 1.2rem;
+  margin: 1.6rem 0 0.4rem;
+}
+
+.conditions-page p {
+  margin: 0 0 0.7rem;
+}
+
+.conditions-page ul {
+  list-style: disc;
+  margin: 0 0 0.9rem;
+  padding-left: 1.3rem;
+}
+
+.conditions-page li {
+  margin: 0.25rem 0;
+}
+
+.conditions-page a {
+  color: var(--accent);
+}
+
+/* A tile or idea that needs a place first: dimmed, and a bubble saying why on
+   hover or focus. A click takes you to the place field. */
+/* Dimmed through colour, not opacity, which would fade the bubble too. */
+.seeker2-tile[aria-disabled="true"],
+.seeker2-idea[aria-disabled="true"] > * {
+  color: color-mix(in srgb, var(--text) 40%, transparent);
+}
+
+.seeker2-tile[aria-disabled="true"],
+.seeker2-idea[aria-disabled="true"] {
+  cursor: help;
+  border-style: dashed;
+}
+
+.seeker2-tile[aria-disabled="true"] .seeker2-glyph {
+  opacity: 0.4;
+}
+
+.seeker2-menu [data-tip] {
+  position: relative;
+}
+
+.seeker2-menu [data-tip]:hover::after,
+.seeker2-menu [data-tip]:focus-visible::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  right: 0;
+  z-index: 20;
+  padding: 0.3rem 0.6rem;
+  border-radius: 8px;
+  background: var(--text);
+  color: var(--bg-elevated);
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+  pointer-events: none;
+}

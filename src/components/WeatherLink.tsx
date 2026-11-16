@@ -6,7 +6,7 @@ export type WeatherPoint = { lat: number; lon: number };
 // integration, just where to look. Windy for the wind and cloud a climber
 // actually plans around; Meteoblue as a second opinion, its week view leans
 // less blocky over mountain terrain.
-function weatherLinks({ lat, lon }: WeatherPoint) {
+export function weatherLinks({ lat, lon }: WeatherPoint) {
   const hemiLat = lat >= 0 ? "N" : "S";
   const hemiLon = lon >= 0 ? "E" : "W";
   return [
@@ -18,6 +18,8 @@ function weatherLinks({ lat, lon }: WeatherPoint) {
       name: "Meteoblue",
       url: `https://www.meteoblue.com/en/weather/week/${Math.abs(lat).toFixed(2)}${hemiLat}${Math.abs(lon).toFixed(2)}${hemiLon}`,
     },
+    // The Norwegian service's own forecast, from a different blend of models.
+    { name: "Yr", url: `https://www.yr.no/en/forecast/daily-table/${lat.toFixed(3)},${lon.toFixed(3)}` },
   ];
 }
 
@@ -29,12 +31,35 @@ export default function WeatherLink({
   label,
   openIn,
   hint,
+  compact,
 }: {
   point: WeatherPoint;
   label: string;
   openIn: string;
   hint?: string;
+  /** An icon button with the label as its name, for a card's footer. */
+  compact?: boolean;
 }) {
+  if (compact) {
+    return (
+      <details className="seeker-open-in seeker-icon-menu">
+        <summary title={label} aria-label={label}>
+          <svg viewBox="0 0 24 24" aria-hidden>
+            <path d="M7 18h10a4 4 0 0 0 .5-8A6 6 0 0 0 6 9.5 4.3 4.3 0 0 0 7 18Z" />
+          </svg>
+        </summary>
+        <ul>
+          {weatherLinks(point).map((link) => (
+            <li key={link.name}>
+              <a href={link.url} target="_blank" rel="noopener noreferrer">
+                {link.name}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </details>
+    );
+  }
   return (
     <div className="seeker-weather">
       <span className="seeker-weather-mark" aria-hidden>

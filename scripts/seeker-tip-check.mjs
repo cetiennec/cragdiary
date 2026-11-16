@@ -40,6 +40,9 @@ async function sweep(label) {
     }, i);
     if (!opened) continue;
 
+    // The card opens a moment after the hover, later on a slow runner: wait
+    // for it rather than a fixed pause, then let any nudge of the map settle.
+    await page.waitForSelector(".leaflet-popup.seeker-tip-wrap", { timeout: 1500 }).catch(() => {});
     await page.waitForTimeout(350);
     const over = await page.evaluate(() => {
       const map = document.querySelector(".seeker-map").getBoundingClientRect();
@@ -128,10 +131,12 @@ console.log("list card highlighted:", await page.locator(".seeker-result.active"
 
 // It closes again — but only once the pointer has left both the marker and the
 // card, so the link in it can actually be reached.
-const card = await page.locator(".seeker-tip").boundingBox();
+// Opening a card can nudge the map so the pointer ends over a neighbour, which
+// opens its card too: measure the first.
+const card = await page.locator(".seeker-tip").first().boundingBox();
 await page.mouse.move(card.x + card.width / 2, card.y + card.height / 2);
 await page.waitForTimeout(600);
-console.log("stays while the pointer is on it:", (await page.locator(".seeker-tip").count()) === 1);
+console.log("stays while the pointer is on it:", (await page.locator(".seeker-tip").count()) >= 1);
 await page.mouse.move(60, 200);
 await page.waitForTimeout(600);
 console.log("closes once the pointer leaves:", (await page.locator(".seeker-tip").count()) === 0);
