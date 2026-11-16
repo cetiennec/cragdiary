@@ -439,6 +439,8 @@ export default function Cragseeker({
   const [facing, setFacing] = useState<string[]>(() =>
     (params.fac ?? "").split(",").filter((o) => (C2C_ORIENTATIONS as readonly string[]).includes(o))
   );
+  // Only routes camptocamp's own editors rate as well written up.
+  const [documented, setDocumented] = useState(() => params.doc === "1");
   // Several at once: "multi-pitch or bouldering" is a real Sunday, and
   // camptocamp reads a comma-separated `crtyp` as exactly that OR.
   const [outdoorTypes, setOutdoorTypes] = useState<string[]>(() =>
@@ -593,6 +595,7 @@ export default function Cragseeker({
     if (elevation.max) sp.set("emax", elevation.max);
     if (facing.length) sp.set("fac", facing.join(","));
     if (outdoorTypes.length && showOutdoorType) sp.set("crtyp", outdoorTypes.join(","));
+    if (documented) sp.set("doc", "1");
     if (showHuts) sp.set("huts", "1");
     if (showGyms) sp.set("gyms", "1");
     return sp.toString();
@@ -609,6 +612,7 @@ export default function Cragseeker({
     facing,
     outdoorTypes,
     showOutdoorType,
+    documented,
     showHuts,
     showGyms,
   ]);
@@ -951,6 +955,7 @@ export default function Cragseeker({
     setElevation({ min: "", max: "" });
     setFacing([]);
     setOutdoorTypes([]);
+    setDocumented(false);
   }
 
   /**
@@ -1157,6 +1162,8 @@ export default function Cragseeker({
     const needle = contains.trim().toLowerCase();
     const kept = results.filter((r) => {
       if (needle && !`${r.title} ${r.area ?? ""}`.toLowerCase().includes(needle)) return false;
+      // OpenBeta has no rating for how well a route is written up.
+      if (documented && r.source !== "c2c") return false;
       if (minLogged > 0) {
         // OpenBeta catalogues crags camptocamp has never counted, so a minimum
         // number of c2c outings is a question they cannot answer at all.
@@ -1194,7 +1201,7 @@ export default function Cragseeker({
     else if (sort === "trad") sorted.sort(by(equipped, -1));
     else sorted.sort(by((r) => r.distance_km, 1));
     return sorted;
-  }, [results, sort, minLogged, contains, activity, outings]);
+  }, [results, sort, minLogged, contains, documented, activity, outings]);
 
   const refined = shown.length !== results.length;
 
@@ -1718,6 +1725,7 @@ export default function Cragseeker({
       otherSet +
       sizeSet +
       (contains ? 1 : 0) +
+      (documented ? 1 : 0) +
       (minLogged ? 1 : 0);
 
     const goTo = (id: string) => {
@@ -1755,6 +1763,16 @@ export default function Cragseeker({
             },
           ]
         : []),
+      {
+        id: "moniteur",
+        label: v.ideaMoniteur,
+        hint: v.ideaMoniteurHint,
+        on: documented && elevation.max === "1500" && !elevation.min,
+        apply: () => {
+          setElevation({ min: "", max: "1500" });
+          setDocumented(true);
+        },
+      },
       {
         id: "warm",
         label: v.ideaWarm,
@@ -1883,6 +1901,7 @@ export default function Cragseeker({
     }
     if (q.trim()) head.push(word(put(say.named, { q: q.trim() }), "seeker2-name"));
     sentence.push(<>{head.map((h, i) => <Fragment key={i}>{i > 0 && " "}{h}</Fragment>)}</>);
+    if (documented) sentence.push(word(say.documented, "seeker2-documented"));
     if (facing.length) {
       sentence.push(word(put(say.facing, { dirs: list(facingOrdered.map((o) => say.dirs[o])) }), "seeker2-facing"));
     }
@@ -2161,6 +2180,20 @@ export default function Cragseeker({
                     ))}
                   </section>
                 )}
+
+                <section className="seeker2-sec" id="seeker2-documented">
+                  <label className="seeker2-check">
+                    <input
+                      type="checkbox"
+                      checked={documented}
+                      onChange={(e) => setDocumented(e.target.checked)}
+                    />
+                    <span>
+                      {v.documented}
+                      <small>{v.documentedHint}</small>
+                    </span>
+                  </label>
+                </section>
 
                 <section className="seeker2-sec">
                   <label className="seeker-field seeker-field-grow">

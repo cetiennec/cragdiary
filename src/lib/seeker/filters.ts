@@ -123,6 +123,7 @@ export function parseSeekerQuery(sp: URLSearchParams): SeekerQuery {
     heightParam: ACTIVITY_HEIGHT_PARAM[activity],
     orientations,
     outdoorTypes,
+    wellDocumented: sp.get("doc") === "1",
     limit: PAGE_SIZE,
     offset,
   };

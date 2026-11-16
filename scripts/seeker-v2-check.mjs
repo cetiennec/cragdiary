@@ -37,10 +37,10 @@ const browser = await chromium.launch();
   // camptocamp's own counts; their outage is not ours, so said rather than failed
   console.log(bars > 0 ? `ok   histogram — ${bars} bands` : "warn histogram — no answer from camptocamp");
 
-  await page.locator(".seeker2-idea").nth(2).click(); // First multi-pitch
+  await page.locator(".seeker2-idea", { hasText: /First multi-pitch|Première grande voie/ }).click();
   await page.waitForTimeout(1500);
   check(params(page).get("crtyp") === "multi" && params(page).get("frat") === "5a,6a", "idea sets its filters", page.url().split("?")[1]);
-  check((await page.locator(".seeker2-idea").nth(2).getAttribute("aria-pressed")) === "true", "idea shows as on");
+  check((await page.locator(".seeker2-idea", { hasText: /First multi-pitch|Première grande voie/ }).getAttribute("aria-pressed")) === "true", "idea shows as on");
   const sentence = await page.locator(".seeker2-sentence-text").innerText();
   check(/from 5a to 6a/.test(sentence) && /^Multi-pitch climbs/.test(sentence), "sentence reads the idea back", sentence);
 

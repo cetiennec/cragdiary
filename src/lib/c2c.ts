@@ -486,6 +486,8 @@ export type C2cRouteFilters = {
   orientations?: string[];
   /** Route styles to accept, ORed together; empty or absent means all. */
   outdoorTypes?: string[];
+  /** Only routes whose camptocamp page is rated "fine" or "great". */
+  wellDocumented?: boolean;
   offset?: number;
   limit?: number;
 };
@@ -571,6 +573,8 @@ export async function searchRoutes(
   if (filters.elevationM) params.set("ele", filters.elevationM.join(","));
   if (filters.orientations?.length) params.set("fac", filters.orientations.join(","));
   if (filters.outdoorTypes?.length) params.set("crtyp", filters.outdoorTypes.join(","));
+  // camptocamp grades each page draft, medium, fine or great.
+  if (filters.wellDocumented) params.set("qa", "fine,great");
   params.set("limit", String(filters.limit ?? 30));
   params.set("offset", String(filters.offset ?? 0));
 

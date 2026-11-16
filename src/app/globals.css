@@ -7442,6 +7442,27 @@ label:has(input:placeholder-shown) + .form-hint.form-warn {
   display: none;
 }
 
+.seeker2-check {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.seeker2-check input {
+  width: 1.1rem;
+  height: 1.1rem;
+  margin-top: 0.15rem;
+  accent-color: var(--accent);
+}
+
+.seeker2-check small {
+  display: block;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
 /* On a computer every filter shows: the fold is for phones. */
 @media (min-width: 861px) {
   .seeker2-more summary {
