@@ -1,0 +1,529 @@
+<!doctype html>
+<html lang="en" data-theme="scrapbook">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Cragseeker menu prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+/* Prototype only — fake routes around Chamonix, nothing is fetched but map
+   tiles. The tokens are the site's two themes, copied from globals.css. */
+:root[data-theme="scrapbook"] {
+  --bg: #f3e8d8; --bg-elevated: #fffaf1; --text: #3a2c22; --text-muted: #8a7561;
+  --accent: #bc5b2e; --accent-contrast: #fffaf1; --border: #e6d5b8;
+  --radius-card: 20px; --shadow-card: 0 14px 34px -16px rgba(58, 44, 34, 0.35);
+  --heading: "Fraunces", serif; --wash: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+:root[data-theme="minimal"] {
+  --bg: #fafaf9; --bg-elevated: #ffffff; --text: #18181b; --text-muted: #71717a;
+  --accent: #18181b; --accent-contrast: #ffffff; --border: #e4e4e7;
+  --radius-card: 10px; --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --heading: "Geist", sans-serif; --wash: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--text); font: 15px/1.45 "Geist", system-ui, sans-serif; }
+button { font: inherit; color: inherit; }
+h1, h2, h3 { font-family: var(--heading); font-weight: 600; margin: 0; }
+
+.proto-note { font-size: 12px; color: var(--text-muted); text-align: center; padding: 8px 16px; border-bottom: 1px dashed var(--border); }
+.proto-note button { border: 1px solid var(--border); background: var(--bg-elevated); border-radius: 999px; padding: 2px 10px; margin-left: 6px; cursor: pointer; font-size: 12px; }
+
+/* ---------- layout: menu beside the map on desktop, stacked on a phone ---------- */
+.app { display: grid; grid-template-columns: minmax(360px, 430px) minmax(0, 1fr); gap: 20px; max-width: 1400px; margin: 0 auto; padding: 20px; align-items: start; }
+.menu { position: sticky; top: 20px; max-height: calc(100vh - 40px); display: flex; flex-direction: column; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-card); box-shadow: var(--shadow-card); overflow: hidden; }
+.menu-scroll { overflow-y: auto; padding: 4px 20px 20px; overscroll-behavior: contain; }
+.stage { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+#map { height: 46vh; min-height: 300px; border-radius: var(--radius-card); border: 1px solid var(--border); box-shadow: var(--shadow-card); z-index: 0; }
+@media (max-width: 860px) {
+  .app { grid-template-columns: minmax(0, 1fr); padding: 0 0 90px; gap: 0; }
+  .menu { position: static; max-height: none; border-radius: 0; border-inline: 0; box-shadow: none; overflow: visible; }
+  .menu-scroll { overflow: visible; padding: 4px 16px 16px; }
+  .stage { padding: 16px; }
+  #map { height: 52vh; }
+}
+
+/* ---------- the sentence: the whole search read back, each part a door ---------- */
+.sentence { position: sticky; top: 0; z-index: 5; background: var(--bg-elevated); padding: 18px 20px 14px; border-bottom: 1px solid var(--border); }
+.sentence h1 { font-size: 13px; font-family: "Geist", sans-serif; text-transform: uppercase; letter-spacing: .08em; color: var(--text-muted); font-weight: 600; margin-bottom: 6px; display: flex; justify-content: space-between; }
+.sentence p { margin: 0; font-family: var(--heading); font-size: 21px; line-height: 1.35; }
+.tok { border: none; background: none; padding: 0 2px; margin: 0 -2px; cursor: pointer; font: inherit; color: var(--accent); text-decoration: underline; text-decoration-thickness: 1.5px; text-underline-offset: 4px; text-decoration-color: color-mix(in srgb, var(--accent) 35%, transparent); border-radius: 6px; }
+.tok:hover { background: var(--wash); }
+.tok.muted { color: var(--text-muted); }
+@media (max-width: 860px) { .sentence { padding: 14px 16px 12px; } .sentence p { font-size: 18px; } }
+
+/* ---------- sections ---------- */
+.sec { padding: 16px 0 4px; border-bottom: 1px solid color-mix(in srgb, var(--border) 70%, transparent); scroll-margin-top: 120px; }
+.sec:last-child { border-bottom: 0; }
+.sec-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px; }
+.sec-head h2 { font-size: 16px; }
+.sec-head .val { font-weight: 700; font-size: 14px; margin-left: auto; }
+.sec-head .hint { font-size: 12.5px; color: var(--text-muted); }
+.clear-x { border: none; background: none; color: var(--text-muted); cursor: pointer; padding: 0 4px; font-size: 15px; }
+.clear-x:hover { color: var(--accent); }
+.flash { animation: flash 1s ease; }
+@keyframes flash { 0%, 40% { background: var(--wash); } 100% { background: transparent; } }
+
+/* activity tiles */
+.acts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+@media (max-width: 860px) { .acts { display: flex; overflow-x: auto; scrollbar-width: none; margin-inline: -16px; padding-inline: 16px; } .acts .act { flex: 0 0 82px; } }
+.act { border: 1px solid var(--border); border-radius: 14px; background: transparent; padding: 10px 4px 8px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; line-height: 1.15; text-align: center; transition: .15s; }
+.act svg { width: 26px; height: 26px; stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.act:hover { border-color: var(--accent); }
+.act[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-contrast); }
+
+/* where */
+.where { display: flex; gap: 8px; }
+.where input { flex: 1; min-width: 0; border: 1px solid var(--border); border-radius: 999px; padding: 9px 14px; background: var(--bg); color: var(--text); font: inherit; }
+.where input:focus { outline: none; border-color: var(--accent); }
+.pill { border: 1px solid var(--border); border-radius: 999px; background: transparent; padding: 8px 12px; cursor: pointer; font-size: 13.5px; font-weight: 600; white-space: nowrap; }
+.pill:hover { border-color: var(--accent); }
+.pill[aria-pressed="true"] { background: var(--accent); color: var(--accent-contrast); border-color: var(--accent); }
+
+/* ideas: one tap sets several filters at once */
+.ideas { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin-inline: -20px; padding: 2px 20px 6px; }
+@media (max-width: 860px) { .ideas { margin-inline: -16px; padding-inline: 16px; } }
+.idea { flex: 0 0 auto; border: 1px dashed color-mix(in srgb, var(--accent) 50%, var(--border)); border-radius: 14px; background: transparent; padding: 8px 12px; cursor: pointer; text-align: left; max-width: 170px; }
+.idea b { display: block; font-size: 13.5px; }
+.idea span { font-size: 11.5px; color: var(--text-muted); }
+.idea:hover, .idea.on { border-style: solid; background: var(--wash); }
+
+/* the slider with its histogram, the Airbnb price picker */
+.range { --thumb: 22px; position: relative; padding: 0 calc(var(--thumb) / 2); }
+.hist { display: flex; align-items: flex-end; gap: 2px; height: 46px; margin: 0 calc(var(--thumb) / -2 + 1px); }
+.hist i { flex: 1; background: color-mix(in srgb, var(--text-muted) 28%, transparent); border-radius: 3px 3px 0 0; min-height: 2px; transition: background .15s, height .25s; }
+.hist i.in { background: color-mix(in srgb, var(--accent) 70%, transparent); }
+.rail { position: relative; height: 28px; touch-action: none; }
+.rail::before { content: ""; position: absolute; left: calc(var(--thumb) / -2); right: calc(var(--thumb) / -2); top: 50%; height: 4px; transform: translateY(-50%); background: var(--border); border-radius: 4px; }
+.rail .fill { position: absolute; top: 50%; height: 4px; transform: translateY(-50%); background: var(--accent); border-radius: 4px; }
+.rail input { position: absolute; inset: 0 calc(var(--thumb) / -2); width: calc(100% + var(--thumb)); height: 100%; margin: 0; padding: 0; background: none; -webkit-appearance: none; appearance: none; pointer-events: none; }
+.rail input.top { z-index: 2; }
+.rail input::-webkit-slider-runnable-track { background: none; height: 100%; }
+.rail input::-moz-range-track { background: none; }
+.rail input::-webkit-slider-thumb { -webkit-appearance: none; pointer-events: auto; width: var(--thumb); height: var(--thumb); margin-top: 3px; border-radius: 50%; background: var(--bg-elevated); border: 2px solid var(--accent); box-shadow: 0 1px 4px rgba(0,0,0,.25); cursor: grab; }
+.rail input::-moz-range-thumb { pointer-events: auto; width: var(--thumb); height: var(--thumb); border-radius: 50%; background: var(--bg-elevated); border: 2px solid var(--accent); box-shadow: 0 1px 4px rgba(0,0,0,.25); cursor: grab; }
+.rail input:active::-webkit-slider-thumb { background: var(--accent); cursor: grabbing; }
+.rail input:focus-visible::-webkit-slider-thumb { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ticks { position: relative; height: 16px; font-size: 11px; color: var(--text-muted); }
+.ticks span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+
+/* style segmented */
+.seg { display: flex; border: 1px solid var(--border); border-radius: 999px; padding: 3px; gap: 2px; }
+.seg button { flex: 1; border: none; background: none; border-radius: 999px; padding: 7px 4px; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--text-muted); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-contrast); }
+
+/* compass */
+.facing { display: grid; grid-template-columns: 150px 1fr; gap: 16px; align-items: center; }
+.compass { width: 150px; height: 150px; }
+.compass path { fill: transparent; stroke: var(--border); stroke-width: 1.2; cursor: pointer; transition: fill .15s; }
+.compass path:hover { fill: var(--wash); }
+.compass path.on { fill: var(--accent); stroke: var(--accent); }
+.compass text { font-size: 10.5px; font-weight: 700; fill: var(--text-muted); pointer-events: none; text-anchor: middle; dominant-baseline: central; }
+.compass text.on { fill: var(--accent-contrast); }
+.compass .sun { fill: #e8b04a; }
+.facing-side { display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+.facing-side .sunline { color: var(--text-muted); min-height: 2.6em; }
+.facing-side .quick { display: flex; flex-wrap: wrap; gap: 6px; }
+.facing-side .quick .pill { padding: 5px 10px; font-size: 12.5px; }
+
+/* more */
+details.more summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 8px; padding: 14px 0 6px; font-weight: 600; font-size: 14px; color: var(--text-muted); }
+details.more summary::-webkit-details-marker { display: none; }
+details.more summary::after { content: "＋"; margin-left: auto; }
+details.more[open] summary::after { content: "－"; }
+details.more .badge { background: var(--accent); color: var(--accent-contrast); border-radius: 999px; font-size: 11px; padding: 1px 7px; }
+.sources { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* footer: the count is the button */
+.foot { display: flex; gap: 10px; align-items: center; padding: 12px 20px; border-top: 1px solid var(--border); background: var(--bg-elevated); }
+.foot .clear { border: none; background: none; text-decoration: underline; cursor: pointer; font-weight: 600; padding: 8px 4px; }
+.foot .clear:disabled { opacity: .35; cursor: default; }
+.foot .go { margin-left: auto; border: none; background: var(--accent); color: var(--accent-contrast); border-radius: 999px; padding: 12px 22px; font-weight: 700; font-size: 15px; cursor: pointer; min-width: 190px; }
+.foot .go .n { font-variant-numeric: tabular-nums; }
+@media (max-width: 860px) { .foot { position: fixed; left: 0; right: 0; bottom: 0; z-index: 1000; box-shadow: 0 -8px 24px -12px rgba(0,0,0,.25); padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); } }
+
+/* results */
+.res-head { display: flex; align-items: baseline; gap: 10px; }
+.res-head h3 { font-size: 20px; }
+.res-head span { color: var(--text-muted); font-size: 13px; }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.card { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; cursor: pointer; transition: .15s; }
+.card:hover, .card.hot { border-color: var(--accent); }
+.card .t { font-family: var(--heading); font-weight: 600; font-size: 16px; line-height: 1.2; }
+.card .meta { font-size: 12.5px; color: var(--text-muted); display: flex; flex-wrap: wrap; gap: 4px 8px; }
+.card .g { font-weight: 700; color: var(--text); }
+.empty { color: var(--text-muted); padding: 30px; text-align: center; border: 1px dashed var(--border); border-radius: 14px; }
+.leaflet-tile-pane { filter: sepia(0.25) saturate(0.85); }
+:root[data-theme="minimal"] .leaflet-tile-pane { filter: grayscale(0.6); }
+.leaflet-container { background: var(--bg); font-family: "Geist", sans-serif; }
+</style>
+</head>
+<body>
+<div class="proto-note">Prototype · fake routes around Chamonix · every control is live
+  <button id="theme">Theme: scrapbook</button></div>
+
+<div class="app">
+  <aside class="menu" aria-label="Search">
+    <div class="sentence">
+      <h1><span>Cragseeker</span><span id="activeCount"></span></h1>
+      <p id="sentence"></p>
+    </div>
+
+    <div class="menu-scroll">
+      <section class="sec" id="sec-act">
+        <div class="sec-head"><h2>What kind of day?</h2></div>
+        <div class="acts" id="acts"></div>
+      </section>
+
+      <section class="sec" id="sec-where">
+        <div class="sec-head"><h2>Where</h2><span class="val" id="radiusVal"></span></div>
+        <div class="where">
+          <input id="place" value="Chamonix" placeholder="A crag, a summit, a town…" />
+          <button class="pill" id="nearMe">◎ Near me</button>
+        </div>
+        <div style="margin-top:12px" id="radius"></div>
+      </section>
+
+      <section class="sec" id="sec-ideas">
+        <div class="sec-head"><h2>Ideas</h2><span class="hint">one tap, several filters</span></div>
+        <div class="ideas" id="ideas"></div>
+      </section>
+
+      <section class="sec" id="sec-grade">
+        <div class="sec-head"><h2 id="gradeTitle">Grade</h2><span class="val" id="gradeVal"></span></div>
+        <div id="grade"></div>
+      </section>
+
+      <section class="sec" id="sec-style">
+        <div class="sec-head"><h2>Style</h2></div>
+        <div class="seg" id="style"></div>
+      </section>
+
+      <section class="sec" id="sec-facing">
+        <div class="sec-head"><h2>Facing</h2><span class="val" id="facingVal"></span></div>
+        <div class="facing">
+          <svg class="compass" id="compass" viewBox="-80 -80 160 160" aria-label="Orientation"></svg>
+          <div class="facing-side">
+            <div class="sunline" id="sunline"></div>
+            <div class="quick">
+              <button class="pill" data-face="E,SE,NE">Morning sun</button>
+              <button class="pill" data-face="S,SE,SW">All-day sun</button>
+              <button class="pill" data-face="W,SW,NW">Afternoon sun</button>
+              <button class="pill" data-face="N,NE,NW">Shade</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <details class="more" id="more">
+        <summary>More filters <span class="badge" id="moreBadge" hidden></span></summary>
+        <section class="sec" id="sec-height">
+          <div class="sec-head"><h2>Length</h2><span class="val" id="heightVal"></span></div>
+          <div id="height"></div>
+        </section>
+        <section class="sec" id="sec-alt">
+          <div class="sec-head"><h2>Altitude</h2><span class="val" id="altVal"></span></div>
+          <div id="alt"></div>
+        </section>
+        <section class="sec" id="sec-equip">
+          <div class="sec-head"><h2>Equipment</h2><span class="hint">well bolted ↔ bring a rack</span><span class="val" id="equipVal"></span></div>
+          <div id="equip"></div>
+        </section>
+        <section class="sec" id="sec-pop">
+          <div class="sec-head"><h2>Popularity</h2><span class="hint">logged on camptocamp</span></div>
+          <div class="seg" id="pop"></div>
+        </section>
+        <section class="sec" id="sec-src">
+          <div class="sec-head"><h2>Databases</h2></div>
+          <div class="sources" id="sources"></div>
+        </section>
+      </details>
+    </div>
+
+    <div class="foot">
+      <button class="clear" id="clear">Clear all</button>
+      <button class="go" id="go">Show <span class="n" id="count">0</span> routes</button>
+    </div>
+  </aside>
+
+  <main class="stage">
+    <div id="map"></div>
+    <div class="res-head" id="results"><h3 id="resTitle"></h3><span id="resSub"></span></div>
+    <div class="cards" id="cards"></div>
+  </main>
+</div>
+
+<script>
+// ---------------------------------------------------------------- scales
+const FREE = ["2","3a","3b","3c","4a","4b","4c","5a","5a+","5b","5b+","5c","5c+","6a","6a+","6b","6b+","6c","6c+","7a","7a+","7b","7b+","7c","7c+","8a","8a+","8b","8b+","8c","8c+","9a"];
+const GLOBAL = ["F","F+","PD-","PD","PD+","AD-","AD","AD+","D-","D","D+","TD-","TD","TD+","ED-","ED","ED+"];
+const ICE = ["1","2","3","3+","4","4+","5","5+","6","6+","7"];
+const FERRATA = ["K1","K2","K3","K4","K5","K6"];
+const SKI = ["S1","S2","S3","S4","S5","S6","S7"];
+const HIKE = ["T1","T2","T3","T4","T5"];
+const ACTS = [
+  { id: "rock", label: "Rock", word: "Rock climbing", scale: FREE, gradeName: "Free grade", ticks: ["3a","4a","5a","6a","7a","8a","9a"], styles: ["Any","Single pitch","Multi-pitch","Bouldering"], icon: '<path d="M3 21 9 8l4 6 3-4 5 11Z"/><path d="M9 8l1.5 5"/>' },
+  { id: "alpine", label: "Alpine", word: "Mountaineering", scale: GLOBAL, gradeName: "Overall grade", ticks: ["F","PD","AD","D","TD","ED"], styles: ["Any","Rock","Snow","Mixed"], icon: '<path d="M2 20 9 7l3 5 3-3 7 11Z"/><path d="m7.5 10 1.5 1 1.5-1"/>' },
+  { id: "ice", label: "Ice", word: "Ice climbing", scale: ICE, gradeName: "Ice grade", ticks: ["1","3","4","5","6","7"], styles: ["Any","Icefall","Mixed"], icon: '<path d="M12 2v20M4 7l16 10M20 7 4 17"/><path d="m9 3 3 2 3-2M9 21l3-2 3 2"/>' },
+  { id: "ferrata", label: "Via ferrata", word: "Via ferrata", scale: FERRATA, gradeName: "Difficulty", ticks: FERRATA, styles: ["Any"], icon: '<path d="M7 2v20M17 2v20M7 6h10M7 11h10M7 16h10"/>' },
+  { id: "ski", label: "Ski tour", word: "Ski touring", scale: SKI, gradeName: "Ski grade", ticks: SKI, styles: ["Any"], icon: '<path d="m3 18 18-6M5 21l16-5"/><circle cx="15" cy="5" r="2"/><path d="m10 13 3-5 3 3"/>' },
+  { id: "hike", label: "Hike", word: "Hiking", scale: HIKE, gradeName: "Hiking grade", ticks: HIKE, styles: ["Any"], icon: '<path d="M7 21c2-1 4-1 5-4l1-5 3 2 3 1"/><circle cx="13" cy="4" r="2"/><path d="m13 8-3 3-2 5"/>' },
+  { id: "boulder", label: "Boulder", word: "Bouldering", scale: FREE.slice(4), gradeName: "Grade", ticks: ["4a","5a","6a","7a","8a"], styles: ["Any"], icon: '<path d="M4 19c0-6 3-11 8-11s8 5 8 11Z"/><path d="M2 19h20"/>' },
+  { id: "gym", label: "Indoor", word: "Climbing gyms", scale: null, gradeName: "", ticks: [], styles: ["Any"], icon: '<path d="M3 21V9l9-6 9 6v12Z"/><path d="M9 21v-6h6v6"/><circle cx="9" cy="10" r=".6"/><circle cx="14" cy="12" r=".6"/>' },
+];
+const HEIGHT = ["0","25","50","100","150","200","300","400","500","750","1000"];
+const ALT = ["0","500","1000","1500","2000","2500","3000","3500","4000","4500"];
+const EQUIP = ["P1","P1+","P2","P2+","P3","P3+","P4"];
+const FACES = ["N","NE","E","SE","S","SW","W","NW"];
+const RADII = [5,10,15,25,40,60,100];
+
+// ---------------------------------------------------------------- fake data
+let seed = 7;
+const rnd = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
+const pick = (a) => a[Math.floor(rnd() * a.length)];
+const A = ["Pilier","Dalle","Éperon","Arête","Fissure","Dièdre","Voie","Couloir","Face","Traversée","Goulotte","Rampe"];
+const B = ["des Cosmiques","du Brévent","Rébuffat","des Chamois","du Midi","des Aiguilles","de la Fourche","Ravanel","du Lac","Gervasutti","des Pèlerins","du Soleil","Frison-Roche","de l'Envers","des Dames"];
+const AREAS = ["Les Gaillands","Brévent","Aiguilles Rouges","Envers des Aiguilles","Vallorcine","Servoz","Les Houches","Col des Montets","Argentière","Plan de l'Aiguille","Saint-Gervais","Sallanches"];
+const centre = [45.92, 6.87];
+const ROUTES = [];
+for (let i = 0; i < 4000; i++) {
+  // Mostly rock, as around Chamonix in the databases.
+  const act = rnd() < 0.55 ? ACTS[0] : pick(ACTS.slice(1, 7));
+  const r = Math.pow(rnd(), 0.7) * 45; const th = rnd() * Math.PI * 2;
+  const lat = centre[0] + (r / 111) * Math.cos(th), lon = centre[1] + (r / 78) * Math.sin(th);
+  const n = act.scale.length;
+  const bias = act.id === "rock" ? 0.55 : 0.45;
+  const g = Math.min(n - 1, Math.max(0, Math.round((bias + (rnd() + rnd() + rnd() - 1.5) * 0.35) * (n - 1))));
+  const style = pick(act.styles.slice(1).length ? act.styles.slice(1) : ["Any"]);
+  const height = style === "Multi-pitch" || act.id !== "rock" ? Math.round(80 + rnd() * 700) : Math.round(10 + rnd() * 35);
+  ROUTES.push({
+    id: i, act: act.id, name: `${pick(A)} ${pick(B)}`, area: pick(AREAS), lat, lon,
+    dist: r, g, style, face: pick(FACES), height,
+    alt: Math.round(act.id === "rock" ? 900 + rnd() * 1800 : 1800 + rnd() * 2500),
+    equip: Math.min(6, Math.floor(rnd() * rnd() * 8)), logged: Math.floor(Math.pow(rnd(), 3) * 140),
+    src: rnd() < 0.85 ? "c2c" : "ob",
+  });
+}
+
+// ---------------------------------------------------------------- state
+const blank = () => ({ act: "rock", place: "Chamonix", radius: 25, grade: null, style: "Any", faces: [], height: null, alt: null, equip: null, pop: 0, src: ["c2c", "ob"], idea: null });
+let S = blank();
+const actOf = () => ACTS.find((a) => a.id === S.act);
+
+function matches(r, skip) {
+  if (r.act !== S.act || r.dist > S.radius) return false;
+  if (!S.src.includes(r.src)) return false;
+  if (skip !== "grade" && S.grade && (r.g < S.grade[0] || r.g > S.grade[1])) return false;
+  if (S.style !== "Any" && r.style !== S.style) return false;
+  if (S.faces.length && !S.faces.includes(r.face)) return false;
+  if (skip !== "height" && S.height && (r.height < +HEIGHT[S.height[0]] || (S.height[1] < HEIGHT.length - 1 && r.height > +HEIGHT[S.height[1]]))) return false;
+  if (skip !== "alt" && S.alt && (r.alt < +ALT[S.alt[0]] || (S.alt[1] < ALT.length - 1 && r.alt > +ALT[S.alt[1]]))) return false;
+  if (skip !== "equip" && S.equip && (r.equip < S.equip[0] || r.equip > S.equip[1])) return false;
+  if (S.pop && r.logged < S.pop) return false;
+  return true;
+}
+
+// ---------------------------------------------------------------- the range slider with its histogram
+function RangeSlider(el, { scale, ticks, get, set, bins, single = false }) {
+  el.innerHTML = `<div class="range"><div class="hist"></div><div class="rail"><div class="fill"></div><input type="range" aria-label="from"><input type="range" aria-label="to"></div><div class="ticks"></div></div>`;
+  const [lo, hi] = el.querySelectorAll("input");
+  const fill = el.querySelector(".fill"), hist = el.querySelector(".hist"), tk = el.querySelector(".ticks");
+  const last = () => scale().length - 1;
+  const read = () => get() ?? [0, last()];
+  const commit = (a, b) => set(a === 0 && b === last() ? null : [a, b]);
+  lo.oninput = () => { const [, b] = read(); commit(Math.min(+lo.value, b), b); };
+  hi.oninput = () => { const [a] = read(); commit(a, Math.max(+hi.value, a)); };
+  el.querySelector(".rail").addEventListener("pointerdown", (e) => {
+    if (e.target.tagName === "INPUT") return;
+    const box = e.currentTarget.getBoundingClientRect();
+    const v = Math.round(Math.min(1, Math.max(0, (e.clientX - box.left) / box.width)) * last());
+    const [a, b] = read();
+    if (single || Math.abs(v - b) < Math.abs(v - a)) commit(a, Math.max(v, a));
+    else commit(Math.min(v, b), b);
+  });
+  return () => {
+    const sc = scale(); const L = sc.length - 1; const [a, b] = read();
+    for (const i of [lo, hi]) { i.min = 0; i.max = L; i.step = 1; }
+    lo.value = a; hi.value = b; lo.classList.toggle("top", a === b && a > L / 2);
+    lo.setAttribute("aria-valuetext", sc[a]); hi.setAttribute("aria-valuetext", sc[b]);
+    fill.style.left = (a / L) * 100 + "%"; fill.style.right = 100 - (b / L) * 100 + "%";
+    const counts = bins(); const max = Math.max(1, ...counts);
+    hist.innerHTML = counts.map((c, i) => `<i class="${i >= a && i <= b ? "in" : ""}" style="height:${Math.round((c / max) * 100)}%" title="${sc[i]}: ${c}"></i>`).join("");
+    tk.innerHTML = ticks().map((t) => { const i = sc.indexOf(t); return i < 0 ? "" : `<span style="left:${(i / L) * 100}%">${t}</span>`; }).join("");
+  };
+}
+const label = (sc, r, unit = "") => {
+  if (!r) return "any";
+  const L = sc.length - 1, [a, b] = r, f = (i) => sc[i] + unit;
+  return a === b ? f(a) : a === 0 ? `up to ${f(b)}` : b === L ? `${f(a)} and up` : `${f(a)} – ${f(b)}`;
+};
+
+// ---------------------------------------------------------------- build
+const $ = (id) => document.getElementById(id);
+$("acts").innerHTML = ACTS.map((a) => `<button class="act" data-act="${a.id}"><svg viewBox="0 0 24 24">${a.icon}</svg>${a.label}</button>`).join("");
+$("acts").onclick = (e) => { const b = e.target.closest("[data-act]"); if (!b) return; S = { ...S, act: b.dataset.act, grade: null, style: "Any", idea: null }; render(); };
+
+const radiusUI = RangeSlider($("radius"), {
+  scale: () => RADII.map(String), ticks: () => RADII.map(String),
+  get: () => [0, RADII.indexOf(S.radius)], set: (r) => { S.radius = RADII[r ? r[1] : RADII.length - 1]; render(); },
+  single: true,
+  bins: () => RADII.map((k, i) => ROUTES.filter((r) => r.act === S.act && r.dist <= k && (i === 0 || r.dist > RADII[i - 1])).length),
+});
+$("radius").querySelector("input").style.display = "none"; // one handle: the radius only grows from the pin
+
+const gradeUI = RangeSlider($("grade"), {
+  scale: () => actOf().scale || ["–"], ticks: () => actOf().ticks,
+  get: () => S.grade, set: (r) => { S.grade = r; S.idea = null; render(); },
+  bins: () => (actOf().scale || ["–"]).map((_, i) => ROUTES.filter((r) => r.g === i && matches(r, "grade")).length),
+});
+const binsOf = (steps, key) => () => steps.map((s, i) => ROUTES.filter((r) => matches(r, key) && r[key] >= +s && (i === steps.length - 1 || r[key] < +steps[i + 1])).length);
+const heightUI = RangeSlider($("height"), { scale: () => HEIGHT, ticks: () => ["0","50","150","300","500","1000"], get: () => S.height, set: (r) => { S.height = r; render(); }, bins: binsOf(HEIGHT, "height") });
+const altUI = RangeSlider($("alt"), { scale: () => ALT, ticks: () => ["0","1000","2000","3000","4000"], get: () => S.alt, set: (r) => { S.alt = r; render(); }, bins: binsOf(ALT, "alt") });
+const equipUI = RangeSlider($("equip"), { scale: () => EQUIP, ticks: () => ["P1","P2","P3","P4"], get: () => S.equip, set: (r) => { S.equip = r; S.idea = null; render(); }, bins: () => EQUIP.map((_, i) => ROUTES.filter((r) => r.equip === i && matches(r, "equip")).length) });
+
+// compass: eight wedges, the sun drawn where it is at each time of day
+(() => {
+  const svg = $("compass"); let html = "";
+  FACES.forEach((f, i) => {
+    const a0 = ((i * 45 - 22.5 - 90) * Math.PI) / 180, a1 = ((i * 45 + 22.5 - 90) * Math.PI) / 180, R = 72, r = 22;
+    const p = (rad, ang) => `${(rad * Math.cos(ang)).toFixed(1)},${(rad * Math.sin(ang)).toFixed(1)}`;
+    html += `<path data-f="${f}" d="M${p(r, a0)} L${p(R, a0)} A${R},${R} 0 0 1 ${p(R, a1)} L${p(r, a1)} A${r},${r} 0 0 0 ${p(r, a0)}Z"/>`;
+    const m = ((i * 45 - 90) * Math.PI) / 180;
+    html += `<text data-t="${f}" x="${(50 * Math.cos(m)).toFixed(1)}" y="${(50 * Math.sin(m)).toFixed(1)}">${f}</text>`;
+  });
+  html += `<circle class="sun" r="7" cx="0" cy="0"/>`;
+  svg.innerHTML = html;
+  svg.onclick = (e) => { const f = e.target.dataset?.f; if (!f) return; S.faces = S.faces.includes(f) ? S.faces.filter((x) => x !== f) : [...S.faces, f]; S.idea = null; render(); };
+})();
+document.querySelectorAll("[data-face]").forEach((b) => (b.onclick = () => {
+  const want = b.dataset.face.split(","); const same = want.length === S.faces.length && want.every((f) => S.faces.includes(f));
+  S.faces = same ? [] : want; S.idea = null; render();
+}));
+const SUN = { E: "sun until ~11:00", NE: "early sun, then shade", SE: "sun until ~14:00", S: "sun most of the day", SW: "sun from ~11:00", W: "sun from ~13:00", NW: "late sun", N: "shade all day" };
+
+const IDEAS = [
+  { id: "sunny", b: "Warm winter day", s: "south faces, low down", apply: () => ({ act: "rock", faces: ["S","SE","SW"], alt: [0, 3], grade: null }) },
+  { id: "shade", b: "Hot summer day", s: "north faces, up high", apply: () => ({ act: "rock", faces: ["N","NE","NW"], alt: [4, ALT.length - 1] }) },
+  { id: "first", b: "First multi-pitch", s: "5a–6a, bolted", apply: () => ({ act: "rock", style: "Multi-pitch", grade: [FREE.indexOf("5a"), FREE.indexOf("6a")], equip: [0, 2] }) },
+  { id: "proj", b: "Project day", s: "7b and up, single pitch", apply: () => ({ act: "rock", style: "Single pitch", grade: [FREE.indexOf("7b"), FREE.length - 1] }) },
+  { id: "classic", b: "Classics only", s: "logged 50+ times", apply: () => ({ pop: 50 }) },
+  { id: "rain", b: "Rainy day", s: "gyms around the pin", apply: () => ({ act: "gym" }) },
+];
+$("ideas").innerHTML = IDEAS.map((i) => `<button class="idea" data-idea="${i.id}"><b>${i.b}</b><span>${i.s}</span></button>`).join("");
+$("ideas").onclick = (e) => {
+  const b = e.target.closest("[data-idea]"); if (!b) return;
+  if (S.idea === b.dataset.idea) { S = { ...blank(), act: S.act, place: S.place, radius: S.radius }; render(); return; }
+  const idea = IDEAS.find((i) => i.id === b.dataset.idea);
+  const next = idea.apply();
+  if (next.act && next.act !== S.act) S = { ...S, grade: null, style: "Any" };
+  S = { ...S, ...next, idea: idea.id };
+  if (next.alt || next.equip || next.pop) $("more").open = true;
+  render();
+};
+
+$("pop").onclick = (e) => { const b = e.target.closest("[data-pop]"); if (b) { S.pop = +b.dataset.pop; S.idea = null; render(); } };
+$("style").onclick = (e) => { const b = e.target.closest("[data-style]"); if (b) { S.style = b.dataset.style; S.idea = null; render(); } };
+$("sources").onclick = (e) => { const b = e.target.closest("[data-src]"); if (!b) return; const s = b.dataset.src; S.src = S.src.includes(s) ? S.src.filter((x) => x !== s) : [...S.src, s]; render(); };
+$("place").oninput = (e) => { S.place = e.target.value || "the pin"; render(); };
+$("nearMe").onclick = () => { $("place").value = "Your position"; S.place = "you"; render(); };
+$("clear").onclick = () => { S = { ...blank(), act: S.act, place: S.place, radius: S.radius }; render(); };
+$("go").onclick = () => $("results").scrollIntoView({ behavior: "smooth", block: "start" });
+$("theme").onclick = () => {
+  const t = document.documentElement.dataset.theme === "scrapbook" ? "minimal" : "scrapbook";
+  document.documentElement.dataset.theme = t; $("theme").textContent = "Theme: " + t; render();
+};
+document.addEventListener("click", (e) => {
+  const t = e.target.closest("[data-goto]"); if (!t) return;
+  const sec = $(t.dataset.goto); if (!sec) return;
+  if (sec.closest("details")) sec.closest("details").open = true;
+  sec.scrollIntoView({ behavior: "smooth", block: "center" });
+  sec.classList.remove("flash"); void sec.offsetWidth; sec.classList.add("flash");
+});
+
+// ---------------------------------------------------------------- map
+const map = L.map("map", { zoomControl: true, attributionControl: true }).setView(centre, 10);
+L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "© OpenStreetMap contributors", maxZoom: 18 }).addTo(map);
+const circle = L.circle(centre, { radius: 25000, color: "#bc5b2e", weight: 1.5, fillOpacity: 0.05 }).addTo(map);
+const layer = L.layerGroup().addTo(map);
+const markers = new Map();
+
+// ---------------------------------------------------------------- render
+function render() {
+  const act = actOf();
+  document.querySelectorAll(".act").forEach((b) => b.setAttribute("aria-pressed", b.dataset.act === S.act));
+  const hasGrade = !!act.scale;
+  ["sec-grade", "sec-style", "sec-facing"].forEach((id) => ($(id).style.display = hasGrade ? "" : "none"));
+  $("sec-style").style.display = act.styles.length > 1 ? "" : "none";
+  $("gradeTitle").textContent = act.gradeName;
+  $("style").innerHTML = act.styles.map((s) => `<button data-style="${s}" aria-pressed="${S.style === s}">${s}</button>`).join("");
+  $("pop").innerHTML = [[0, "Any"], [5, "5+"], [20, "20+"], [50, "Classics 50+"]].map(([n, l]) => `<button data-pop="${n}" aria-pressed="${S.pop === n}">${l}</button>`).join("");
+  $("sources").innerHTML = [["c2c", "Camptocamp"], ["ob", "OpenBeta (US)"]].map(([k, l]) => `<button class="pill" data-src="${k}" aria-pressed="${S.src.includes(k)}">${l}</button>`).join("");
+  document.querySelectorAll(".idea").forEach((b) => b.classList.toggle("on", b.dataset.idea === S.idea));
+
+  const x = (id, txt, onClear) => { $(id).innerHTML = txt === "any" ? `<span style="color:var(--text-muted);font-weight:500">any</span>` : `${txt} <button class="clear-x" aria-label="clear">×</button>`; const c = $(id).querySelector(".clear-x"); if (c) c.onclick = onClear; };
+  const sc = act.scale || ["–"];
+  x("gradeVal", label(sc, S.grade), () => { S.grade = null; render(); });
+  x("heightVal", label(HEIGHT, S.height, " m"), () => { S.height = null; render(); });
+  x("altVal", label(ALT, S.alt, " m"), () => { S.alt = null; render(); });
+  x("equipVal", label(EQUIP, S.equip), () => { S.equip = null; render(); });
+  x("facingVal", S.faces.length ? FACES.filter((f) => S.faces.includes(f)).join(" · ") : "any", () => { S.faces = []; render(); });
+  $("radiusVal").textContent = `within ${S.radius} km`;
+  document.querySelectorAll("#compass path").forEach((p) => p.classList.toggle("on", S.faces.includes(p.dataset.f)));
+  document.querySelectorAll("#compass text").forEach((t) => t.classList.toggle("on", S.faces.includes(t.dataset.t)));
+  $("sunline").textContent = S.faces.length ? FACES.filter((f) => S.faces.includes(f)).map((f) => `${f}: ${SUN[f]}`).join(" · ") : "Tap a slice, or pick a time of day.";
+  radiusUI(); if (hasGrade) gradeUI(); heightUI(); altUI(); equipUI();
+
+  const more = [S.height, S.alt, S.equip, S.pop, S.src.length < 2].filter(Boolean).length;
+  $("moreBadge").hidden = !more; $("moreBadge").textContent = more;
+  const active = [S.grade, S.style !== "Any", S.faces.length, more].filter(Boolean).length + (more ? more - 1 : 0);
+  $("activeCount").textContent = active ? `${active} filter${active > 1 ? "s" : ""}` : "";
+  $("clear").disabled = !active;
+
+  // the sentence
+  const T = (txt, goto, muted) => `<button class="tok${muted ? " muted" : ""}" data-goto="${goto}">${txt}</button>`;
+  let s = `${T(act.word, "sec-act")} near ${T(S.place, "sec-where")}, within ${T(S.radius + " km", "sec-where")}`;
+  if (hasGrade) s += `, ${T(S.grade ? label(sc, S.grade) : "any grade", "sec-grade", !S.grade)}`;
+  if (S.style !== "Any") s += `, ${T(S.style.toLowerCase(), "sec-style")}`;
+  if (S.faces.length) s += `, facing ${T(FACES.filter((f) => S.faces.includes(f)).join("·"), "sec-facing")}`;
+  if (S.height) s += `, ${T(label(HEIGHT, S.height, " m") + " long", "sec-height")}`;
+  if (S.alt) s += `, at ${T(label(ALT, S.alt, " m"), "sec-alt")}`;
+  if (S.equip) s += `, ${T(label(EQUIP, S.equip), "sec-equip")}`;
+  if (S.pop) s += `, ${T(`logged ${S.pop}+ times`, "sec-pop")}`;
+  $("sentence").innerHTML = s + ".";
+
+  // results
+  const found = act.id === "gym" ? [] : ROUTES.filter((r) => matches(r)).sort((a, b) => a.dist - b.dist);
+  const gyms = act.id === "gym" ? ROUTES.filter((r) => r.dist <= S.radius).slice(0, Math.max(3, Math.round(S.radius / 8))).map((r, i) => ({ ...r, name: ["Arkose","Vertical'Art","Climb Up","Block'Out","Espace Escalade","Le Mur"][i % 6] + " " + r.area, gym: true })) : [];
+  const list = act.id === "gym" ? gyms : found;
+  $("count").textContent = list.length;
+  $("go").lastChild.textContent = act.id === "gym" ? (list.length === 1 ? " gym" : " gyms") : list.length === 1 ? " route" : " routes";
+  $("resTitle").textContent = `${list.length} ${act.id === "gym" ? "gyms" : "routes"}`;
+  $("resSub").textContent = `nearest first · around ${S.place}`;
+  $("cards").innerHTML = list.length ? list.slice(0, 24).map((r) => {
+    const a = ACTS.find((q) => q.id === r.act);
+    return r.gym
+      ? `<article class="card" data-id="${r.id}"><div class="t">${r.name}</div><div class="meta"><span>${r.dist.toFixed(0)} km</span><span>indoor</span></div></article>`
+      : `<article class="card" data-id="${r.id}"><div class="t">${r.name}</div><div class="meta"><span class="g">${a.scale[r.g]}</span><span>${r.style !== "Any" ? r.style.toLowerCase() : a.word.toLowerCase()}</span><span>${r.height} m</span><span>faces ${r.face}</span><span>${r.alt} m alt.</span></div><div class="meta"><span>${r.area}</span><span>· ${r.dist.toFixed(0)} km</span>${r.logged >= 50 ? "<span>· classic</span>" : ""}</div></article>`;
+  }).join("") : `<div class="empty">Nothing matches. Try widening the grade or the radius.</div>`;
+
+  // map
+  circle.setRadius(S.radius * 1000);
+  circle.setStyle({ color: getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() });
+  layer.clearLayers(); markers.clear();
+  const accent = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim();
+  for (const r of list.slice(0, 400)) {
+    const m = L.circleMarker([r.lat, r.lon], { radius: r.gym ? 7 : 5, color: "#fff", weight: 1.5, fillColor: accent, fillOpacity: 0.9 })
+      .bindTooltip(`<b>${r.name}</b><br>${r.gym ? "gym" : ACTS.find((q) => q.id === r.act).scale[r.g]} · ${r.dist.toFixed(0)} km`);
+    m.addTo(layer); markers.set(String(r.id), m);
+  }
+}
+$("cards").addEventListener("mouseover", (e) => { const c = e.target.closest(".card"); if (!c) return; const m = markers.get(c.dataset.id); m && m.setStyle({ radius: 10 }).bringToFront(); });
+$("cards").addEventListener("mouseout", (e) => { const c = e.target.closest(".card"); if (!c) return; const m = markers.get(c.dataset.id); m && m.setStyle({ radius: 5 }); });
+render();
+setTimeout(() => map.fitBounds(circle.getBounds(), { padding: [10, 10] }), 50);
+</script>
+</body>
+</html>

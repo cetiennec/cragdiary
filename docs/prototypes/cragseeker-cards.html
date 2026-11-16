@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cartes Cragseeker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f3e8d8; --bg-elevated: #fffaf1; --text: #3a2c22; --text-muted: #8a7561;
+  --accent: #bc5b2e; --accent-contrast: #fffaf1; --border: #e6d5b8;
+  --radius-card: 20px; --shadow-card: 0 14px 34px -16px rgba(58,44,34,.35);
+  --dry: #4d7c3a; --damp: #b7832a; --wet: #4a6e9c;
+  --heading: "Fraunces", Georgia, serif; --body: "Geist", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1f1915; --bg-elevated: #2a221c; --text: #f1e6d6; --text-muted: #b3a08a;
+    --accent: #e07a4a; --accent-contrast: #1f1915; --border: #3d3229;
+    --dry: #8cc06f; --damp: #e0b260; --wet: #86a9d6;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.45 var(--body); }
+main { max-width: 1060px; margin: 0 auto; padding: 28px 16px 60px; }
+h1 { font: 600 2rem/1.1 var(--heading); margin: 0 0 4px; }
+.lead { color: var(--text-muted); margin: 0 0 22px; max-width: 60ch; }
+.note { font-size: .8rem; color: var(--text-muted); margin: 6px 0 0; }
+
+/* Weather advisor */
+.wx { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card); padding: 18px 20px; margin-bottom: 26px; display: grid;
+  grid-template-columns: minmax(0,1fr) 300px; gap: 22px; }
+.wx-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.wx-dot { width: 12px; height: 12px; border-radius: 50%; flex: none; }
+.wx h2 { font: 600 1.25rem var(--heading); margin: 0; }
+.wx p { margin: 6px 0 0; }
+.wx .tip { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border); }
+.wx .tip b { font-weight: 600; }
+.scen { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+.scen button { font: inherit; font-size: .78rem; border: 1px solid var(--border); background: transparent; color: var(--text-muted);
+  border-radius: 99px; padding: 3px 10px; cursor: pointer; }
+.scen button[aria-pressed="true"] { background: var(--text); color: var(--bg-elevated); border-color: var(--text); }
+.rain { align-self: center; }
+.rain-bars { display: flex; align-items: flex-end; gap: 1px; height: 64px; border-bottom: 1px solid var(--border); position: relative; }
+.rain-bars span { flex: 1; background: var(--wet); border-radius: 2px 2px 0 0; min-height: 0; opacity: .85; }
+.rain-bars span.past { opacity: .4; }
+.rain-now { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--accent); }
+.rain-axis { display: flex; justify-content: space-between; font-size: .72rem; color: var(--text-muted); margin-top: 4px; }
+.days { display: flex; gap: 4px; margin-top: 10px; }
+.days div { flex: 1; text-align: center; font-size: .72rem; color: var(--text-muted); border-radius: 8px; padding: 4px 0; }
+.days div b { display: block; color: var(--text); font-size: .8rem; }
+.days div.dryday { background: color-mix(in srgb, var(--dry) 18%, transparent); }
+
+/* Cards */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 16px; }
+.card { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card); overflow: hidden; display: flex; flex-direction: column; }
+.photo { height: 132px; background: center/cover no-repeat, color-mix(in srgb, var(--accent) 14%, var(--bg)); position: relative; }
+.photo.none { display: grid; place-items: center; }
+.photo.none svg { width: 54px; height: 54px; opacity: .35; stroke: var(--text); fill: none; stroke-width: 1.4; }
+.grade { position: absolute; left: 12px; bottom: -18px; background: var(--bg-elevated); border-radius: 14px;
+  padding: 4px 11px 3px; box-shadow: 0 4px 14px -6px rgba(0,0,0,.35); line-height: 1; text-align: center; }
+.grade b { font: 600 1.6rem/1 var(--heading); display: block; }
+.grade small { font-size: .68rem; color: var(--text-muted); letter-spacing: .02em; }
+.dist { position: absolute; right: 10px; top: 10px; background: rgba(20,14,10,.6); color: #fff; font-size: .75rem;
+  padding: 2px 8px; border-radius: 99px; backdrop-filter: blur(4px); }
+.chip-wx { position: absolute; right: 10px; bottom: 10px; font-size: .74rem; font-weight: 600; padding: 3px 9px;
+  border-radius: 99px; color: #fff; display: flex; gap: 5px; align-items: center; }
+.chip-wx.dry { background: var(--dry); } .chip-wx.damp { background: var(--damp); } .chip-wx.wet { background: var(--wet); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .chip-wx { color: #1f1915; } }
+.body { padding: 26px 16px 4px; flex: 1; }
+.body h3 { font: 600 1.08rem/1.25 var(--heading); margin: 0; }
+.body h3 a { color: inherit; text-decoration: none; }
+.body h3 a:hover { text-decoration: underline; text-decoration-color: var(--accent); }
+.area { font-size: .8rem; color: var(--text-muted); margin: 2px 0 8px; }
+.facts { font-size: .86rem; margin: 0 0 8px; }
+.facts .sep { color: var(--border); margin: 0 5px; }
+.sum { font-size: .85rem; color: var(--text-muted); margin: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+footer { display: flex; align-items: center; gap: 6px; padding: 10px 12px 12px 16px; }
+.src { width: 8px; height: 8px; border-radius: 50%; background: #3f7fbf; flex: none; }
+.src + span { font-size: .72rem; color: var(--text-muted); margin-right: auto; }
+.icon { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--border); background: transparent; display: grid; place-items: center; cursor: pointer; color: var(--text); }
+.icon svg { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-width: 1.7; }
+.add { font: 600 .85rem var(--body); background: var(--accent); color: var(--accent-contrast); border: 0; border-radius: 99px; padding: 8px 14px; cursor: pointer; }
+.why { margin-top: 34px; font-size: .9rem; }
+.why h2 { font: 600 1.2rem var(--heading); }
+.why li { margin: 4px 0; }
+@media (max-width: 760px) { .wx { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Cragseeker, les cartes</h1>
+  <p class="lead">Prototype local : un conseil météo en haut de la liste, et des cartes plus lisibles. Voies réelles autour de Chamonix, météo en direct d'Open-Meteo.</p>
+
+  <section class="wx" aria-live="polite">
+    <div>
+      <div class="wx-head"><span class="wx-dot" id="wx-dot"></span><h2 id="wx-title">…</h2></div>
+      <p id="wx-text"></p>
+      <p class="tip" id="wx-tip"></p>
+      <div class="scen" role="group" aria-label="Scénario">
+        <button data-s="live" aria-pressed="true">Météo réelle</button>
+        <button data-s="after">Pluie hier, sec aujourd'hui</button>
+        <button data-s="dry">Sec depuis 3 jours</button>
+        <button data-s="hot">Canicule</button>
+      </div>
+      <p class="note" id="wx-src"></p>
+    </div>
+    <div class="rain">
+      <div class="rain-bars" id="rain-bars"></div>
+      <div class="rain-axis"><span>il y a 48 h</span><span>maintenant</span><span>+24 h</span></div>
+      <div class="days" id="days"></div>
+    </div>
+  </section>
+
+  <div class="grid" id="grid"></div>
+
+  <section class="why">
+    <h2>Ce qui change par rapport aux cartes actuelles</h2>
+    <ul>
+      <li>La cotation passe en premier, en grand, avec la cotation globale dessous.</li>
+      <li>Une photo camptocamp quand la voie en a une.</li>
+      <li>Les infos tiennent sur une ligne de texte au lieu de huit étiquettes.</li>
+      <li>La source devient un petit point coloré, et « 0 sortie » disparaît.</li>
+      <li>Météo, accès et « Ajouter » sont sur une seule ligne en bas.</li>
+      <li>Une étiquette dit si la face a des chances d'être sèche, d'après la pluie récente et l'orientation.</li>
+    </ul>
+  </section>
+</main>
+<script>
+const ROUTES = [{"source": "c2c", "key": "c2c:1423818", "id": "1423818", "title": "Par Catyoucha Man", "area": "Haut Giffre - Aiguilles Rouges - Fiz", "url": "https://www.camptocamp.org/routes/1423818", "lat": 45.93395730145655, "lon": 6.8443214018644785, "summary": "Escalade des Lames de Planpraz depuis Catyoucha man (6 longueurs, 6a+ max) au départ de Chamonix.\n\nEscalade des lames en terrain d'aventure et rappel depuis le sommet, puis remontée par [[routes/57588|Catyoucha man]].", "distance_km": 2.520559063189185, "grade": "6a+", "required_grade": "6a+", "rating": "TD", "equipment": "P4", "orientation": "S", "height_m": 20, "outdoor_type": "multi", "elevation_max": 2050, "climb_count": null, "disciplines": [], "grade_spans": [], "photo": "https://media.camptocamp.org/c2corg-active/1653332497_1383826015MI.jpg"}, {"source": "c2c", "key": "c2c:1132930", "id": "1132930", "title": "Retour à la Bretagne", "area": "Haut Giffre - Aiguilles Rouges - Fiz", "url": "https://www.camptocamp.org/routes/1132930", "lat": 45.93368100501784, "lon": 6.837845000951845, "summary": "Belle voie de trad, la plus récente ouverte sur cette falaise, de même niveau qu'Ex-Libris. Une fois le dièdre de départ nettoyé par le passage, elle devrait acquérir elle aussi le statut de classique.", "distance_km": 2.915384390052252, "grade": "6b+", "required_grade": null, "rating": "TD+", "equipment": "P2+", "orientation": "SE", "height_m": 150, "outdoor_type": "multi", "elevation_max": 2525, "climb_count": null, "disciplines": [], "grade_spans": [], "photo": "https://media.camptocamp.org/c2corg-active/1659901862_470739157MI.jpg"}, {"source": "c2c", "key": "c2c:833971", "id": "833971", "title": "À fleur de roche", "area": "Haut Giffre - Aiguilles Rouges - Fiz", "url": "https://www.camptocamp.org/routes/833971", "lat": 45.93368100501784, "lon": 6.837845000951845, "summary": null, "distance_km": 2.915384390052252, "grade": "6c", "required_grade": "6a+", "rating": "TD+", "equipment": "P1", "orientation": "S", "height_m": 170, "outdoor_type": "multi", "elevation_max": 2525, "climb_count": null, "disciplines": [], "grade_spans": [], "photo": "https://media.camptocamp.org/c2corg-active/1663523635_1005811280MI.jpg"}, {"source": "c2c", "key": "c2c:1918390", "id": "1918390", "title": "Le Rapt", "area": "Haut Giffre - Aiguilles Rouges - Fiz", "url": "https://www.camptocamp.org/routes/1918390", "lat": 45.9339344606575, "lon": 6.837826068972206, "summary": "Voie en trad moderne qui suit une ligne de fissure évidente juste à droite de Premier de corvée.", "distance_km": 2.9314271022782634, "grade": "6c", "required_grade": "6b", "rating": "ED-", "equipment": "P2", "orientation": "SE", "height_m": 170, "outdoor_type": "multi", "elevation_max": 2525, "climb_count": null, "disciplines": [], "grade_spans": [], "photo": "https://media.camptocamp.org/c2corg-active/1784033894_1201649615MI.jpg"}, {"source": "c2c", "key": "c2c:784327", "id": "784327", "title": "Face W des Papillons - Le Lutin des Neiges", "area": "Mont-Blanc", "url": "https://www.camptocamp.org/routes/784327", "lat": 45.895063055616134, "lon": 6.894017458919246, "summary": null, "distance_km": 3.3379507377973856, "grade": "6b+", "required_grade": "6a+", "rating": "TD+", "equipment": "P2", "orientation": "W", "height_m": 220, "outdoor_type": "multi", "elevation_max": 2800, "climb_count": null, "disciplines": [], "grade_spans": [], "photo": "https://media.camptocamp.org/c2corg-active/1781075059_1119542099MI.jpg"}, {"source": "c2c", "key": "c2c:1934060", "id": "1934060", "title": "Le sortilège de Babidi", "area": "Mont-Blanc", "url": "https://www.camptocamp.org/routes/1934060", "lat": 45.91221819592818, "lon": 6.912835837375377, "summary": "Belle fissure à main pour compléter la journée à la Ménégaux.", "distance_km": 3.4248711603671036, "grade": "6a+", "required_grade": null, "rating": null, "equipment": "P2", "orientation": "NW", "height_m": 25, "outdoor_type": "single", "elevation_max": null, "climb_count": null, "disciplines": [], "grade_spans": [], "photo": "https://media.camptocamp.org/c2corg-active/1785478600_794191928MI.jpg"}, {"source": "c2c", "key": "c2c:1668523", "id": "1668523", "title": "Dièdre Terray ", "area": "Haut Giffre - Aiguilles Rouges - Fiz", "url": "https://www.camptocamp.org/routes/1668523", "lat": 45.91549249492289, "lon": 6.847568858823492, "summary": "C'est LA voie du secteur Petit Gaillands (à droite).", "distance_km": 1.8061480119755091, "grade": "6a", "required_grade": "6a", "rating": "TD-", "equipment": "P1", "orientation": "SE", "height_m": 50, "outdoor_type": "multi", "elevation_max": 1050, "climb_count": null, "disciplines": [], "grade_spans": []}, {"source": "c2c", "key": "c2c:1928076", "id": "1928076", "title": "Arête intégrale ", "area": "Haut Giffre - Aiguilles Rouges - Fiz", "url": "https://www.camptocamp.org/routes/1928076", "lat": 45.915123817504735, "lon": 6.846798643289798, "summary": "Pilier à gauche du secteur grand Gaillands", "distance_km": 1.8749108864428647, "grade": "6a", "required_grade": "6a", "rating": "D+", "equipment": "P1", "orientation": "SE", "height_m": 55, "outdoor_type": "multi", "elevation_max": 1070, "climb_count": null, "disciplines": [], "grade_spans": []}, {"source": "c2c", "key": "c2c:827154", "id": "827154", "title": "Moulinettes", "area": "Haut Giffre - Aiguilles Rouges - Fiz", "url": "https://www.camptocamp.org/routes/827154", "lat": 45.91500000501692, "lon": 6.8466670009530715, "summary": null, "distance_km": 1.8886703139846202, "grade": null, "required_grade": null, "rating": null, "equipment": null, "orientation": null, "height_m": null, "outdoor_type": "single", "elevation_max": 1000, "climb_count": null, "disciplines": [], "grade_spans": []}];
+const SNAPSHOT = {"daily": {"time": ["2026-11-14", "2026-11-15", "2026-11-16", "2026-11-17", "2026-11-18", "2026-11-19", "2026-11-20", "2026-11-21", "2026-11-22"], "precipitation_sum": [0.0, 10.5, 11.2, 33.82, 19.0, 32.8, 25.8, 2.9, 26.3], "temperature_2m_max": [11.3, 10.1, 8.9, 10.2, 8.4, 6.5, 4.4, 6.7, 7.5], "temperature_2m_min": [2.0, 5.9, 2.1, 7.4, 5.7, 3.7, 1.8, 1.1, 3.3], "precipitation_probability_max": [78, 100, 100, 100, 98, 100, 100, 91, 91]}, "hourly": {"time": ["2026-11-14T00:00", "2026-11-14T01:00", "2026-11-14T02:00", "2026-11-14T03:00", "2026-11-14T04:00", "2026-11-14T05:00", "2026-11-14T06:00", "2026-11-14T07:00", "2026-11-14T08:00", "2026-11-14T09:00", "2026-11-14T10:00", "2026-11-14T11:00", "2026-11-14T12:00", "2026-11-14T13:00", "2026-11-14T14:00", "2026-11-14T15:00", "2026-11-14T16:00", "2026-11-14T17:00", "2026-11-14T18:00", "2026-11-14T19:00", "2026-11-14T20:00", "2026-11-14T21:00", "2026-11-14T22:00", "2026-11-14T23:00", "2026-11-15T00:00", "2026-11-15T01:00", "2026-11-15T02:00", "2026-11-15T03:00", "2026-11-15T04:00", "2026-11-15T05:00", "2026-11-15T06:00", "2026-11-15T07:00", "2026-11-15T08:00", "2026-11-15T09:00", "2026-11-15T10:00", "2026-11-15T11:00", "2026-11-15T12:00", "2026-11-15T13:00", "2026-11-15T14:00", "2026-11-15T15:00", "2026-11-15T16:00", "2026-11-15T17:00", "2026-11-15T18:00", "2026-11-15T19:00", "2026-11-15T20:00", "2026-11-15T21:00", "2026-11-15T22:00", "2026-11-15T23:00", "2026-11-16T00:00", "2026-11-16T01:00", "2026-11-16T02:00", "2026-11-16T03:00", "2026-11-16T04:00", "2026-11-16T05:00", "2026-11-16T06:00", "2026-11-16T07:00", "2026-11-16T08:00", "2026-11-16T09:00", "2026-11-16T10:00", "2026-11-16T11:00", "2026-11-16T12:00", "2026-11-16T13:00", "2026-11-16T14:00", "2026-11-16T15:00", "2026-11-16T16:00", "2026-11-16T17:00", "2026-11-16T18:00", "2026-11-16T19:00", "2026-11-16T20:00", "2026-11-16T21:00", "2026-11-16T22:00", "2026-11-16T23:00", "2026-11-17T00:00", "2026-11-17T01:00", "2026-11-17T02:00", "2026-11-17T03:00", "2026-11-17T04:00", "2026-11-17T05:00", "2026-11-17T06:00", "2026-11-17T07:00", "2026-11-17T08:00", "2026-11-17T09:00", "2026-11-17T10:00", "2026-11-17T11:00", "2026-11-17T12:00", "2026-11-17T13:00", "2026-11-17T14:00", "2026-11-17T15:00", "2026-11-17T16:00", "2026-11-17T17:00", "2026-11-17T18:00", "2026-11-17T19:00", "2026-11-17T20:00", "2026-11-17T21:00", "2026-11-17T22:00", "2026-11-17T23:00", "2026-11-18T00:00", "2026-11-18T01:00", "2026-11-18T02:00", "2026-11-18T03:00", "2026-11-18T04:00", "2026-11-18T05:00", "2026-11-18T06:00", "2026-11-18T07:00", "2026-11-18T08:00", "2026-11-18T09:00", "2026-11-18T10:00", "2026-11-18T11:00", "2026-11-18T12:00", "2026-11-18T13:00", "2026-11-18T14:00", "2026-11-18T15:00", "2026-11-18T16:00", "2026-11-18T17:00", "2026-11-18T18:00", "2026-11-18T19:00", "2026-11-18T20:00", "2026-11-18T21:00", "2026-11-18T22:00", "2026-11-18T23:00", "2026-11-19T00:00", "2026-11-19T01:00", "2026-11-19T02:00", "2026-11-19T03:00", "2026-11-19T04:00", "2026-11-19T05:00", "2026-11-19T06:00", "2026-11-19T07:00", "2026-11-19T08:00", "2026-11-19T09:00", "2026-11-19T10:00", "2026-11-19T11:00", "2026-11-19T12:00", "2026-11-19T13:00", "2026-11-19T14:00", "2026-11-19T15:00", "2026-11-19T16:00", "2026-11-19T17:00", "2026-11-19T18:00", "2026-11-19T19:00", "2026-11-19T20:00", "2026-11-19T21:00", "2026-11-19T22:00", "2026-11-19T23:00", "2026-11-20T00:00", "2026-11-20T01:00", "2026-11-20T02:00", "2026-11-20T03:00", "2026-11-20T04:00", "2026-11-20T05:00", "2026-11-20T06:00", "2026-11-20T07:00", "2026-11-20T08:00", "2026-11-20T09:00", "2026-11-20T10:00", "2026-11-20T11:00", "2026-11-20T12:00", "2026-11-20T13:00", "2026-11-20T14:00", "2026-11-20T15:00", "2026-11-20T16:00", "2026-11-20T17:00", "2026-11-20T18:00", "2026-11-20T19:00", "2026-11-20T20:00", "2026-11-20T21:00", "2026-11-20T22:00", "2026-11-20T23:00", "2026-11-21T00:00", "2026-11-21T01:00", "2026-11-21T02:00", "2026-11-21T03:00", "2026-11-21T04:00", "2026-11-21T05:00", "2026-11-21T06:00", "2026-11-21T07:00", "2026-11-21T08:00", "2026-11-21T09:00", "2026-11-21T10:00", "2026-11-21T11:00", "2026-11-21T12:00", "2026-11-21T13:00", "2026-11-21T14:00", "2026-11-21T15:00", "2026-11-21T16:00", "2026-11-21T17:00", "2026-11-21T18:00", "2026-11-21T19:00", "2026-11-21T20:00", "2026-11-21T21:00", "2026-11-21T22:00", "2026-11-21T23:00", "2026-11-22T00:00", "2026-11-22T01:00", "2026-11-22T02:00", "2026-11-22T03:00", "2026-11-22T04:00", "2026-11-22T05:00", "2026-11-22T06:00", "2026-11-22T07:00", "2026-11-22T08:00", "2026-11-22T09:00", "2026-11-22T10:00", "2026-11-22T11:00", "2026-11-22T12:00", "2026-11-22T13:00", "2026-11-22T14:00", "2026-11-22T15:00", "2026-11-22T16:00", "2026-11-22T17:00", "2026-11-22T18:00", "2026-11-22T19:00", "2026-11-22T20:00", "2026-11-22T21:00", "2026-11-22T22:00", "2026-11-22T23:00"], "precipitation": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.3, 0.8, 0.0, 0.0, 0.0, 0.4, 2.2, 0.9, 0.2, 0.1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.6, 1.8, 3.2, 0.6, 0.1, 0.1, 0.0, 0.3, 0.9, 0.4, 0.6, 4.4, 1.9, 0.2, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.1, 0.4, 0.4, 0.4, 0.4, 0.0, 0.4, 0.7, 0.4, 0.6, 0.6, 0.2, 0.0, 0.0, 0.0, 2.1, 5.0, 3.9, 4.0, 3.3, 2.3, 1.5, 3.1, 2.03, 2.0, 1.1, 0.4, 0.0, 0.1, 0.1, 0.0, 0.0, 1.7, 2.2, 4.0, 4.0, 1.7, 0.3, 0.4, 1.1, 2.9, 0.35, 0.25, 0.1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.1, 0.9, 2.0, 1.5, 1.0, 2.3, 2.8, 1.9, 2.7, 1.8, 0.0, 0.0, 0.1, 0.3, 0.3, 0.9, 1.8, 2.5, 2.5, 1.6, 1.7, 1.7, 1.7, 0.7, 0.7, 0.7, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.2, 1.2, 1.2, 0.9, 0.9, 0.9, 0.6, 0.6, 0.6, 1.1, 1.1, 1.1, 1.8, 1.8, 1.8, 1.0, 1.0, 1.0, 0.3, 0.3, 0.3, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.5, 0.5, 0.5, 2.5, 2.5, 2.5, 1.8, 1.8, 1.8, 1.9, 1.9, 1.9, 2.0, 2.0, 2.0, 0.2]}, "today": "2026-11-16"};
+const STYLE = { multi: "Grande voie", single: "Couenne", bloc: "Bloc", psychic: "Psicobloc" };
+const DAYS = ["dim.", "lun.", "mar.", "mer.", "jeu.", "ven.", "sam."];
+const SUN_FIRST = ["S", "SE", "SW"], SUN_LATE = ["E", "W"], SHADE = ["N", "NE", "NW"];
+
+// The advisor works on four numbers: rain over the last two days, rain and
+// its chance today, and today's high. Everything it says follows from them.
+function read(wx) {
+  const d = wx.daily, t = d.time.indexOf(wx.today ?? new Date().toISOString().slice(0, 10));
+  const i = t < 0 ? 2 : t;
+  const nextDry = d.time.findIndex((day, k) => k > i && d.precipitation_sum[k] < 1 && d.precipitation_probability_max[k] < 40);
+  return {
+    before: d.precipitation_sum[i - 1] + d.precipitation_sum[i - 2] * 0.5,
+    yesterday: d.precipitation_sum[i - 1],
+    today: d.precipitation_sum[i], chance: d.precipitation_probability_max[i],
+    high: d.temperature_2m_max[i], low: d.temperature_2m_min[i],
+    nextDry: nextDry < 0 ? null : d.time[nextDry], i,
+  };
+}
+const dayName = (iso) => DAYS[new Date(iso + "T12:00").getDay()] + " " + Number(iso.slice(8));
+const mm = (x) => (x < 1 ? x.toFixed(1) : Math.round(x)) + " mm";
+
+function advise(w) {
+  if (w.chance >= 70 && w.today >= 2) return {
+    state: "wet", colour: "var(--wet)", title: "Journée de pluie",
+    text: `${mm(w.today)} de pluie prévus aujourd'hui, probabilité ${w.chance} %.` + (w.yesterday >= 1 ? ` Il est déjà tombé ${mm(w.yesterday)} hier.` : ""),
+    tip: `<b>Plutôt une salle.</b> ` + (w.nextDry ? `Le prochain jour sec annoncé est ${dayName(w.nextDry)}.` : "Aucun jour sec dans les 7 prochains jours."),
+  };
+  if (w.before >= 3) return {
+    state: "damp", colour: "var(--damp)", title: "Le rocher sèche",
+    text: `Il est tombé ${mm(w.yesterday)} hier. Aujourd'hui s'annonce sec.`,
+    tip: `<b>Visez les faces sud.</b> Au soleil, elles sèchent souvent dans la matinée. Les faces nord et les dalles à l'ombre risquent de rester humides toute la journée, et le calcaire peut suinter plusieurs jours après une grosse pluie.`,
+  };
+  if (w.high >= 27) return {
+    state: "dry", colour: "var(--dry)", title: "Sec, mais chaud",
+    text: `Pas de pluie depuis deux jours. Jusqu'à ${Math.round(w.high)} °C aujourd'hui.`,
+    tip: `<b>Cherchez l'ombre.</b> Faces nord, ou en altitude : on perd environ 6 °C tous les 1000 m.`,
+  };
+  return {
+    state: "dry", colour: "var(--dry)", title: "Bonnes conditions",
+    text: `Pas de pluie depuis deux jours. Entre ${Math.round(w.low)} et ${Math.round(w.high)} °C aujourd'hui.`,
+    tip: w.high < 10 ? `<b>Il fait frais.</b> Les faces sud au soleil seront les plus agréables.` : `<b>Tout est grimpable.</b>`,
+  };
+}
+
+// What one face is likely to be like, given the verdict. High up, the same
+// rain fell as snow: the low is carried up at 6.5 °C per 1000 m from the
+// weather point, about 1000 m in the Chamonix valley.
+function face(state, o, high, low, ele, before) {
+  if (ele && before >= 3 && low - (6.5 * (ele - 1035)) / 1000 < 1) return { cls: "wet", text: "Neige possible" };
+  if (!o) return null;
+  const faces = o.split(/,\s*/);
+  const has = (list) => faces.some((f) => list.includes(f));
+  if (state === "wet") return { cls: "wet", text: "Pluie" };
+  if (state === "damp") {
+    if (has(SUN_FIRST)) return { cls: "dry", text: "Sèche vite" };
+    if (has(SUN_LATE)) return { cls: "damp", text: faces.includes("E") ? "Sèche le matin" : "Sèche l'après-midi" };
+    return { cls: "wet", text: "Sans doute humide" };
+  }
+  if (high >= 27) return has(SHADE) ? { cls: "dry", text: "À l'ombre" } : has(SUN_FIRST) ? { cls: "damp", text: "En plein soleil" } : null;
+  if (high < 10 && has(SUN_FIRST)) return { cls: "dry", text: "Au soleil" };
+  return null;
+}
+
+const ICON = {
+  cloud: '<path d="M7 18h10a4 4 0 0 0 .5-8A6 6 0 0 0 6 9.5 4.3 4.3 0 0 0 7 18Z"/>',
+  car: '<path d="M4 16V12l2-5h12l2 5v4M4 16h16M4 16v2M20 16v2M7 13h.01M17 13h.01"/>',
+  pin: '<path d="M12 21s-7-6.2-7-11.5a7 7 0 1 1 14 0C19 14.8 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.5"/>',
+  peak: '<path d="M3 20 10 7l3 5 2-3 6 11Z"/>',
+};
+const svg = (k) => `<svg viewBox="0 0 24 24" aria-hidden="true">${ICON[k]}</svg>`;
+
+function card(r, verdict, high, w) {
+  const f = face(verdict.state, r.orientation, high, w.low, r.elevation_max, w.before);
+  const facts = [
+    STYLE[r.outdoor_type],
+    r.height_m && `${r.height_m} m`,
+    r.orientation && r.orientation.replace(/, /g, "/"),
+    r.equipment,
+    r.required_grade && r.required_grade !== r.grade && `oblig. ${r.required_grade}`,
+    r.climb_count && `${r.climb_count} sorties`,
+  ].filter(Boolean);
+  return `<article class="card">
+    <div class="photo ${r.photo ? "" : "none"}" ${r.photo ? `style="background-image:url('${r.photo}')"` : ""}>
+      ${r.photo ? "" : svg("peak")}
+      <span class="dist">${r.distance_km.toFixed(r.distance_km < 10 ? 1 : 0).replace(".", ",")} km</span>
+      ${f ? `<span class="chip-wx ${f.cls}">${f.text}</span>` : ""}
+      ${r.grade ? `<span class="grade"><b>${r.grade}</b>${r.rating ? `<small>${r.rating}</small>` : ""}</span>` : ""}
+    </div>
+    <div class="body">
+      <h3><a href="${r.url}" target="_blank" rel="noopener">${r.title.trim()}</a></h3>
+      <p class="area">${r.area ?? ""}${r.elevation_max ? ` · ${r.elevation_max} m` : ""}</p>
+      ${facts.length ? `<p class="facts">${facts.join('<span class="sep">·</span>')}</p>` : ""}
+      ${r.summary ? `<p class="sum">${r.summary}</p>` : ""}
+    </div>
+    <footer>
+      <span class="src" title="camptocamp"></span><span>camptocamp</span>
+      <button class="icon" title="Météo">${svg("cloud")}</button>
+      <button class="icon" title="Itinéraire">${svg("car")}</button>
+      <button class="add">+ Ajouter</button>
+    </footer>
+  </article>`;
+}
+
+function rainStrip(wx) {
+  const h = wx.hourly, now = new Date(), nowKey = (wx.today ? wx.today + "T12:00" : now.toISOString().slice(0, 13) + ":00");
+  let at = h.time.findIndex((t) => t >= nowKey.slice(0, 16));
+  if (at < 0) at = h.time.length - 25;
+  const from = Math.max(0, at - 48), to = Math.min(h.time.length, at + 24);
+  const slice = h.precipitation.slice(from, to), top = Math.max(2, ...slice);
+  document.getElementById("rain-bars").innerHTML =
+    slice.map((p, k) => `<span class="${from + k < at ? "past" : ""}" style="height:${(p / top) * 100}%" title="${h.time[from + k].slice(5).replace("T", " ")} · ${p} mm"></span>`).join("") +
+    `<i class="rain-now" style="left:${((at - from) / slice.length) * 100}%"></i>`;
+}
+
+function days(wx, w) {
+  const d = wx.daily;
+  document.getElementById("days").innerHTML = d.time.slice(w.i, w.i + 5).map((iso, k) => {
+    const j = w.i + k, dry = d.precipitation_sum[j] < 1 && d.precipitation_probability_max[j] < 40;
+    return `<div class="${dry ? "dryday" : ""}"><b>${k === 0 ? "auj." : dayName(iso)}</b>${mm(d.precipitation_sum[j])}<br>${Math.round(d.temperature_2m_max[j])}°</div>`;
+  }).join("");
+}
+
+function render(wx, source) {
+  const w = read(wx), v = advise(w);
+  document.getElementById("wx-dot").style.background = v.colour;
+  document.getElementById("wx-title").textContent = v.title;
+  document.getElementById("wx-text").textContent = v.text;
+  document.getElementById("wx-tip").innerHTML = v.tip;
+  document.getElementById("wx-src").textContent = source;
+  rainStrip(wx); days(wx, w);
+  document.getElementById("grid").innerHTML = ROUTES.map((r) => card(r, v, w.high, w)).join("");
+}
+
+// The scenarios rewrite the live numbers around today, so every state of the
+// advisor can be seen whatever the actual weather.
+function scenario(base, kind) {
+  const wx = structuredClone(base), d = wx.daily, i = read(wx).i;
+  const set = (k, rain, chance, high, low) => { d.precipitation_sum[k] = rain; d.precipitation_probability_max[k] = chance; d.temperature_2m_max[k] = high; d.temperature_2m_min[k] = low; };
+  const hourly = (fn) => { wx.hourly.precipitation = wx.hourly.time.map((t) => fn(t.slice(0, 10))); };
+  if (kind === "after") {
+    set(i - 2, 0, 10, 14, 4); set(i - 1, 14, 100, 11, 6); set(i, 0, 10, 16, 5); set(i + 1, 0, 15, 17, 6);
+    hourly((day) => (day === d.time[i - 1] ? Math.random() * 1.6 : 0));
+  } else if (kind === "dry" || kind === "hot") {
+    const hot = kind === "hot";
+    for (let k = 0; k < d.time.length; k++) set(k, 0, 5, hot ? 32 : 15, hot ? 18 : 3);
+    hourly(() => 0);
+  }
+  return wx;
+}
+
+let live = SNAPSHOT, liveNote = `Instantané du ${SNAPSHOT.today}, Open-Meteo.`;
+const show = (kind) => {
+  document.querySelectorAll(".scen button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.s === kind)));
+  render(kind === "live" ? live : scenario(live, kind), kind === "live" ? liveNote : "Scénario fictif, pour voir ce que dit le conseil.");
+};
+document.querySelectorAll(".scen button").forEach((b) => b.addEventListener("click", () => show(b.dataset.s)));
+show("live");
+fetch("https://api.open-meteo.com/v1/forecast?latitude=45.92&longitude=6.87&daily=precipitation_sum,temperature_2m_max,temperature_2m_min,precipitation_probability_max&hourly=precipitation&past_days=2&forecast_days=7&timezone=Europe%2FParis")
+  .then((r) => r.json())
+  .then((wx) => { if (!wx.daily) return; wx.today = new Date().toLocaleDateString("sv", { timeZone: "Europe/Paris" }); live = wx; liveNote = "Météo réelle à Chamonix, Open-Meteo, mise à jour à l'instant."; if (document.querySelector('[data-s="live"]').getAttribute("aria-pressed") === "true") show("live"); })
+  .catch(() => {});
+</script>
+</body>
+</html>
