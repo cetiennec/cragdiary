@@ -13,6 +13,7 @@ import {
   getOwnedWishlists,
   getSharedWishlists,
   getWishesTaggingUser,
+  getExistingUsernames,
   followState,
   followStates,
   getFollowers,
@@ -406,7 +407,26 @@ export async function ProfileView({
     }
   }
   const partners = [...partnerCounts.values()].sort((a, b) => b.n - a.n).slice(0, 16);
-  const partnerNodes = await Promise.all(partners.map((p) => renderMentions(p.text)));
+  // A partner with an account links to it, by name and without the @, like
+  // the names on a day's card.
+  const partnerAccounts = await getExistingUsernames(
+    partners.filter((p) => p.text.startsWith("@")).map((p) => p.text.slice(1).toLowerCase())
+  );
+  const partnerChips = partners.map((p) => {
+    const name = p.text.replace(/^@/, "");
+    return {
+      ...p,
+      name,
+      account: p.text.startsWith("@") ? partnerAccounts.get(name.toLowerCase()) : undefined,
+      initials: name
+        .split(/[\s_-]+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((w) => w[0].toUpperCase())
+        .join(""),
+      hue: [...name].reduce((a, c) => a + c.charCodeAt(0), 0) % 6,
+    };
+  });
 
   // Every route the reader may see, for the wishlist's by-area and weekend
   // views, which read across lists.
@@ -868,9 +888,13 @@ export async function ProfileView({
         <section className="profile2-partners profile-anchor" id="partners">
           <h2 className="pitch-notes-title">{t.profileV2.partnersTitle}</h2>
           <ul>
-            {partners.map((p, k) => (
+            {partnerChips.map((p) => (
               <li key={p.text}>
-                {partnerNodes[k]} <span>{t.profileV2.together(p.n)}</span>
+                <i className={`profile2-initial hue-${p.hue}`} aria-hidden>
+                  {p.initials}
+                </i>
+                {p.account ? <Link href={`/u/${p.account}`}>{p.name}</Link> : p.name}{" "}
+                <span>{t.profileV2.together(p.n)}</span>
               </li>
             ))}
           </ul>

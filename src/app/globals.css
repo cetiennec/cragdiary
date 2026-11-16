@@ -8279,8 +8279,9 @@ label:has(input:placeholder-shown) + .form-hint.form-warn {
 
 /* The drawn mountains keep to the right, clear of the name and bio. */
 .profile-v2 .profile-backdrop {
-  left: 45%;
-  opacity: 0.7;
+  left: 42%;
+  height: 210px;
+  opacity: 0.3;
 }
 
 /* The links under the bio become small tags on one line. */
@@ -8843,5 +8844,129 @@ label:has(input:placeholder-shown) + .form-hint.form-warn {
     flex-direction: column;
     align-items: flex-start;
     gap: 0;
+  }
+}
+
+/* ---- Profile v2, design pass ---- */
+.profile-v2 .profile-header {
+  margin-bottom: 1.5rem;
+}
+
+.profile-v2 .profile-header .profile-avatar {
+  width: 92px;
+  height: 92px;
+  font-size: 2.2rem;
+  box-shadow: 0 0 0 3px var(--bg-elevated), var(--shadow-card);
+}
+
+.profile2-stats .stat-tile {
+  padding: 0.7rem 0.95rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.profile2-stats .stat-value {
+  font-family: var(--heading-font), serif;
+}
+
+.profile2-bars {
+  height: 1.9rem;
+  margin-top: auto;
+}
+
+.profile-v2 .profile-map {
+  height: 270px;
+}
+
+/* The menu fades at its right edge when it scrolls, so a cut word reads as
+   "more this way" rather than as a mistake. */
+.profile2-tabs a:focus-visible,
+.profile2-tabs a:hover {
+  color: var(--accent);
+}
+
+.profile2-partners li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.2rem 0.75rem 0.2rem 0.2rem;
+}
+
+.profile2-partners li a {
+  color: inherit;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.profile2-partners li a:hover {
+  color: var(--accent);
+}
+
+.profile2-initial {
+  display: grid;
+  place-items: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 50%;
+  font-style: normal;
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #fff;
+  background: #bc5b2e;
+}
+
+.profile2-initial.hue-1 { background: #4a6e9c; }
+.profile2-initial.hue-2 { background: #4d7c3a; }
+.profile2-initial.hue-3 { background: #8a5a9c; }
+.profile2-initial.hue-4 { background: #a8761f; }
+.profile2-initial.hue-5 { background: #2f8f8a; }
+
+/* Day cards: the "with … · date" line sits at the foot of every card, so a
+   row of cards lines up whatever each one says. */
+.entry-card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.entry-card-by {
+  margin-top: auto;
+  padding-top: 0.8rem;
+}
+
+@media (max-width: 760px) {
+  .profile-v2 .profile-backdrop {
+    opacity: 0.12;
+  }
+
+  .profile-v2 .profile-header .profile-avatar {
+    width: 72px;
+    height: 72px;
+  }
+
+  .profile2-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+
+  .profile2-stats .stat-tile {
+    padding: 0.6rem 0.7rem;
+  }
+
+  .profile2-stats .stat-value {
+    font-size: 1.15rem;
+  }
+
+  .profile2-favourite {
+    font-size: 0.95rem;
+  }
+
+  .profile2-tabs {
+    mask-image: linear-gradient(to right, black 85%, transparent);
+    -webkit-mask-image: linear-gradient(to right, black 85%, transparent);
+  }
+
+  .profile-v2 .profile-map {
+    height: 220px;
   }
 }

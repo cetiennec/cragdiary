@@ -45,8 +45,10 @@ export default function EntryCard({
   const tags = [
     rating && rating !== grade ? rating : null,
     size || null,
-    orientation ? `${words.face} ${orientation}` : null,
-    equipment,
+    // One tag for the rock's face and its bolting, so a lone "P2" doesn't
+    // wrap onto a line of its own.
+    [orientation ? `${words.face} ${orientation}` : null, equipment].filter(Boolean).join(" · ") ||
+      null,
   ].filter((tag): tag is string => Boolean(tag));
 
   // "@cetiennec, Mitch" reads as names on a card; the links live on the day.
