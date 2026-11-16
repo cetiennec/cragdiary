@@ -128,33 +128,24 @@ jobs:
       # The one test about something being impossible rather than working.
       - name: Nothing private leaks
         run: node scripts/privacy-check.mjs http://localhost:3111 "$DATABASE_URL"
-      # The checks below were written with their features and then never
-      # wired in here; the account was locked when they were added, so none
-      # has been seen green in CI yet. On trial — reported, not blocking —
-      # until each has passed once, then drop its `continue-on-error`.
+      # Written with their features, and for a long while run by hand only.
+      # All eight passed on their first run here (16 Nov 2026); they block
+      # a merge like the two above.
       - name: Co-authored days
-        continue-on-error: true
         run: node scripts/coauthor-check.mjs http://localhost:3111 "$DATABASE_URL"
       - name: Three or more on the rope
-        continue-on-error: true
         run: node scripts/coauthor-three-check.mjs http://localhost:3111 "$DATABASE_URL"
       - name: Hidden fields stay hidden
-        continue-on-error: true
         run: node scripts/hidden-fields-check.mjs http://localhost:3111 "$DATABASE_URL"
       - name: Linking a day offers only what it should
-        continue-on-error: true
         run: node scripts/linkday-check.mjs http://localhost:3111 "$DATABASE_URL"
       - name: Unlinking, and linking again
-        continue-on-error: true
         run: node scripts/unlink-check.mjs http://localhost:3111 "$DATABASE_URL"
       - name: Notifications fire when they should, and only then
-        continue-on-error: true
         run: node scripts/notification-check.mjs http://localhost:3111 "$DATABASE_URL"
       - name: What leaves for an inbox
-        continue-on-error: true
         run: node scripts/email-check.mjs http://localhost:3111 "$DATABASE_URL" 3210
       - name: The camptocamp publish gate (talks to no one)
-        continue-on-error: true
         run: node scripts/c2c-publish-check.mjs "$DATABASE_URL"
 
   # Everything that leans on an API we don't control — camptocamp, and

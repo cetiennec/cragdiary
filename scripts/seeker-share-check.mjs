@@ -19,13 +19,33 @@ const page = await ctx.newPage();
 page.on("pageerror", (e) => console.error("PAGE ERROR:", e.message));
 
 await page.addInitScript(() => localStorage.setItem("cragdiary-welcome-v1", "1"));
-await page.goto(`${base}/cragseeker`);
+// The place arrives by URL, the way the tip and pin checks start, rather
+// than through the geocoder: Photon is komoot's public instance, not ours,
+// and it does not answer every network a runner sits on. The geocoder is
+// still exercised below — as a probe that reports, never as a wait that
+// decides the run.
+await page.goto(`${base}/cragseeker?lat=45.92&lon=6.87&radius=25&place=Chamonix&act=rock_climbing`);
 await page.waitForSelector(".seeker-map");
+await page.waitForSelector(".seeker-result", { timeout: 30000 });
+
+// 0. The geocoder, when reachable: typing a place offers suggestions.
+const probe = await ctx.newPage();
+await probe.addInitScript(() => localStorage.setItem("cragdiary-welcome-v1", "1"));
+await probe.goto(`${base}/cragseeker`);
+await probe.waitForSelector(".seeker-map");
+await probe.locator(".seeker-where input").first().fill("Chamonix");
+const suggestions = await probe
+  .waitForSelector(".combobox-list button", { timeout: 10000 })
+  .then(() => probe.locator(".combobox-list button").count())
+  .catch(() => 0);
+console.log(
+  suggestions > 0
+    ? `geocoder: ${suggestions} suggestions for Chamonix`
+    : "geocoder: no answer within 10 s (Photon unreachable from here — not a failure of ours)"
+);
+await probe.close();
 
 // 1. Filters are written into the address bar.
-await page.locator(".seeker-where input").first().fill("Chamonix");
-await page.waitForSelector(".combobox-list button");
-await page.locator(".combobox-list button").first().click();
 await page.getByRole("button", { name: "Free grade 6a", exact: true }).click();
 await page.getByRole("button", { name: "Free grade 6c", exact: true }).click();
 await page.waitForTimeout(2500);
