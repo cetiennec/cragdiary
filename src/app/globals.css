@@ -535,6 +535,123 @@ a {
   font-size: 0.9rem;
   line-height: 1.45;
   margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.entry-card-place {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin: 0 0 0.6rem;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.entry-card-place svg {
+  width: 0.8rem;
+  height: 0.8rem;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+}
+
+/* The grade filled, everything else outlined: light enough to keep the card
+   airy. */
+.entry-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin: 0 0 0.65rem;
+  padding: 0;
+  list-style: none;
+}
+
+.entry-card-tags li {
+  padding: 0.05rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.entry-card-tags li.is-grade {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-contrast);
+  font-weight: 600;
+}
+
+.entry-card-by {
+  margin: 0.8rem 0 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.entry-card-by b {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.entry-card-count {
+  position: absolute;
+  left: 0.6rem;
+  bottom: 0.6rem;
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  color: #fff;
+  background: rgba(20, 14, 10, 0.45);
+}
+
+/* A day without a photo: contour lines and the grade written large. */
+.contour-cover {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 1rem 1.1rem;
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--accent) 18%, var(--bg)),
+    color-mix(in srgb, var(--accent) 6%, var(--bg-elevated))
+  );
+}
+
+.contour-cover svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.contour-cover svg path {
+  fill: none;
+  stroke: color-mix(in srgb, var(--accent) 35%, transparent);
+  stroke-width: 1;
+}
+
+.contour-cover-grade {
+  position: relative;
+  font-family: var(--heading-font);
+  font-size: 3rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.contour-cover-grade small {
+  margin-left: 0.35rem;
+  font-size: 1.15rem;
+  color: var(--text-muted);
+}
+
+.contour-cover-line {
+  position: relative;
+  margin: 0.25rem 0 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
 }
 
 /* Leaves room for the visibility pill in the bottom-right corner. */

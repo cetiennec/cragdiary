@@ -2560,6 +2560,17 @@ export const STAR_LABELS: Record<Locale, [string, string, string]> = {
   fr: ["Super souvenir", "Majeur", "Majeurissime"],
 };
 
+// The small words on a day's card in the feed. Kept here rather than in the
+// dictionary because the card is rendered in several lists, each with only a
+// locale to hand.
+export const CARD_LABELS: Record<
+  Locale,
+  { with: string; With: string; photos: string; pitches: string; face: string }
+> = {
+  en: { with: "with", With: "With", photos: "{n} photos", pitches: "{n} pitches", face: "face" },
+  fr: { with: "avec", With: "Avec", photos: "{n} photos", pitches: "{n} longueurs", face: "face" },
+};
+
 export const PIN_LABELS: Record<Locale, Record<string, string>> = {
   en: {
     "🌊": "By the sea (Calanques, Cap Canaille)",

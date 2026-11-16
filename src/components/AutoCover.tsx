@@ -140,6 +140,59 @@ export function CoverStars({ entry, locale }: { entry: EntryWithAuthor; locale: 
   );
 }
 
+// Contour lines around a summit, for a day's card when it has no photo. Drawn
+// from the entry's id, so each day keeps its own map.
+function contourPaths(rand: () => number): string[] {
+  const cx = 60 + rand() * 180;
+  const cy = 40 + rand() * 80;
+  const out: string[] = [];
+  for (let k = 1; k <= 9; k++) {
+    const pts: string[] = [];
+    for (let a = 0; a <= 360; a += 20) {
+      const r = k * 22 * (0.8 + rand() * 0.35);
+      const t = (a * Math.PI) / 180;
+      pts.push(`${(cx + r * Math.cos(t) * 1.4).toFixed(1)},${(cy + r * Math.sin(t)).toFixed(1)}`);
+    }
+    out.push(`M${pts.join(" L")}Z`);
+  }
+  return out;
+}
+
+// A card's cover when the day has no photo: the grade written large over
+// contour lines, with the length and place under it.
+export function ContourCover({
+  entry,
+  locale,
+  grade,
+  rating,
+  line,
+}: {
+  entry: EntryWithAuthor;
+  locale: Locale;
+  grade: string | null;
+  rating: string | null;
+  line: string;
+}) {
+  const rand = mulberry32(hashCode(entry.id));
+  return (
+    <div className="entry-card-cover contour-cover">
+      <svg viewBox="0 0 320 240" preserveAspectRatio="xMidYMid slice" aria-hidden>
+        {contourPaths(rand).map((d, i) => (
+          <path key={i} d={d} />
+        ))}
+      </svg>
+      {(grade || rating) && (
+        <b className="contour-cover-grade">
+          {grade ?? rating}
+          {grade && rating && <small>{rating}</small>}
+        </b>
+      )}
+      {line && <p className="contour-cover-line">{line}</p>}
+      <CoverStars entry={entry} locale={locale} />
+    </div>
+  );
+}
+
 export default function AutoCover({
   entry,
   locale,
