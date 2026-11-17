@@ -9494,3 +9494,26 @@ label:has(input:placeholder-shown) + .form-hint.form-warn {
 .toast-action:hover {
   background: color-mix(in srgb, currentColor 30%, transparent);
 }
+
+/* Weather on or off, beside the view switch: a pill like the selects. */
+.seeker2-wx-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+  cursor: pointer;
+  align-self: flex-end;
+}
+
+.seeker2-wx-toggle[aria-pressed="true"] {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  background: color-mix(in srgb, var(--accent) 8%, var(--bg-elevated));
+}

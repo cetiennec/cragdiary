@@ -131,6 +131,25 @@ function subscribeCardView(onChange: () => void) {
     window.removeEventListener("storage", onChange);
   };
 }
+// The weather — the conditions panel and each card's note — can be turned
+// off, for a search that isn't about this weekend. Same store as the view.
+const WEATHER_KEY = "cragdiary-seeker-weather";
+function readWeatherOn(): boolean {
+  try {
+    return localStorage.getItem(WEATHER_KEY) !== "off";
+  } catch {
+    return true;
+  }
+}
+function writeWeatherOn(on: boolean) {
+  try {
+    localStorage.setItem(WEATHER_KEY, on ? "on" : "off");
+  } catch {
+    // As for the view: it holds for this page only.
+  }
+  window.dispatchEvent(new Event(CARD_VIEW_EVENT));
+}
+
 const PAGE_SIZE = 30;
 const SUMMARY_CHARS = 180;
 
@@ -595,6 +614,7 @@ export default function Cragseeker({
   const [photos, setPhotos] = useState<Record<number, { id: number; filename: string }>>({});
   const cardView = useSyncExternalStore(subscribeCardView, readCardView, () => "cards" as CardView);
   const compact = variant === "v2" && cardView === "compact";
+  const weatherOn = useSyncExternalStore(subscribeCardView, readWeatherOn, () => true);
   // Which routes have been asked about — `access` alone can't say, since a
   // route with no parking never lands there.
   const asked = useRef(new Set<number>());
@@ -712,8 +732,9 @@ export default function Cragseeker({
   // The weather at the search point, for the conditions panel and the note on
   // each card. Only where wet rock is the question: rock climbing and via
   // ferrata, on the current menu.
-  const wantsWeather =
-    variant === "v2" && Boolean(centre) && (activity === "rock_climbing" || activity === "via_ferrata");
+  const weatherApplies =
+    variant === "v2" && (activity === "rock_climbing" || activity === "via_ferrata");
+  const wantsWeather = weatherApplies && weatherOn && Boolean(centre);
   const wxKey = centre ? `${centre.lat.toFixed(2)},${centre.lon.toFixed(2)}` : "";
   const [forecast, setForecast] = useState<{ key: string; data: Forecast } | null>(null);
   useEffect(() => {
@@ -1596,6 +1617,23 @@ export default function Cragseeker({
                 </button>
               ))}
             </div>
+          )}
+          {weatherApplies && (
+            <button
+              type="button"
+              className="seeker2-wx-toggle"
+              aria-pressed={weatherOn}
+              onClick={() => writeWeatherOn(!weatherOn)}
+              title={weatherOn ? t.v2.weatherHide : t.v2.weatherShow}
+            >
+              {/* A sun behind a cloud; struck through when off. */}
+              <svg viewBox="0 0 24 24" aria-hidden className="seeker2-view-icon">
+                <path d="M8 3v1.5 M3.5 8H5 M4.8 4.8l1 1 M11.2 4.8l-1 1 M5.6 10.6A3.2 3.2 0 1 1 11 7" />
+                <path d="M8 19h9a3.5 3.5 0 0 0 .4-7A5 5 0 0 0 8 13a3 3 0 0 0 0 6Z" />
+                {!weatherOn && <path d="M3 3l18 18" />}
+              </svg>
+              <span>{t.v2.weatherLabel}</span>
+            </button>
           )}
           <label className="seeker-refine-field">
             <span>{t.loggedLabel}</span>
