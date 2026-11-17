@@ -9399,3 +9399,58 @@ label:has(input:placeholder-shown) + .form-hint.form-warn {
     min-width: min(230px, 80vw);
   }
 }
+
+/* Folded unless something new is in it. */
+.shared-days-fold > summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.shared-days-fold > summary::-webkit-details-marker {
+  display: none;
+}
+
+.shared-days-fold > summary .pitch-notes-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+}
+
+.shared-days-fold > summary .pitch-notes-title::after {
+  content: "";
+  width: 0.45rem;
+  height: 0.45rem;
+  border-right: 2px solid var(--text-muted);
+  border-bottom: 2px solid var(--text-muted);
+  transform: rotate(-45deg);
+  transition: transform 0.15s;
+  margin-left: 0.15rem;
+}
+
+.shared-days-fold[open] > summary .pitch-notes-title::after {
+  transform: rotate(45deg);
+}
+
+.shared-days-count {
+  font-family: var(--font-body, inherit);
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  background: var(--border);
+  color: var(--text-muted);
+}
+
+.shared-days-new {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-contrast);
+}

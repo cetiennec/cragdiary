@@ -446,6 +446,7 @@ const en = {
     groupTaggedHint: "Someone else's account of a day you were on. Yours is still yours to write.",
     inJournal: "In my journal",
     more: "More",
+    newDays: "New · {n}",
     tab: "With you",
   },
   cordees: {
@@ -1817,6 +1818,7 @@ const fr: Dict = {
     groupTaggedHint: "Le récit de quelqu'un d'autre sur une journée où vous étiez. Le vôtre reste à écrire si vous le voulez.",
     inJournal: "Dans mon carnet",
     more: "Plus",
+    newDays: "Nouveau · {n}",
     tab: "Avec vous",
   },
   cordees: {

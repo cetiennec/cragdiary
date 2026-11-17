@@ -1,4 +1,5 @@
 import Link from "next/link";
+import SharedDaysFold from "@/components/SharedDaysFold";
 import type { TrayDay } from "@/lib/queries";
 import { formatDate, type Locale } from "@/lib/i18n";
 import {
@@ -31,6 +32,8 @@ export type SharedDaysLabels = {
   groupTaggedHint: string;
   inJournal: string;
   more: string;
+  /** "{n} new" beside the folded title. */
+  newDays: string;
 };
 
 /**
@@ -73,7 +76,16 @@ export default function SharedDaysTray({
     ].filter((g) => g.days.length > 0);
     return (
       <section className="shared-days shared-days-grouped" id="shared-days">
-        <h2 className="pitch-notes-title">{t.title}</h2>
+        <SharedDaysFold
+          ids={days.map((d) => d.id)}
+          urgent={invited.length > 0}
+          newLabel={t.newDays}
+          summary={
+            <h2 className="pitch-notes-title">
+              {t.title} <span className="shared-days-count">{days.length}</span>
+            </h2>
+          }
+        >
         {groups.map((g) => (
           <div key={g.key} className={`shared-days-group is-${g.key}`}>
             <h3 className="shared-days-group-head">
@@ -151,6 +163,7 @@ export default function SharedDaysTray({
             </ul>
           </div>
         ))}
+        </SharedDaysFold>
       </section>
     );
   }
