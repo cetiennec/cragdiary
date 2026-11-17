@@ -1035,6 +1035,11 @@ const en = {
     loggedFew: "5 times or more",
     loggedMany: "20 times or more",
     refineCount: "{n} of {total} shown",
+    // Filtered before every page is in: say what was looked at, and how much
+    // there is, so "0 of 60" never reads as the whole search.
+    refineCountPartial: "{n} of the first {loaded} · about {total} in all",
+    mixedRefineCount: "{n} of {total} shown",
+    mixedRefineCountPartial: "{n} of the first {loaded} · about {total} in all",
     resultCount: "{n} routes found",
     resultCountOne: "1 route found",
     resultCountAbout: "about {n} routes",
@@ -2402,6 +2407,9 @@ const fr: Dict = {
     loggedFew: "5 ou plus",
     loggedMany: "20 ou plus",
     refineCount: "{n} sur {total} affichées",
+    refineCountPartial: "{n} parmi les {loaded} premières · environ {total} en tout",
+    mixedRefineCount: "{n} sur {total} affichés",
+    mixedRefineCountPartial: "{n} parmi les {loaded} premiers · environ {total} en tout",
     resultCount: "{n} voies trouvées",
     resultCountOne: "1 voie trouvée",
     resultCountAbout: "environ {n} voies",

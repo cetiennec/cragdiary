@@ -1152,19 +1152,29 @@ export default function Cragseeker({
   // routes inside the circle; before that only an estimate can be honest.
   const allLoaded = !more;
   // OpenBeta counts crags, camptocamp counts routes; the moment both are in the
-  // list, only the vaguer word is true of everything in it.
-  const counts = activeSources.includes("openbeta")
+  // list, only the vaguer word is true of everything in it. In the list, not
+  // merely asked: OpenBeta is ticked by default and finds nothing in France,
+  // where "1,507 routes" is the true word. Before anything is in, the ticks
+  // are all there is to go on.
+  const mixed =
+    activeSources.includes("openbeta") &&
+    (results.length === 0 || results.some((r) => r.source === "openbeta"));
+  const counts = mixed
     ? {
         one: t.mixedCountOne,
         many: t.mixedCount,
         about: t.mixedCountAbout,
         capped: t.mixedCountCapped,
+        refine: t.mixedRefineCount,
+        refinePartial: t.mixedRefineCountPartial,
       }
     : {
         one: t.resultCountOne,
         many: t.resultCount,
         about: t.resultCountAbout,
         capped: t.resultCountCapped,
+        refine: t.refineCount,
+        refinePartial: t.refineCountPartial,
       };
   const countLabel = allLoaded
     ? results.length === 1
@@ -1333,6 +1343,15 @@ export default function Cragseeker({
     else sorted.sort(by((r) => r.distance_km, 1));
     return sorted;
   }, [results, sort, minLogged, contains, documented, activity, outings]);
+  // A filter applied here, on what has been loaded: "3 of 41" once everything
+  // is in, "3 of the first 60 · about 1,507 in all" before.
+  const refinedLabel = allLoaded
+    ? fill(fill(counts.refine, "n", shown.length), "total", results.length)
+    : fill(
+        fill(fill(counts.refinePartial, "n", shown.length), "loaded", results.length),
+        "total",
+        estimatedTotal > 5000 ? "5000+" : estimatedTotal
+      );
 
   const refined = shown.length !== results.length;
 
@@ -1556,7 +1575,7 @@ export default function Cragseeker({
           <span>{t.error}</span>
         ) : refined ? (
           // Say both numbers: "3 of 41" answers "where did the rest go?"
-          <span>{fill(fill(t.refineCount, "n", shown.length), "total", results.length)}</span>
+          <span>{refinedLabel}</span>
         ) : (
           <span>{countLabel}</span>
         )}
@@ -2621,7 +2640,7 @@ export default function Cragseeker({
                   : failed
                     ? t.error
                     : refined
-                      ? fill(fill(t.refineCount, "n", shown.length), "total", results.length)
+                      ? refinedLabel
                       : countLabel}
                 <span aria-hidden> ↓</span>
               </button>
