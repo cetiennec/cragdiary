@@ -1671,11 +1671,13 @@ export default function Cragseeker({
               >
                 <div className={`seeker2-card-top${photo ? "" : " no-photo"}`}>
                   {photo ? (
+                    // The photo opens the route, like its title: the photo's
+                    // own page on camptocamp says nothing about the climb.
                     <a
-                      href={`https://www.camptocamp.org/images/${photo.id}`}
+                      href={route.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      title={t.v2.wx.photoCredit}
+                      title={`${t.openOn[route.source]} · ${t.v2.wx.photoCredit}`}
                       tabIndex={-1}
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element -- camptocamp's own thumbnail, already sized */}
