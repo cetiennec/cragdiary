@@ -194,7 +194,8 @@ async function climbingPlaces(
           lat: g.rows.reduce((t, r) => t + r.lat, 0) / g.rows.length,
           lon: g.rows.reduce((t, r) => t + r.lon, 0) / g.rows.length,
         };
-        const word = KIND_WORDS[lead.kind]?.[lang] ?? null;
+        // A crag with sectors is a crag, whatever its first site was filed as.
+        const word = KIND_WORDS[g.rows.length > 1 ? "crag" : lead.kind]?.[lang] ?? null;
         return {
           score:
             Math.max(...g.rows.map(score)) +
@@ -202,7 +203,8 @@ async function climbingPlaces(
             Math.min(g.rows.length, 10),
           place: {
             name: g.rows.length > 1 && !g.exact ? g.name : lead.name,
-            region: lead.region,
+            // OSM's crags carry no region; any of its sites may.
+            region: lead.region ?? g.rows.find((r) => r.region)?.region ?? null,
             kind:
               sectors > 0 && g.rows.length > 1
                 ? `${word ?? ""}${word ? " · " : ""}${sectors} ${lang === "fr" ? (sectors === 1 ? "secteur" : "secteurs") : sectors === 1 ? "sector" : "sectors"}`

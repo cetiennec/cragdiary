@@ -193,6 +193,34 @@ for (const p of osm) {
   seenOsm.set(p.name_key, near);
   osmKept.push(p);
 }
+// OSM's crags seldom say where they are in words. Borrow the region of the
+// nearest camptocamp site within 25 km: "Hautes-Alpes, France" tells two
+// Verdons apart where nothing would.
+const cells = new Map();
+const cellOf = (p) => `${Math.floor(p.lat * 4)},${Math.floor(p.lon * 4)}`;
+for (const c of c2c) {
+  if (!c.region) continue;
+  const k = cellOf(c);
+  cells.set(k, [...(cells.get(k) ?? []), c]);
+}
+let borrowed = 0;
+for (const p of osmKept) {
+  if (p.region) continue;
+  const [a, b] = cellOf(p).split(",").map(Number);
+  let best = null;
+  for (let i = -1; i <= 1; i++)
+    for (let j = -1; j <= 1; j++)
+      for (const c of cells.get(`${a + i},${b + j}`) ?? []) {
+        const d = km(c, p);
+        if (d < 25 && (!best || d < best.d)) best = { d, region: c.region };
+      }
+  if (best) {
+    p.region = best.region;
+    borrowed++;
+  }
+}
+console.log(`${borrowed} OSM crags given the region of a camptocamp site nearby.`);
+
 const rows = [...c2c.filter((p) => p.name_key), ...osmKept];
 console.log(
   `${c2c.length} from camptocamp, ${osm.length} from OpenStreetMap ` +
