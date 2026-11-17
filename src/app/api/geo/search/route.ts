@@ -149,26 +149,86 @@ async function climbingPlaces(
       `select name, name_key, kind, source, region, lat, lon, weight
          from climbing_places
         where name_key like $1 || '%' or name_key like '% ' || $1 || '%'
-        limit 200`,
+        limit 400`,
       [key]
     );
-    const score = (r: (typeof rows)[number]) =>
+    type Row = (typeof rows)[number];
+    const score = (r: Row) =>
       r.weight +
       (r.name_key === key ? 40 : r.name_key.startsWith(key) ? 20 : 0) -
       // Near the map counts, but a famous crag far away still beats a pile of
       // boulders next door: at most 40 points lost to distance.
       (near ? Math.min(km(near, r) / 10, 40) : 0);
-    return rows
-      .sort((a, b) => score(b) - score(a))
+
+    // camptocamp files a big crag one sector at a time ("Céüse - Demi Lune",
+    // "Céüse - Un pont sur l'infini"…), which filled the list with one crag.
+    // Sectors whose crag name is what was typed fold into that crag, placed
+    // at their middle; a sector found by its own name ("demi lune") stays.
+    const cragOf = (name: string) => name.split(/\s[-–—:]\s|\s\(|,\s/)[0].trim();
+    const matchesKey = (k: string) => k.startsWith(key) || k.includes(` ${key}`);
+    type Group = { name: string; rows: Row[]; lat: number; lon: number; exact: Row | null };
+    const groups: Group[] = [];
+    const singles: Row[] = [];
+    for (const r of rows) {
+      const crag = cragOf(r.name);
+      const cragKey = nameKey(crag);
+      if (!cragKey || !matchesKey(cragKey)) {
+        singles.push(r);
+        continue;
+      }
+      // Same crag name within 30 km is the same crag; further, a namesake.
+      const g = groups.find((x) => nameKey(x.name) === cragKey && km(x, r) < 30);
+      if (g) {
+        g.rows.push(r);
+        if (r.name_key === cragKey) g.exact = r;
+      } else {
+        groups.push({ name: crag, rows: [r], lat: r.lat, lon: r.lon, exact: r.name_key === cragKey ? r : null });
+      }
+    }
+    const candidates = [
+      ...groups.map((g) => {
+        const lead = g.exact ?? [...g.rows].sort((a, b) => score(b) - score(a))[0];
+        const sectors = g.rows.filter((r) => r !== g.exact).length;
+        // The crag's own entry where there is one, the middle of its sectors otherwise.
+        const at = g.exact ?? {
+          lat: g.rows.reduce((t, r) => t + r.lat, 0) / g.rows.length,
+          lon: g.rows.reduce((t, r) => t + r.lon, 0) / g.rows.length,
+        };
+        const word = KIND_WORDS[lead.kind]?.[lang] ?? null;
+        return {
+          score:
+            Math.max(...g.rows.map(score)) +
+            (nameKey(g.name) === key ? 40 : 0) +
+            Math.min(g.rows.length, 10),
+          place: {
+            name: g.rows.length > 1 && !g.exact ? g.name : lead.name,
+            region: lead.region,
+            kind:
+              sectors > 0 && g.rows.length > 1
+                ? `${word ?? ""}${word ? " · " : ""}${sectors} ${lang === "fr" ? (sectors === 1 ? "secteur" : "secteurs") : sectors === 1 ? "sector" : "sectors"}`
+                : word,
+            lat: at.lat,
+            lon: at.lon,
+            climbing: true,
+          },
+        };
+      }),
+      ...singles.map((r) => ({
+        score: score(r),
+        place: {
+          name: r.name,
+          region: r.region,
+          kind: KIND_WORDS[r.kind]?.[lang] ?? null,
+          lat: r.lat,
+          lon: r.lon,
+          climbing: true,
+        },
+      })),
+    ];
+    return candidates
+      .sort((a, b) => b.score - a.score)
       .slice(0, 5)
-      .map((r) => ({
-        name: r.name,
-        region: r.region,
-        kind: KIND_WORDS[r.kind]?.[lang] ?? null,
-        lat: r.lat,
-        lon: r.lon,
-        climbing: true,
-      }));
+      .map((c) => c.place);
   } catch {
     return [];
   }
