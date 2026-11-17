@@ -2,6 +2,7 @@ import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf
 import { pool } from "@/lib/db";
 import { currentUser } from "@/lib/auth";
 import { formatDate, getLocale, type Locale } from "@/lib/i18n";
+import { myDaysSql } from "@/lib/queries";
 
 // Server-generated "carnet de course": a plain logbook table (route, date,
 // grade, style, overall difficulty) served as a downloadable PDF. Built with
@@ -16,6 +17,8 @@ type Row = {
   style: string | null;
   grade_max: string | null;
   rating: string | null;
+  /** Someone else's entry this climber is on: who wrote it. */
+  written_by: string | null;
 };
 
 const T: Record<Locale, {
@@ -27,6 +30,7 @@ const T: Record<Locale, {
   difficulty: string;
   count: (n: number) => string;
   exportedOn: string;
+  by: string;
 }> = {
   fr: {
     title: "Carnet de course",
@@ -37,6 +41,7 @@ const T: Record<Locale, {
     difficulty: "Difficulté",
     count: (n) => `${n} ${n > 1 ? "sorties" : "sortie"}`,
     exportedOn: "Exporté le",
+    by: "avec {name}",
   },
   en: {
     title: "Route logbook",
@@ -47,6 +52,7 @@ const T: Record<Locale, {
     difficulty: "Difficulty",
     count: (n) => `${n} ${n > 1 ? "outings" : "outing"}`,
     exportedOn: "Exported on",
+    by: "with {name}",
   },
 };
 
@@ -91,12 +97,16 @@ export async function GET() {
   const t = T[locale];
 
   const { rows } = await pool.query<Row>(
-    `select to_char(entry_date, 'YYYY-MM-DD') as entry_date, month_only,
-            crag as title, location, style, grade_max, rating
-     from entries
-     where user_id = $1
-     order by entry_date asc, created_at asc`,
-    [user.id]
+    // Every day you were out, not only those you wrote up yourself: a day a
+    // partner logged with you on it is as much your experience.
+    `select to_char(e.entry_date, 'YYYY-MM-DD') as entry_date, e.month_only,
+            e.crag as title, e.location, e.style, e.grade_max, e.rating,
+            case when e.user_id = $1 then null else u.display_name end as written_by
+     from entries e
+     join users u on u.id = e.user_id
+     where ${myDaysSql("e", "$1", "$2")}
+     order by e.entry_date asc, e.created_at asc`,
+    [user.id, user.username]
   );
 
   const doc = await PDFDocument.create();
@@ -193,7 +203,10 @@ export async function GET() {
   for (let i = 0; i < rows.length; i++) {
     const r = rows[i];
     const titleLines = wrap(ansi(r.title), bold, SIZE, cols[1].w - 6);
-    const locLines = r.location ? wrap(ansi(r.location), font, SIZE, cols[1].w - 6) : [];
+    const place = [r.location, r.written_by ? t.by.replace("{name}", r.written_by) : null]
+      .filter(Boolean)
+      .join(" · ");
+    const locLines = place ? wrap(ansi(place), font, SIZE, cols[1].w - 6) : [];
     const dateLines = wrap(ansi(formatDate(r.entry_date, locale, r.month_only)), font, SIZE, cols[2].w - 6);
     const styleLines = wrap(ansi(r.style), font, SIZE, cols[4].w - 6);
     const routeLineCount = titleLines.length + locLines.length;

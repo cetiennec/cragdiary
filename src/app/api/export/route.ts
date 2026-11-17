@@ -1,5 +1,6 @@
 import { pool } from "@/lib/db";
 import { currentUser } from "@/lib/auth";
+import { myDaysSql } from "@/lib/queries";
 
 export async function GET() {
   const user = await currentUser();
@@ -17,15 +18,17 @@ export async function GET() {
               e.grade_max, e.rating, e.orientation, e.equipment, e.pitches, e.height_m,
               e.routes, e.partners, e.notes, e.pitch_notes, e.c2c_url, e.c2c_summary,
               e.lat, e.lon, e.visibility, e.created_at,
+              case when e.user_id = $1 then null else u.username end as written_by,
               coalesce(json_agg(json_build_object('id', p.id, 'position', p.position,
                 'size', p.size, 'align', p.align, 'para', p.para)
                 order by p.position) filter (where p.id is not null), '[]') as photos
        from entries e
+       join users u on u.id = e.user_id
        left join photos p on p.entry_id = e.id
-       where e.user_id = $1
-       group by e.id
+       where ${myDaysSql("e", "$1", "$2")}
+       group by e.id, u.username
        order by e.entry_date desc`,
-      [user.id]
+      [user.id, user.username]
     ),
     pool.query(
       `select id, title, location, grade_max, rating, pitches, height_m, c2c_url, note,

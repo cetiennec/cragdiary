@@ -904,6 +904,28 @@ export async function coAuthorInviteStates(
  * The copy offer used to live in a notification and scroll away for good; here
  * it stays available as long as the day does.
  */
+/**
+ * The days that belong in a climber's own records — the logbook PDF, the CSV,
+ * the JSON export: the ones they wrote, and the ones somebody else wrote with
+ * them on it, as an accepted co-author or @-named among the partners. A day
+ * they also wrote themselves (same date, same crag) counts once, as theirs.
+ * A pending invitation is not theirs yet.
+ *
+ * `alias` is the entries table's alias; `id` and `username` are the
+ * placeholders holding the climber's id and username.
+ */
+export function myDaysSql(alias: string, id: string, username: string): string {
+  return `(${alias}.user_id = ${id}
+    or ((exists (select 1 from entry_authors my_ea
+                  where my_ea.entry_id = ${alias}.id and my_ea.user_id = ${id}
+                    and my_ea.status = 'accepted')
+         or ${alias}.partners ~* ('@' || ${username} || '([^a-z0-9-]|$)'))
+        and not exists (select 1 from entries mine
+                         where mine.user_id = ${id}
+                           and mine.entry_date = ${alias}.entry_date
+                           and mine.crag = ${alias}.crag)))`;
+}
+
 export type TrayDay = EntryWithAuthor & {
   /**
    * Where they stand on the pen: never offered, offered and waiting, or taken.
