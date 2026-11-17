@@ -1684,7 +1684,17 @@ export default function Cragseeker({
                       <img src={c2cImageUrl(photo.filename, "MI")} alt="" loading="lazy" decoding="async" />
                     </a>
                   ) : (
-                    <ActivityGlyph id={activity} />
+                    // No photo: the placeholder opens the route all the same.
+                    <a
+                      href={route.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title={t.openOn[route.source]}
+                      tabIndex={-1}
+                      className="seeker2-card-glyph-link"
+                    >
+                      <ActivityGlyph id={activity} />
+                    </a>
                   )}
                   {route.distance_km != null && !compact && (
                     <span className="seeker2-card-dist">

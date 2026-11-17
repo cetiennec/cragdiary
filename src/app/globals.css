@@ -9454,3 +9454,15 @@ label:has(input:placeholder-shown) + .form-hint.form-warn {
   background: var(--accent);
   color: var(--accent-contrast);
 }
+
+/* The placeholder is a link too: centre its glyph inside the whole area. */
+.seeker2-card-top.no-photo > .seeker2-card-glyph-link {
+  display: grid;
+  place-items: center;
+  position: absolute;
+  inset: 0;
+}
+
+.seeker2-card-glyph-link:hover .seeker2-glyph {
+  opacity: 0.45;
+}
