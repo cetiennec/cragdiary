@@ -325,6 +325,26 @@ create table if not exists climbing_gyms (
 -- be fine too, this just keeps the habit for whenever it grows.
 create index if not exists climbing_gyms_lat_lon_idx on climbing_gyms(lat, lon);
 
+-- Outdoor climbing places (migration 045), for the "Où" search: camptocamp's
+-- climbing sites and OpenStreetMap's named crags, refreshed monthly by
+-- scripts/refresh-climbing-places.mjs. `name_key` is the name lowercased and
+-- without accents, so "ceuse" finds Céüse; `weight` ranks equal matches
+-- (camptocamp's own quality rating, a little above a bare OSM crag).
+create table if not exists climbing_places (
+  id text primary key,            -- "c2c:123" or "osm:n456"
+  name text not null,
+  name_key text not null,
+  kind text not null,             -- crag | boulder | area
+  source text not null,           -- c2c | osm
+  region text,
+  lat double precision not null,
+  lon double precision not null,
+  elevation integer,
+  weight integer not null default 0,
+  updated_at timestamptz not null default now()
+);
+create index if not exists climbing_places_name_key_idx on climbing_places(name_key text_pattern_ops);
+
 -- The EPI register (migration 038): the gear you climb on, when it was made,
 -- when it went into service, and every time someone has looked at it properly.
 -- Retired items stay — a register whose purpose is traceability must be able to

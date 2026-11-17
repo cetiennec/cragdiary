@@ -9517,3 +9517,9 @@ label:has(input:placeholder-shown) + .form-hint.form-warn {
   border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
   background: color-mix(in srgb, var(--accent) 8%, var(--bg-elevated));
 }
+
+/* A crag from our own list, told apart from the map's towns and peaks. */
+.seeker-place-kind.is-climbing {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+}

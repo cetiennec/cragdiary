@@ -1,0 +1,28 @@
+name: Refresh climbing places
+
+# The "Où" search's own list of crags: camptocamp's climbing sites and
+# OpenStreetMap's named crags. See scripts/refresh-climbing-places.mjs. Monthly,
+# the day after the gyms, so the two don't queue at Overpass together.
+on:
+  schedule:
+    - cron: "43 3 2 * *"
+  workflow_dispatch: {}
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Make sure the table exists
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: node scripts/migrate-045-climbing-places.js
+      - name: Read camptocamp and Overpass, replace climbing_places
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: node scripts/refresh-climbing-places.mjs --apply

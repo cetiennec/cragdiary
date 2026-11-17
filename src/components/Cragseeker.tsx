@@ -921,6 +921,12 @@ export default function Cragseeker({
     [showGyms, gymCircle, gyms]
   );
 
+  // Read by the place search without making it re-run when the centre moves.
+  const biasRef = useRef<{ lat: number; lon: number } | null>(null);
+  useEffect(() => {
+    biasRef.current = centre ? { lat: centre.lat, lon: centre.lon } : null;
+  }, [centre]);
+
   useEffect(() => {
     if (!placeArmed.current || placeInput.trim().length < 3) {
       setPlaces([]);
@@ -929,8 +935,17 @@ export default function Cragseeker({
     }
     const timer = setTimeout(async () => {
       try {
+        // Nearest first: around the search already on the map, or in France
+        // when there is none yet and the page is in French. One decimal is
+        // close enough to rank by, and keeps the answers cacheable.
+        const near = biasRef.current;
+        const bias = near
+          ? `&lat=${near.lat.toFixed(1)}&lon=${near.lon.toFixed(1)}`
+          : locale === "fr"
+            ? "&near=fr"
+            : "";
         const res = await fetch(
-          `/api/geo/search?q=${encodeURIComponent(placeInput.trim())}&lang=${locale}`
+          `/api/geo/search?q=${encodeURIComponent(placeInput.trim())}&lang=${locale}${bias}`
         );
         const data = (await res.json()) as { results: GeoSuggestion[] };
         setPlaces(data.results);
@@ -1486,7 +1501,9 @@ export default function Cragseeker({
                       >
                         <span className="combobox-title">
                           {p.name}
-                          {p.kind && <em className="seeker-place-kind">{p.kind}</em>}
+                          {p.kind && (
+                            <em className={`seeker-place-kind${p.climbing ? " is-climbing" : ""}`}>{p.kind}</em>
+                          )}
                         </span>
                         <span className="combobox-meta">{p.region}</span>
                       </button>
