@@ -337,11 +337,15 @@ export async function GET(req: Request) {
   // it is "Annecy-le-Vieux, bloc". Then our crags, then the rest of the map.
   const key = nameKey(q);
   const exact = (g: GeoSuggestion) => nameKey(g.name) === key;
-  const lead = [...ours.filter(exact), ...fresh.filter(exact).slice(0, 2)];
+  // …except a crag far from the reader's country, which waits at the end:
+  // "verdon" on a French page is the gorge, then villages, then Bohemia.
+  const far = (g: GeoSuggestion) => !near && home === "fr" && km(FRANCE, g) > 900;
+  const lead = [...ours.filter((g) => exact(g) && !far(g)), ...fresh.filter(exact).slice(0, 2)];
   const results = [
     ...lead,
-    ...ours.filter((g) => !lead.includes(g)),
+    ...ours.filter((g) => !lead.includes(g) && !far(g)),
     ...fresh.filter((g) => !lead.includes(g)),
+    ...ours.filter(far),
   ].slice(0, 8);
 
   return Response.json(
