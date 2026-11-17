@@ -131,7 +131,8 @@ function km(a: { lat: number; lon: number }, b: { lat: number; lon: number }): n
 async function climbingPlaces(
   q: string,
   lang: Lang,
-  near: { lat: number; lon: number } | null
+  near: { lat: number; lon: number } | null,
+  home: string | null
 ): Promise<GeoSuggestion[]> {
   const key = nameKey(q);
   if (key.length < 3) return [];
@@ -158,7 +159,12 @@ async function climbingPlaces(
       (r.name_key === key ? 40 : r.name_key.startsWith(key) ? 20 : 0) -
       // Near the map counts, but a famous crag far away still beats a pile of
       // boulders next door: at most 40 points lost to distance.
-      (near ? Math.min(km(near, r) / 10, 40) : 0);
+      (near ? Math.min(km(near, r) / 10, 40) : 0) -
+      // No point, only a country: a Czech crag nicknamed "Verdon" goes below
+      // the French one. 900 km from the middle of France leaves out Corsica.
+      (!near && home === "fr" && km(FRANCE, r) > 900 ? 25 : 0) -
+      // No region means no camptocamp site within 25 km: a crag few climb.
+      (r.region ? 0 : 5);
 
     // camptocamp files a big crag one sector at a time ("Céüse - Demi Lune",
     // "Céüse - Un pont sur l'infini"…), which filled the list with one crag.
@@ -319,7 +325,7 @@ export async function GET(req: Request) {
   }
 
   const [ours, map] = await Promise.all([
-    climbingPlaces(q, lang, near),
+    climbingPlaces(q, lang, near, home),
     // Photon being slow or down must never break the editor.
     photonPlaces(q, lang, near, home).catch(() => [] as GeoSuggestion[]),
   ]);
