@@ -14,7 +14,7 @@ import Toast from "./Toast";
 import GymThumb from "./GymThumb";
 import { ActivityGlyph, Compass } from "./SeekerV2Parts";
 import SeekerWeather from "./SeekerWeather";
-import { saveWishFromSearch } from "@/app/actions";
+import { deleteWish, saveWishFromSearch } from "@/app/actions";
 import type { SeekerResult } from "@/app/api/seeker/route";
 import type { OpenBetaClimb } from "@/app/api/seeker/climbs/route";
 import type { MountainHut } from "@/app/api/seeker/huts/route";
@@ -578,7 +578,11 @@ export default function Cragseeker({
   const [gyms, setGyms] = useState<{ at: string; list: ClimbingGym[] } | null>(null);
   // Confirms the add, which otherwise happens at the foot of a card the eye
   // may already have left.
-  const [toast, setToast] = useState<{ text: string; tone: "ok" | "error" } | null>(null);
+  const [toast, setToast] = useState<{
+    text: string;
+    tone: "ok" | "error";
+    undo?: () => void;
+  } | null>(null);
   // A visitor who keeps searching is a visitor with something to keep. After a
   // few searches the page says so, once, and takes no for an answer — the
   // count and the refusal both live in localStorage, never on the server.
@@ -1073,16 +1077,37 @@ export default function Cragseeker({
     try {
       const res = await saveWishFromSearch(form);
       setSaved((s) => ({ ...s, [route.key]: res.ok ? "done" : "error" }));
+      const wishId = res.id;
       setToast(
         res.ok
           ? {
               text: fill(fill(t.addedToast, "title", route.title), "list", listName),
               tone: "ok",
+              // Added to the wrong list, or by a slip of the mouse: take it
+              // back without a trip to the profile.
+              undo: wishId ? () => undoSave(route, wishId, listName) : undefined,
             }
           : { text: t.addFailed, tone: "error" }
       );
     } catch {
       setSaved((s) => ({ ...s, [route.key]: "error" }));
+      setToast({ text: t.addFailed, tone: "error" });
+    }
+  }
+
+  async function undoSave(route: SeekerResult, wishId: string, listName: string) {
+    setToast(null);
+    const form = new FormData();
+    form.set("id", wishId);
+    try {
+      await deleteWish(form);
+      setSaved((s) => {
+        const next = { ...s };
+        delete next[route.key];
+        return next;
+      });
+      setToast({ text: fill(fill(t.undoneToast, "title", route.title), "list", listName), tone: "ok" });
+    } catch {
       setToast({ text: t.addFailed, tone: "error" });
     }
   }
@@ -2554,7 +2579,12 @@ export default function Cragseeker({
         </div>
 
         {toast && (
-          <Toast message={toast.text} tone={toast.tone} onDone={() => setToast(null)} />
+          <Toast
+            message={toast.text}
+            tone={toast.tone}
+            onDone={() => setToast(null)}
+            action={toast.undo ? { label: t.undo, onClick: toast.undo } : undefined}
+          />
         )}
       </div>
     );
@@ -2787,7 +2817,12 @@ export default function Cragseeker({
 
       {resultsBlock}
       {toast && (
-        <Toast message={toast.text} tone={toast.tone} onDone={() => setToast(null)} />
+        <Toast
+            message={toast.text}
+            tone={toast.tone}
+            onDone={() => setToast(null)}
+            action={toast.undo ? { label: t.undo, onClick: toast.undo } : undefined}
+          />
       )}
     </div>
   );

@@ -20,6 +20,8 @@ export type NotificationData = {
   wishlist_id?: string;
   list_name?: string;
   wish_title?: string;
+  /** The wish a list notification is about, so deleting the wish takes the notification with it. */
+  wish_id?: string;
   count?: number;
 };
 

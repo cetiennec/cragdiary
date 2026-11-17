@@ -2220,7 +2220,7 @@ async function insertWish(
   wishlistId: string,
   title: string,
   formData: FormData
-): Promise<void> {
+): Promise<string> {
   const coords = parseCoords(formData);
   // Parking is optional and only ever arrives from Cragseeker, where it comes
   // from camptocamp's access waypoint.
@@ -2228,9 +2228,10 @@ async function insertWish(
   const parkingLon = optionalCoord(formData.get("parking_lon"), -180, 180);
   const hasParking = parkingLat !== null && parkingLon !== null;
   const partners = optionalText(formData.get("partners"));
-  await pool.query(
+  const inserted = await pool.query<{ id: string }>(
     `insert into wishes (user_id, wishlist_id, title, location, grade_max, rating, pitches, height_m, c2c_url, note, partners, lat, lon, parking_lat, parking_lon, parking_name)
-     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+     returning id`,
     [
       user.id,
       wishlistId,
@@ -2262,6 +2263,7 @@ async function insertWish(
     [wishlistId]
   );
   const listName = recipients.rows[0]?.name ?? "";
+  const wishId = inserted.rows[0].id;
   await Promise.all(
     recipients.rows
       .filter((r) => r.id !== user.id)
@@ -2270,7 +2272,7 @@ async function insertWish(
           userId: r.id,
           actorId: user.id,
           type: "wishlist_add",
-          data: { wishlist_id: wishlistId, list_name: r.name, wish_title: title },
+          data: { wishlist_id: wishlistId, list_name: r.name, wish_title: title, wish_id: wishId },
         })
       )
   );
@@ -2288,12 +2290,13 @@ async function insertWish(
           userId: m.id,
           actorId: user.id,
           type: "wish_tagged",
-          data: { wishlist_id: wishlistId, list_name: listName, wish_title: title },
+          data: { wishlist_id: wishlistId, list_name: listName, wish_title: title, wish_id: wishId },
         })
       )
   );
 
   revalidatePath(`/u/${user.username}`);
+  return wishId;
 }
 
 export async function addWish(formData: FormData): Promise<void> {
@@ -2316,7 +2319,7 @@ export async function addWish(formData: FormData): Promise<void> {
 // redirecting, so the results list can just tick the route off.
 export async function saveWishFromSearch(
   formData: FormData
-): Promise<{ ok: boolean; error?: "auth" | "list" | "title" }> {
+): Promise<{ ok: boolean; id?: string; error?: "auth" | "list" | "title" }> {
   const user = await currentUser();
   if (!user) return { ok: false, error: "auth" };
 
@@ -2328,8 +2331,8 @@ export async function saveWishFromSearch(
   const title = String(formData.get("title") ?? "").trim();
   if (!title) return { ok: false, error: "title" };
 
-  await insertWish(user, wishlistId, title, formData);
-  return { ok: true };
+  const id = await insertWish(user, wishlistId, title, formData);
+  return { ok: true, id };
 }
 
 export async function createWishlist(formData: FormData): Promise<void> {
@@ -2667,10 +2670,18 @@ export async function deleteWish(formData: FormData): Promise<void> {
 
   const id = String(formData.get("id") ?? "");
   if (id) {
-    await pool.query(
+    const gone = await pool.query(
       `delete from wishes where id = $1 and wishlist_id in (${EDITABLE_WISH_LISTS})`,
       [id, user.id]
     );
+    // What it told the list's members ("Léa added a route") goes with it:
+    // undone a second later from Cragseeker, it should leave no trace.
+    if (gone.rowCount) {
+      await pool.query(
+        "delete from notifications where actor_id = $1 and data->>'wish_id' = $2",
+        [user.id, id]
+      );
+    }
   }
   revalidatePath(`/u/${user.username}`);
 }

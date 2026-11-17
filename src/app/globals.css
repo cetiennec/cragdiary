@@ -9466,3 +9466,31 @@ label:has(input:placeholder-shown) + .form-hint.form-warn {
 .seeker2-card-glyph-link:hover .seeker2-glyph {
   opacity: 0.45;
 }
+
+/* A toast with a button: "Undo" after adding a route to a list. */
+.toast.has-action {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  /* Positioned from the middle, it would otherwise shrink to half the screen. */
+  width: max-content;
+  padding-right: 0.45rem;
+  border-radius: 1.4rem;
+}
+
+.toast-action {
+  flex: none;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: inherit;
+  background: color-mix(in srgb, currentColor 18%, transparent);
+  border: 0;
+  border-radius: 999px;
+  padding: 0.3rem 0.8rem;
+  cursor: pointer;
+}
+
+.toast-action:hover {
+  background: color-mix(in srgb, currentColor 30%, transparent);
+}

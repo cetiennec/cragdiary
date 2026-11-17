@@ -9,18 +9,22 @@ import { createPortal } from "react-dom";
 export default function Toast({
   message,
   onDone,
-  ms = 3200,
+  ms,
   tone = "ok",
+  action,
 }: {
   message: string;
   onDone: () => void;
   ms?: number;
   tone?: "ok" | "error";
+  /** One button beside the message, "Undo" say; the toast stays longer to leave time for it. */
+  action?: { label: string; onClick: () => void };
 }) {
+  const stay = ms ?? (action ? 6500 : 3200);
   useEffect(() => {
-    const timer = setTimeout(onDone, ms);
+    const timer = setTimeout(onDone, stay);
     return () => clearTimeout(timer);
-  }, [onDone, ms]);
+  }, [onDone, stay]);
 
   // Rendered into <body>: anywhere else it inherits a stacking context and
   // gets painted under the page. Only ever mounted from an event handler, so
@@ -28,7 +32,14 @@ export default function Toast({
   if (typeof document === "undefined") return null;
 
   return createPortal(
-    <output className={`toast toast-${tone}`}>{message}</output>,
+    <output className={`toast toast-${tone}${action ? " has-action" : ""}`}>
+      <span>{message}</span>
+      {action && (
+        <button type="button" className="toast-action" onClick={action.onClick}>
+          {action.label}
+        </button>
+      )}
+    </output>,
     document.body
   );
 }
